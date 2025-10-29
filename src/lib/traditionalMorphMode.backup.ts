@@ -243,7 +243,7 @@ export class TraditionalMorphProcessor {
   }
 
   /**
-   * ENHANCED: Multi-scale depth analysis for superior 3D representation
+   * SIMPLIFIED: Use Fast Mode's exact depth map approach for consistency
    */
   createAdvancedDepthMap(starlessImg: HTMLImageElement, blur: number): {
     primaryDepth: HTMLCanvasElement;
@@ -262,164 +262,154 @@ export class TraditionalMorphProcessor {
     const imageData = this.ctx.getImageData(0, 0, width, height);
     const data = imageData.data;
     
-    // 1. PRIMARY DEPTH: Enhanced luminance with perceptual weighting
-    const primaryCanvas = document.createElement('canvas');
-    const primaryCtx = primaryCanvas.getContext('2d')!;
-    primaryCanvas.width = width;
-    primaryCanvas.height = height;
-    
-    const primaryData = new ImageData(width, height);
-    for (let i = 0; i < data.length; i += 4) {
-      // Standard luminance calculation (ITU-R BT.709)
-      const luminance = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
-      // Gentle gamma correction for depth perception without over-brightening
-      const enhancedLum = Math.pow(luminance / 255, 0.9) * 255;
-      primaryData.data[i] = primaryData.data[i + 1] = primaryData.data[i + 2] = enhancedLum;
-      primaryData.data[i + 3] = 255;
-    }
-    primaryCtx.putImageData(primaryData, 0, 0);
-    
-    if (blur > 0) {
-      primaryCtx.filter = `blur(${blur}px)`;
-      primaryCtx.drawImage(primaryCanvas, 0, 0);
-      primaryCtx.filter = 'none';
+    // STEP 1: Calculate brightness (exact Fast Mode approach)
+    const brightness = new Float32Array(width * height);
+    for (let i = 0; i < width * height; i++) {
+      const idx = i * 4;
+      // Standard ITU-R BT.709 luminance - EXACT same as Fast Mode
+      brightness[i] = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
     }
     
-    // 2. STRUCTURE DEPTH: Edge-aware depth mapping
-    const structureCanvas = this.createStructureDepthMap(imageData, width, height);
+    // STEP 2: Detect edges with Sobel (exact Fast Mode approach)
+    const edges = new Float32Array(width * height);
+    const sobelX = [-1, 0, 1, -2, 0, 2, -1, 0, 1];
+    const sobelY = [-1, -2, -1, 0, 0, 0, 1, 2, 1];
     
-    // 3. EDGE DEPTH: Preserve sharp boundaries
-    const edgeCanvas = this.createEdgeDepthMap(imageData, width, height);
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        let gx = 0;
+        let gy = 0;
+        
+        for (let ky = -1; ky <= 1; ky++) {
+          for (let kx = -1; kx <= 1; kx++) {
+            const idx = ((y + ky) * width + (x + kx)) * 4;
+            const gray = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+            const kernelIdx = (ky + 1) * 3 + (kx + 1);
+            
+            gx += gray * sobelX[kernelIdx];
+            gy += gray * sobelY[kernelIdx];
+          }
+        }
+        
+        const magnitude = Math.sqrt(gx * gx + gy * gy);
+        edges[y * width + x] = Math.min(255, magnitude);
+      }
+    }
     
-    // 4. COMBINED DEPTH: Intelligent fusion of all depth layers
-    const combinedCanvas = this.fuseDepthMaps(primaryCanvas, structureCanvas, edgeCanvas);
+    // STEP 3: Normalize both arrays
+    const normalizedBrightness = this.normalizeArray(brightness);
+    const normalizedEdges = this.normalizeArray(edges);
     
+    // STEP 4: Combine with 0.3 edge weight, 0.7 brightness weight (Fast Mode default)
+    const combined = new Float32Array(width * height);
+    for (let i = 0; i < width * height; i++) {
+      combined[i] = normalizedEdges[i] * 0.3 + normalizedBrightness[i] * 0.7;
+    }
+    
+    // STEP 5: Normalize and smooth
+    const normalizedCombined = this.normalizeArray(combined);
+    const blurRadius = Math.max(2, Math.floor(blur));
+    const smoothed = this.gaussianBlurArray(normalizedCombined, width, height, blurRadius);
+    
+    // Create the combined depth canvas (primary output)
+    const combinedCanvas = document.createElement('canvas');
+    combinedCanvas.width = width;
+    combinedCanvas.height = height;
+    const combinedCtx = combinedCanvas.getContext('2d')!;
+    const combinedImageData = new ImageData(width, height);
+    
+    for (let i = 0; i < width * height; i++) {
+      const depthValue = Math.min(255, smoothed[i]);
+      const idx = i * 4;
+      combinedImageData.data[idx] = depthValue;
+      combinedImageData.data[idx + 1] = depthValue;
+      combinedImageData.data[idx + 2] = depthValue;
+      combinedImageData.data[idx + 3] = 255;
+    }
+    
+    combinedCtx.putImageData(combinedImageData, 0, 0);
+    
+    // Return same canvas for all outputs (simplified)
     return {
-      primaryDepth: primaryCanvas,
-      structureDepth: structureCanvas,
-      edgeDepth: edgeCanvas,
+      primaryDepth: combinedCanvas,
+      structureDepth: combinedCanvas,
+      edgeDepth: combinedCanvas,
       combinedDepth: combinedCanvas
     };
   }
-
+  
   /**
-   * OPTIMIZED: Create structure-aware depth map using canvas pool
+   * Normalize array to 0-255 range (Fast Mode helper)
    */
-  private createStructureDepthMap(imageData: ImageData, width: number, height: number): HTMLCanvasElement {
-    const canvas = this.canvasPool.acquire(width, height);
-    const ctx = canvas.getContext('2d')!;
+  private normalizeArray(arr: Float32Array): Float32Array {
+    let min = Infinity;
+    let max = -Infinity;
     
-    const data = imageData.data;
-    const structureData = new ImageData(width, height);
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i] < min) min = arr[i];
+      if (arr[i] > max) max = arr[i];
+    }
     
-    // Analyze local gradients and structures
-    for (let y = 1; y < height - 1; y++) {
-      for (let x = 1; x < width - 1; x++) {
-        const idx = (y * width + x) * 4;
-        
-        // Calculate gradients in all directions
-        const gradients = this.calculateGradients(data, x, y, width);
-        const gradientMagnitude = Math.sqrt(gradients.gx * gradients.gx + gradients.gy * gradients.gy);
-        
-        // Local contrast analysis for structure detection
-        const localContrast = this.calculateLocalContrast(data, x, y, width, height, 3);
-        
-        // Combine gradient and contrast for structure depth - reduced weights to prevent over-amplification
-        const structureDepth = Math.min(255, gradientMagnitude * 0.3 + localContrast * 0.5);
-        
-        structureData.data[idx] = structureData.data[idx + 1] = structureData.data[idx + 2] = structureDepth;
-        structureData.data[idx + 3] = 255;
+    const range = max - min;
+    const normalized = new Float32Array(arr.length);
+    
+    if (range > 0) {
+      for (let i = 0; i < arr.length; i++) {
+        normalized[i] = ((arr[i] - min) / range) * 255;
       }
     }
     
-    ctx.putImageData(structureData, 0, 0);
-    
-    // Smooth structure map
-    ctx.filter = 'blur(1px)';
-    ctx.drawImage(canvas, 0, 0);
-    ctx.filter = 'none';
-    
-    return canvas;
+    return normalized;
   }
-
+  
   /**
-   * OPTIMIZED: Create edge-preserving depth map using canvas pool
+   * Gaussian blur (Fast Mode helper)
    */
-  private createEdgeDepthMap(imageData: ImageData, width: number, height: number): HTMLCanvasElement {
-    const canvas = this.canvasPool.acquire(width, height);
-    const ctx = canvas.getContext('2d')!;
+  private gaussianBlurArray(data: Float32Array, width: number, height: number, radius: number): Float32Array {
+    const blurred = new Float32Array(width * height);
+    const kernel: number[] = [];
+    let kernelSum = 0;
     
-    const data = imageData.data;
-    const edgeData = new ImageData(width, height);
+    // Generate 1D Gaussian kernel
+    for (let i = -radius; i <= radius; i++) {
+      const value = Math.exp(-(i * i) / (2 * radius * radius));
+      kernel.push(value);
+      kernelSum += value;
+    }
     
-    // Sobel edge detection with depth assignment
-    for (let y = 1; y < height - 1; y++) {
-      for (let x = 1; x < width - 1; x++) {
-        const idx = (y * width + x) * 4;
-        
-        // Sobel operators
-        const sobelX = this.applySobelX(data, x, y, width);
-        const sobelY = this.applySobelY(data, x, y, width);
-        const edgeStrength = Math.sqrt(sobelX * sobelX + sobelY * sobelY);
-        
-        // Edge-based depth: reduced multiplier to prevent edge over-emphasis
-        const edgeDepth = Math.min(255, edgeStrength * 1.2);
-        
-        edgeData.data[idx] = edgeData.data[idx + 1] = edgeData.data[idx + 2] = 255 - edgeDepth; // Invert for depth
-        edgeData.data[idx + 3] = 255;
+    // Normalize kernel
+    for (let i = 0; i < kernel.length; i++) {
+      kernel[i] /= kernelSum;
+    }
+    
+    // Horizontal pass
+    const temp = new Float32Array(width * height);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let sum = 0;
+        for (let i = -radius; i <= radius; i++) {
+          const sx = Math.max(0, Math.min(width - 1, x + i));
+          sum += data[y * width + sx] * kernel[i + radius];
+        }
+        temp[y * width + x] = sum;
       }
     }
     
-    ctx.putImageData(edgeData, 0, 0);
-    return canvas;
-  }
-
-  /**
-   * OPTIMIZED: Intelligently fuse multiple depth maps using canvas pool
-   */
-  private fuseDepthMaps(primary: HTMLCanvasElement, structure: HTMLCanvasElement, edge: HTMLCanvasElement): HTMLCanvasElement {
-    const canvas = this.canvasPool.acquire(primary.width, primary.height);
-    const ctx = canvas.getContext('2d')!;
-    
-    const width = primary.width;
-    const height = primary.height;
-    
-    // Get data from all depth maps
-    const primaryData = primary.getContext('2d')!.getImageData(0, 0, width, height);
-    const structureData = structure.getContext('2d')!.getImageData(0, 0, width, height);
-    const edgeData = edge.getContext('2d')!.getImageData(0, 0, width, height);
-    
-    const fusedData = new ImageData(width, height);
-    
-    for (let i = 0; i < primaryData.data.length; i += 4) {
-      const primaryVal = primaryData.data[i] / 255;
-      const structureVal = structureData.data[i] / 255;
-      const edgeVal = edgeData.data[i] / 255;
-      
-      // Simplified fusion focusing on primary luminance to match Fast Mode's approach
-      const structureWeight = Math.min(1, structureVal * 1.2);
-      const edgeWeight = Math.min(1, (1 - edgeVal) * 1.0);
-      
-      // More weight on primary depth, less on structure/edge to prevent artifacts
-      const fusedVal = (
-        primaryVal * 0.7 +
-        structureVal * structureWeight * 0.15 +
-        edgeVal * edgeWeight * 0.15
-      ) * 255;
-      
-      fusedData.data[i] = fusedData.data[i + 1] = fusedData.data[i + 2] = Math.min(255, fusedVal);
-      fusedData.data[i + 3] = 255;
+    // Vertical pass
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let sum = 0;
+        for (let i = -radius; i <= radius; i++) {
+          const sy = Math.max(0, Math.min(height - 1, y + i));
+          sum += temp[sy * width + x] * kernel[i + radius];
+        }
+        blurred[y * width + x] = sum;
+      }
     }
     
-    ctx.putImageData(fusedData, 0, 0);
-    
-    // Final smoothing
-    ctx.filter = 'blur(0.5px)';
-    ctx.drawImage(canvas, 0, 0);
-    ctx.filter = 'none';
-    
-    return canvas;
+    return blurred;
   }
+
 
   /**
    * Calculate gradients at a point
