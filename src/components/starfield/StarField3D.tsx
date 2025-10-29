@@ -998,7 +998,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
       // Layer 12: Smallest/dimmest stars (farthest, slowest movement)
       if (starLayers.layer12) {
         ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.85;
+        ctx.globalAlpha = 1.0; // Increased from 0.85
         const scale = offsetsRef.current.layer12.scale;
         const scaledWidth = cachedDimensions.current.layer12ScaledWidth * scale;
         const scaledHeight = cachedDimensions.current.layer12ScaledHeight * scale;
@@ -1010,7 +1010,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
       // Layer 11
       if (starLayers.layer11) {
         ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.87;
+        ctx.globalAlpha = 1.0; // Increased from 0.87
         const scale = offsetsRef.current.layer11.scale;
         const scaledWidth = cachedDimensions.current.layer11ScaledWidth * scale;
         const scaledHeight = cachedDimensions.current.layer11ScaledHeight * scale;
@@ -1022,7 +1022,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
       // Layer 10
       if (starLayers.layer10) {
         ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.89;
+        ctx.globalAlpha = 1.0; // Increased from 0.89
         const scale = offsetsRef.current.layer10.scale;
         const scaledWidth = cachedDimensions.current.layer10ScaledWidth * scale;
         const scaledHeight = cachedDimensions.current.layer10ScaledHeight * scale;
@@ -1034,7 +1034,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
       // Layer 9
       if (starLayers.layer9) {
         ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.91;
+        ctx.globalAlpha = 1.0; // Increased from 0.91
         const scale = offsetsRef.current.layer9.scale;
         const scaledWidth = cachedDimensions.current.layer9ScaledWidth * scale;
         const scaledHeight = cachedDimensions.current.layer9ScaledHeight * scale;
@@ -1046,7 +1046,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
       // Layer 8
       if (starLayers.layer8) {
         ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.93;
+        ctx.globalAlpha = 1.0; // Increased from 0.93
         const scale = offsetsRef.current.layer8.scale;
         const scaledWidth = cachedDimensions.current.layer8ScaledWidth * scale;
         const scaledHeight = cachedDimensions.current.layer8ScaledHeight * scale;
@@ -1058,7 +1058,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
       // Layer 7
       if (starLayers.layer7) {
         ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.95;
+        ctx.globalAlpha = 1.0; // Increased from 0.95
         const scale = offsetsRef.current.layer7.scale;
         const scaledWidth = cachedDimensions.current.layer7ScaledWidth * scale;
         const scaledHeight = cachedDimensions.current.layer7ScaledHeight * scale;
@@ -1070,7 +1070,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
       // Layer 6
       if (starLayers.layer6) {
         ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.97;
+        ctx.globalAlpha = 1.0; // Increased from 0.97
         const scale = offsetsRef.current.layer6.scale;
         const scaledWidth = cachedDimensions.current.layer6ScaledWidth * scale;
         const scaledHeight = cachedDimensions.current.layer6ScaledHeight * scale;
@@ -1082,7 +1082,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
       // Layer 5
       if (starLayers.layer5) {
         ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.95;
+        ctx.globalAlpha = 1.0; // Increased from 0.95
         const scale = offsetsRef.current.layer5.scale;
         const scaledWidth = cachedDimensions.current.layer5ScaledWidth * scale;
         const scaledHeight = cachedDimensions.current.layer5ScaledHeight * scale;
@@ -1090,6 +1090,14 @@ const StarField3D: React.FC<StarField3DProps> = ({
         const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer5.y;
         ctx.drawImage(starLayers.layer5, drawX, drawY, scaledWidth, scaledHeight);
       }
+      
+      // Apply contrast enhancement for darker tones
+      ctx.save();
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.globalAlpha = 0.15; // Subtle darkening
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
       
       // Layer 4
       if (starLayers.layer4) {
