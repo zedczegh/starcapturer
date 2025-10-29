@@ -115,6 +115,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
     scale2: number;
     scale3: number;
     scaleBg: number;
+    anchorX: number;
+    anchorY: number;
   } | null>(null);
   
   // Cache calculated dimensions to avoid recalculation every frame
@@ -832,11 +834,6 @@ const StarField3D: React.FC<StarField3DProps> = ({
     // Calculate zoom/pan with ENHANCED parallax that respects stereoscopic displacement
     const progressRatio = progress / 100;
     
-    // Check if we can skip recalculation (performance optimization)
-    const stateChanged = !lastRenderState.current || 
-      lastRenderState.current.progress !== progress ||
-      lastRenderState.current.motionType !== motionType;
-    
     // Calculate rotation angle based on progress, spin setting, and direction
     const rotationMultiplier = spinDirection === 'counterclockwise' ? -1 : 1;
     const currentRotation = (spin * progressRatio * Math.PI * rotationMultiplier) / 180; // Convert to radians
@@ -964,6 +961,13 @@ const StarField3D: React.FC<StarField3DProps> = ({
     // Normalize anchor point to 0-1 range
     const anchorNormX = effectiveAnchor.x / canvas.width;
     const anchorNormY = effectiveAnchor.y / canvas.height;
+    
+    // Check if we can skip recalculation (performance optimization)
+    const stateChanged = !lastRenderState.current || 
+      lastRenderState.current.progress !== progress ||
+      lastRenderState.current.motionType !== motionType ||
+      lastRenderState.current.anchorX !== effectiveAnchor.x ||
+      lastRenderState.current.anchorY !== effectiveAnchor.y;
     
     // Only recalculate offsets if state changed
     if (stateChanged) {
@@ -1264,7 +1268,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
         scale1: offsetsRef.current.layer1.scale,
         scale2: offsetsRef.current.layer2.scale,
         scale3: offsetsRef.current.layer3.scale,
-        scaleBg: offsetsRef.current.background.scale
+        scaleBg: offsetsRef.current.background.scale,
+        anchorX: effectiveAnchor.x,
+        anchorY: effectiveAnchor.y
       };
     }
     
@@ -1451,7 +1457,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
     if (!videoProgressRef) {
       animationFrameRef.current = requestAnimationFrame(animate);
     }
-  }, [isAnimating, settings, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete, controlledProgress, videoProgressRef, depthIntensity]);
+  }, [isAnimating, settings, backgroundImg, starLayers, onProgressUpdate, onAnimationComplete, controlledProgress, videoProgressRef, depthIntensity, internalAnchorPoint]);
 
   // Trigger frame rendering when frameRenderTrigger changes (for video generation)
   // Reset progress when external progress is set to 0 (replay triggered)
@@ -1630,12 +1636,20 @@ const StarField3D: React.FC<StarField3DProps> = ({
     const newAnchor = { x, y };
     setInternalAnchorPoint(newAnchor);
     
+    // Clear cached render state to force recalculation
+    lastRenderState.current = null;
+    
+    // Trigger immediate re-render of static frame
+    if (!isAnimating && animate) {
+      requestAnimationFrame(() => animate());
+    }
+    
     if (onAnchorPointChange) {
       onAnchorPointChange(newAnchor);
     }
     
     console.log('🎯 Anchor point set:', newAnchor);
-  }, [isAnimating, isRecording, onAnchorPointChange]);
+  }, [isAnimating, isRecording, onAnchorPointChange, animate]);
 
   if (stars.length === 0) {
     return (
