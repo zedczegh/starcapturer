@@ -1062,61 +1062,109 @@ const StarField3D: React.FC<StarField3DProps> = ({
         offsetsRef.current.layer1.x = l1.x;
         offsetsRef.current.layer1.y = l1.y;
       } else if (motionType === 'zoom_out') {
-        // Zoom out with anchor point-based motion
-        const calculateAnchorBasedScaleOut = (baseParallax: number, layerKey: string) => {
-          const centerDist = Math.sqrt(
-            Math.pow(anchorNormX - 0.5, 2) + Math.pow(anchorNormY - 0.5, 2)
-          );
-          const speedMultiplier = 1.0 + (1.0 - centerDist) * 0.5;
-          const maxScale = 1.0 + (ampFactor * baseParallax * parallaxMultipliers[layerKey] * speedMultiplier);
-          return maxScale - (progressRatio * ampFactor * baseParallax * parallaxMultipliers[layerKey] * speedMultiplier);
+        // Zoom out: elements contract back TOWARDS the anchor point (vanishing point)
+        // This is the reverse of zoom_in
+        
+        // Calculate scales starting from max and decreasing
+        const calculateMaxScale = (baseParallax: number, layerKey: string) => {
+          return 1.0 + (ampFactor * baseParallax * parallaxMultipliers[layerKey]);
         };
         
-        offsetsRef.current.background.scale = calculateAnchorBasedScaleOut(1.0, 'background');
-        offsetsRef.current.layer12.scale = calculateAnchorBasedScaleOut(0.35, 'layer12');
-        offsetsRef.current.layer11.scale = calculateAnchorBasedScaleOut(0.37, 'layer11');
-        offsetsRef.current.layer10.scale = calculateAnchorBasedScaleOut(0.39, 'layer10');
-        offsetsRef.current.layer9.scale = calculateAnchorBasedScaleOut(0.41, 'layer9');
-        offsetsRef.current.layer8.scale = calculateAnchorBasedScaleOut(0.43, 'layer8');
-        offsetsRef.current.layer7.scale = calculateAnchorBasedScaleOut(0.45, 'layer7');
-        offsetsRef.current.layer6.scale = calculateAnchorBasedScaleOut(0.5, 'layer6');
-        offsetsRef.current.layer5.scale = calculateAnchorBasedScaleOut(0.6, 'layer5');
-        offsetsRef.current.layer4.scale = calculateAnchorBasedScaleOut(0.7, 'layer4');
-        offsetsRef.current.layer3.scale = calculateAnchorBasedScaleOut(0.8, 'layer3');
-        offsetsRef.current.layer2.scale = calculateAnchorBasedScaleOut(0.9, 'layer2');
-        offsetsRef.current.layer1.scale = calculateAnchorBasedScaleOut(1.0, 'layer1');
+        const bgMaxScale = calculateMaxScale(1.0, 'background');
+        const l12MaxScale = calculateMaxScale(0.35, 'layer12');
+        const l11MaxScale = calculateMaxScale(0.37, 'layer11');
+        const l10MaxScale = calculateMaxScale(0.39, 'layer10');
+        const l9MaxScale = calculateMaxScale(0.41, 'layer9');
+        const l8MaxScale = calculateMaxScale(0.43, 'layer8');
+        const l7MaxScale = calculateMaxScale(0.45, 'layer7');
+        const l6MaxScale = calculateMaxScale(0.5, 'layer6');
+        const l5MaxScale = calculateMaxScale(0.6, 'layer5');
+        const l4MaxScale = calculateMaxScale(0.7, 'layer4');
+        const l3MaxScale = calculateMaxScale(0.8, 'layer3');
+        const l2MaxScale = calculateMaxScale(0.9, 'layer2');
+        const l1MaxScale = calculateMaxScale(1.0, 'layer1');
         
-        // Apply offset away from anchor point (inverse of zoom in)
-        const offsetStrength = (1 - progressRatio) * 100 * ampFactor;
-        const offsetX = (anchorNormX - 0.5) * offsetStrength;
-        const offsetY = (anchorNormY - 0.5) * offsetStrength;
+        // Scale down from max to normal
+        offsetsRef.current.background.scale = bgMaxScale - (progressRatio * (bgMaxScale - 1.0));
+        offsetsRef.current.layer12.scale = l12MaxScale - (progressRatio * (l12MaxScale - 1.0));
+        offsetsRef.current.layer11.scale = l11MaxScale - (progressRatio * (l11MaxScale - 1.0));
+        offsetsRef.current.layer10.scale = l10MaxScale - (progressRatio * (l10MaxScale - 1.0));
+        offsetsRef.current.layer9.scale = l9MaxScale - (progressRatio * (l9MaxScale - 1.0));
+        offsetsRef.current.layer8.scale = l8MaxScale - (progressRatio * (l8MaxScale - 1.0));
+        offsetsRef.current.layer7.scale = l7MaxScale - (progressRatio * (l7MaxScale - 1.0));
+        offsetsRef.current.layer6.scale = l6MaxScale - (progressRatio * (l6MaxScale - 1.0));
+        offsetsRef.current.layer5.scale = l5MaxScale - (progressRatio * (l5MaxScale - 1.0));
+        offsetsRef.current.layer4.scale = l4MaxScale - (progressRatio * (l4MaxScale - 1.0));
+        offsetsRef.current.layer3.scale = l3MaxScale - (progressRatio * (l3MaxScale - 1.0));
+        offsetsRef.current.layer2.scale = l2MaxScale - (progressRatio * (l2MaxScale - 1.0));
+        offsetsRef.current.layer1.scale = l1MaxScale - (progressRatio * (l1MaxScale - 1.0));
         
-        offsetsRef.current.background.x = offsetX * parallaxMultipliers.background;
-        offsetsRef.current.background.y = offsetY * parallaxMultipliers.background;
-        offsetsRef.current.layer12.x = offsetX * parallaxMultipliers.layer12;
-        offsetsRef.current.layer12.y = offsetY * parallaxMultipliers.layer12;
-        offsetsRef.current.layer11.x = offsetX * parallaxMultipliers.layer11;
-        offsetsRef.current.layer11.y = offsetY * parallaxMultipliers.layer11;
-        offsetsRef.current.layer10.x = offsetX * parallaxMultipliers.layer10;
-        offsetsRef.current.layer10.y = offsetY * parallaxMultipliers.layer10;
-        offsetsRef.current.layer9.x = offsetX * parallaxMultipliers.layer9;
-        offsetsRef.current.layer9.y = offsetY * parallaxMultipliers.layer9;
-        offsetsRef.current.layer8.x = offsetX * parallaxMultipliers.layer8;
-        offsetsRef.current.layer8.y = offsetY * parallaxMultipliers.layer8;
-        offsetsRef.current.layer7.x = offsetX * parallaxMultipliers.layer7;
-        offsetsRef.current.layer7.y = offsetY * parallaxMultipliers.layer7;
-        offsetsRef.current.layer6.x = offsetX * parallaxMultipliers.layer6;
-        offsetsRef.current.layer6.y = offsetY * parallaxMultipliers.layer6;
-        offsetsRef.current.layer5.x = offsetX * parallaxMultipliers.layer5;
-        offsetsRef.current.layer5.y = offsetY * parallaxMultipliers.layer5;
-        offsetsRef.current.layer4.x = offsetX * parallaxMultipliers.layer4;
-        offsetsRef.current.layer4.y = offsetY * parallaxMultipliers.layer4;
-        offsetsRef.current.layer3.x = offsetX * parallaxMultipliers.layer3;
-        offsetsRef.current.layer3.y = offsetY * parallaxMultipliers.layer3;
-        offsetsRef.current.layer2.x = offsetX * parallaxMultipliers.layer2;
-        offsetsRef.current.layer2.y = offsetY * parallaxMultipliers.layer2;
-        offsetsRef.current.layer1.x = offsetX * parallaxMultipliers.layer1;
-        offsetsRef.current.layer1.y = offsetY * parallaxMultipliers.layer1;
+        // Perspective motion: elements contract TOWARDS the anchor point
+        // Reverse of zoom_in - elements move back towards the vanishing point
+        const perspectiveStrength = (1 - progressRatio) * 250 * ampFactor;
+        
+        const applyContraction = (layerDepthFactor: number) => {
+          // Direction from anchor point (they return towards it)
+          const dirFromAnchorX = 0.5 - anchorNormX;
+          const dirFromAnchorY = 0.5 - anchorNormY;
+          
+          return {
+            x: dirFromAnchorX * perspectiveStrength * layerDepthFactor,
+            y: dirFromAnchorY * perspectiveStrength * layerDepthFactor
+          };
+        };
+        
+        const bg = applyContraction(parallaxMultipliers.background * 0.2);
+        offsetsRef.current.background.x = bg.x;
+        offsetsRef.current.background.y = bg.y;
+        
+        const l12 = applyContraction(parallaxMultipliers.layer12 * 0.3);
+        offsetsRef.current.layer12.x = l12.x;
+        offsetsRef.current.layer12.y = l12.y;
+        
+        const l11 = applyContraction(parallaxMultipliers.layer11 * 0.35);
+        offsetsRef.current.layer11.x = l11.x;
+        offsetsRef.current.layer11.y = l11.y;
+        
+        const l10 = applyContraction(parallaxMultipliers.layer10 * 0.4);
+        offsetsRef.current.layer10.x = l10.x;
+        offsetsRef.current.layer10.y = l10.y;
+        
+        const l9 = applyContraction(parallaxMultipliers.layer9 * 0.5);
+        offsetsRef.current.layer9.x = l9.x;
+        offsetsRef.current.layer9.y = l9.y;
+        
+        const l8 = applyContraction(parallaxMultipliers.layer8 * 0.6);
+        offsetsRef.current.layer8.x = l8.x;
+        offsetsRef.current.layer8.y = l8.y;
+        
+        const l7 = applyContraction(parallaxMultipliers.layer7 * 0.7);
+        offsetsRef.current.layer7.x = l7.x;
+        offsetsRef.current.layer7.y = l7.y;
+        
+        const l6 = applyContraction(parallaxMultipliers.layer6 * 0.8);
+        offsetsRef.current.layer6.x = l6.x;
+        offsetsRef.current.layer6.y = l6.y;
+        
+        const l5 = applyContraction(parallaxMultipliers.layer5 * 0.9);
+        offsetsRef.current.layer5.x = l5.x;
+        offsetsRef.current.layer5.y = l5.y;
+        
+        const l4 = applyContraction(parallaxMultipliers.layer4 * 1.0);
+        offsetsRef.current.layer4.x = l4.x;
+        offsetsRef.current.layer4.y = l4.y;
+        
+        const l3 = applyContraction(parallaxMultipliers.layer3 * 1.1);
+        offsetsRef.current.layer3.x = l3.x;
+        offsetsRef.current.layer3.y = l3.y;
+        
+        const l2 = applyContraction(parallaxMultipliers.layer2 * 1.3);
+        offsetsRef.current.layer2.x = l2.x;
+        offsetsRef.current.layer2.y = l2.y;
+        
+        const l1 = applyContraction(parallaxMultipliers.layer1 * 1.5);
+        offsetsRef.current.layer1.x = l1.x;
+        offsetsRef.current.layer1.y = l1.y;
       } else if (motionType === 'pan_left') {
         // Pan left with anchor point affecting direction and speed
         const panAmount = progressRatio * speed * 250 * ampFactor;
