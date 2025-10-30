@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Upload, Video, Sparkles, Eye, Settings2, Download, ChevronDown, RotateCcw, Info } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { VideoGenerationService, MotionSettings } from '@/services/VideoGenerationService';
@@ -1685,134 +1686,134 @@ const ParallelVideoGenerator: React.FC = () => {
               </div>
             </CardHeader>
 
-            <CardContent className="space-y-6">
-              {/* Motion Settings Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Motion Type */}
-                <div className="space-y-2">
-                  <Label className="text-cosmic-200">{t('Motion Type', '运动类型')}</Label>
-                  <Select
-                    value={motionSettings.motionType}
-                    onValueChange={(value: any) => 
-                      setMotionSettings({ ...motionSettings, motionType: value })
-                    }
-                  >
-                    <SelectTrigger className="bg-cosmic-800/50 border-cosmic-700">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="zoom_in">{t('Zoom In', '拉近')}</SelectItem>
-                      <SelectItem value="zoom_out">{t('Zoom Out', '拉远')}</SelectItem>
-                      <SelectItem value="pan_left">{t('Pan Left', '向左平移')}</SelectItem>
-                      <SelectItem value="pan_right">{t('Pan Right', '向右平移')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <Label className="text-cosmic-200">{t('Motion Type', '动作类型')}</Label>
+                <Select
+                  value={motionSettings.motionType}
+                  onValueChange={(value) => setMotionSettings(prev => ({...prev, motionType: value as any}))}
+                >
+                  <SelectTrigger className="bg-cosmic-800/50 border-cosmic-700/50 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-cosmic-800 border-cosmic-700">
+                    <SelectItem value="zoom_in" className="text-white hover:bg-cosmic-700">
+                      {t('Zoom In (Fly Forward)', '放大（向前飞行）')}
+                    </SelectItem>
+                    <SelectItem value="zoom_out" className="text-white hover:bg-cosmic-700">
+                      {t('Zoom Out (Fly Backward)', '缩小（向后飞行）')}
+                    </SelectItem>
+                    <SelectItem value="pan_left" className="text-white hover:bg-cosmic-700">
+                      {t('Pan Left', '向左平移')}
+                    </SelectItem>
+                    <SelectItem value="pan_right" className="text-white hover:bg-cosmic-700">
+                      {t('Pan Right', '向右平移')}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                {/* Duration */}
-                <div className="space-y-2">
-                  <Label className="text-cosmic-200 flex justify-between">
-                    <span>{t('Duration', '时长')}</span>
-                    <span className="text-blue-400 font-mono">{motionSettings.duration}s</span>
-                  </Label>
-                  <Slider
-                    value={[motionSettings.duration]}
-                    onValueChange={([value]) => 
-                      setMotionSettings({ ...motionSettings, duration: value })
-                    }
-                    min={5}
-                    max={60}
-                    step={5}
-                  />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-cosmic-200">{t('Motion Amplification', '动作放大')}</Label>
+                  <span className="text-cosmic-300 text-sm font-semibold">{motionSettings.amplification}%</span>
                 </div>
+                <Slider
+                  value={[motionSettings.amplification]}
+                  onValueChange={(value) => setMotionSettings(prev => ({
+                    ...prev, 
+                    amplification: value[0],
+                    speed: (value[0] / 100) * (60 / prev.duration)
+                  }))}
+                  min={100}
+                  max={300}
+                  step={10}
+                  className="w-full"
+                />
+                <p className="text-xs text-cosmic-400">
+                  {t('Higher amplification = faster motion through space', '更高的放大倍数 = 更快的空间移动速度')}
+                </p>
+              </div>
 
-                {/* Speed */}
-                <div className="space-y-2">
-                  <Label className="text-cosmic-200 flex justify-between">
-                    <span>{t('Speed', '速度')}</span>
-                    <span className="text-blue-400 font-mono">{motionSettings.speed.toFixed(1)}x</span>
-                  </Label>
-                  <Slider
-                    value={[motionSettings.speed]}
-                    onValueChange={([value]) => 
-                      setMotionSettings({ ...motionSettings, speed: value })
-                    }
-                    min={0.5}
-                    max={3}
-                    step={0.1}
-                  />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-cosmic-200">{t('Spin Angle', '旋转角度')}</Label>
+                  <span className="text-cosmic-300 text-sm font-semibold">{motionSettings.spin}°</span>
                 </div>
-
-                {/* Amplification */}
+                <Slider
+                  value={[motionSettings.spin]}
+                  onValueChange={(value) => setMotionSettings(prev => ({
+                    ...prev, 
+                    spin: value[0]
+                  }))}
+                  min={0}
+                  max={90}
+                  step={5}
+                  className="w-full"
+                />
                 <div className="space-y-2">
-                  <Label className="text-cosmic-200 flex justify-between">
-                    <span>{t('Amplification', '放大')}</span>
-                    <span className="text-blue-400 font-mono">{motionSettings.amplification}%</span>
-                  </Label>
-                  <Slider
-                    value={[motionSettings.amplification]}
-                    onValueChange={([value]) => 
-                      setMotionSettings({ ...motionSettings, amplification: value })
-                    }
-                    min={100}
-                    max={300}
-                    step={10}
-                  />
-                </div>
-
-                {/* Spin Amount */}
-                <div className="space-y-2">
-                  <Label className="text-cosmic-200 flex justify-between">
-                    <span>{t('Spin Amount', '旋转量')}</span>
-                    <span className="text-blue-400 font-mono">{motionSettings.spin}°</span>
-                  </Label>
-                  <Slider
-                    value={[motionSettings.spin]}
-                    onValueChange={([value]) => 
-                      setMotionSettings({ ...motionSettings, spin: value })
-                    }
-                    min={0}
-                    max={90}
-                    step={5}
-                  />
-                </div>
-
-                {/* Spin Direction */}
-                <div className="space-y-2">
-                  <Label className="text-cosmic-200">{t('Spin Direction', '旋转方向')}</Label>
-                  <Select
+                  <Label className="text-cosmic-200 text-xs">{t('Spin Direction', '旋转方向')}</Label>
+                  <RadioGroup
                     value={motionSettings.spinDirection}
-                    onValueChange={(value: any) => 
-                      setMotionSettings({ ...motionSettings, spinDirection: value })
+                    onValueChange={(value: 'clockwise' | 'counterclockwise') => 
+                      setMotionSettings(prev => ({ ...prev, spinDirection: value }))
                     }
+                    className="flex gap-4"
                   >
-                    <SelectTrigger className="bg-cosmic-800/50 border-cosmic-700">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="clockwise">{t('Clockwise', '顺时针')}</SelectItem>
-                      <SelectItem value="counterclockwise">{t('Counterclockwise', '逆时针')}</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="clockwise" id="clockwise" />
+                      <Label htmlFor="clockwise" className="text-cosmic-300 text-sm cursor-pointer">
+                        {t('Clockwise', '顺时针')}
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="counterclockwise" id="counterclockwise" />
+                      <Label htmlFor="counterclockwise" className="text-cosmic-300 text-sm cursor-pointer">
+                        {t('Counter-clockwise', '逆时针')}
+                      </Label>
+                    </div>
+                  </RadioGroup>
                 </div>
+                <p className="text-xs text-cosmic-400">
+                  {t('Rotation angle during animation (0° = no rotation)', '动画期间的旋转角度（0° = 无旋转）')}
+                </p>
+              </div>
 
-                {/* Depth Intensity */}
-                <div className="space-y-2 md:col-span-3">
-                  <Label className="text-cosmic-200 flex justify-between">
-                    <span>{t('3D Depth Intensity', '3D深度强度')}</span>
-                    <span className="text-blue-400 font-mono">{depthIntensity}</span>
-                  </Label>
-                  <Slider
-                    value={[depthIntensity]}
-                    onValueChange={([value]) => setDepthIntensity(value)}
-                    min={0}
-                    max={500}
-                    step={5}
-                  />
-                  <p className="text-xs text-cosmic-400">
-                    {t('Controls the parallax effect intensity', '控制视差效果强度')}
-                  </p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-cosmic-200">{t('3D Intensity', '3D强度')}</Label>
+                  <span className="text-amber-400 font-mono text-sm font-semibold">{depthIntensity}%</span>
                 </div>
+                <Slider
+                  value={[depthIntensity]}
+                  onValueChange={(value) => setDepthIntensity(value[0])}
+                  min={0}
+                  max={500}
+                  step={5}
+                  className="w-full"
+                />
+                <p className="text-xs text-cosmic-400">
+                  {t('Controls the depth range of the 3D parallax effect (higher = more dramatic)', '控制3D视差效果的深度范围（越高越戏剧化）')}
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-cosmic-200">{t('Duration (seconds)', '持续时间（秒）')}</Label>
+                  <span className="text-amber-400 font-mono text-sm font-semibold">{motionSettings.duration}s</span>
+                </div>
+                <Slider
+                  value={[motionSettings.duration]}
+                  onValueChange={(value) => setMotionSettings(prev => ({
+                    ...prev, 
+                    duration: value[0],
+                    speed: (prev.amplification / 100) * (60 / value[0])
+                  }))}
+                  min={5}
+                  max={60}
+                  step={5}
+                  className="w-full"
+                />
               </div>
 
               <Separator className="bg-cosmic-700/30" />
