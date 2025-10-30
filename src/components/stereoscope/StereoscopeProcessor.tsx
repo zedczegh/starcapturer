@@ -15,7 +15,7 @@ import { generateSimpleDepthMap, detectStars, type SimpleDepthParams } from '@/l
 import { TraditionalMorphProcessor, type TraditionalInputs, type TraditionalMorphParams } from '@/lib/traditionalMorphMode';
 import { NobelPrizeStereoscopeEngine } from '@/lib/advanced/NobelPrizeStereoscopeEngine';
 import { calculateStereoscopicDisplacement } from '@/lib/astronomicalCalculations';
-import { cmosSensors } from '@/data/cmosSensors';
+import { cmosSensors, getSensorsByCategory } from '@/data/cmosSensors';
 import JSZip from 'jszip';
 // @ts-ignore
 import * as UTIF from 'utif';
@@ -1014,15 +1014,11 @@ const StereoscopeProcessor: React.FC = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px]">
-                        <SelectItem value="IMX294">IMX294 (4.63μm) - Deep Sky</SelectItem>
-                        <SelectItem value="IMX533">IMX533 (3.76μm) - Deep Sky</SelectItem>
-                        <SelectItem value="IMX571">IMX571 (3.76μm) - Deep Sky</SelectItem>
-                        <SelectItem value="IMX183">IMX183 (2.4μm) - Deep Sky</SelectItem>
-                        <SelectItem value="ASI294MC">ASI294MC (4.63μm) - Deep Sky</SelectItem>
-                        <SelectItem value="ASI533MC">ASI533MC (3.76μm) - Deep Sky</SelectItem>
-                        <SelectItem value="ASI2600MC">ASI2600MC (3.76μm) - Deep Sky</SelectItem>
-                        <SelectItem value="QHY600M">QHY600M (3.76μm) - Deep Sky</SelectItem>
-                        <SelectItem value="QHY268C">QHY268C (3.76μm) - Deep Sky</SelectItem>
+                        {getSensorsByCategory('Deep Sky').slice(0, 15).map(sensor => (
+                          <SelectItem key={sensor.name} value={sensor.name}>
+                            {sensor.name} ({sensor.pixelSize}μm) - {sensor.manufacturer}
+                          </SelectItem>
+                        ))}
                         <SelectItem value="custom">{t('Custom Pixel Size', '自定义像素尺寸')}</SelectItem>
                       </SelectContent>
                     </Select>
@@ -1063,47 +1059,50 @@ const StereoscopeProcessor: React.FC = () => {
                         <p className="font-semibold text-blue-400 mb-2">
                           {t('Distance to Parallax Converter:', '距离视差转换器：')}
                         </p>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min="50"
-                            max="10000"
-                            placeholder={t('Light years', '光年')}
-                            className="flex-1 px-2 py-1 bg-cosmic-800/50 border border-cosmic-700/50 rounded text-xs text-cosmic-200 focus:outline-none focus:border-blue-500/50"
-                            onChange={(e) => {
-                              const ly = parseFloat(e.target.value);
-                              if (!isNaN(ly) && ly > 0) {
-                                // Use scientific calculation
-                                const pixelSize = getCurrentPixelSize();
-                                const result = calculateStereoscopicDisplacement(
-                                  ly,
-                                  1.0, // 1 AU baseline
-                                  focalLength,
-                                  pixelSize
-                                );
-                                const resultElement = e.target.nextElementSibling;
-                                if (resultElement) {
-                                  resultElement.textContent = `≈ ${Math.round(result.constrainedDisplacement)}px`;
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <input
+                              id="distance-input-stereo"
+                              type="number"
+                              min="50"
+                              max="10000"
+                              placeholder={t('Light years', '光年')}
+                              className="flex-1 px-2 py-1 bg-cosmic-800/50 border border-cosmic-700/50 rounded text-xs text-cosmic-200 focus:outline-none focus:border-blue-500/50"
+                              onChange={(e) => {
+                                const ly = parseFloat(e.target.value);
+                                const resultSpan = document.getElementById('converter-result-stereo');
+                                const detailsDiv = document.getElementById('converter-details-stereo');
+                                
+                                if (!isNaN(ly) && ly > 0 && resultSpan && detailsDiv) {
+                                  // Use scientific calculation
+                                  const pixelSize = getCurrentPixelSize();
+                                  const result = calculateStereoscopicDisplacement(
+                                    ly,
+                                    1.0, // 1 AU baseline
+                                    focalLength,
+                                    pixelSize
+                                  );
                                   
-                                  // Show detailed results below
-                                  const detailsElement = resultElement.nextElementSibling;
-                                  if (detailsElement) {
-                                    detailsElement.innerHTML = `
-                                      <div class="text-[10px] space-y-0.5 text-cosmic-400">
-                                        <p>• Parallax Angle: <span class="text-blue-300">${result.parallaxAngle.toFixed(4)}"</span></p>
-                                        <p>• Plate Scale: <span class="text-blue-300">${result.plateScale.toFixed(3)}"/px</span></p>
-                                        ${result.isConstrained ? `<p>• Real Displacement: <span class="text-orange-300">${result.realDisplacement.toFixed(2)}px</span> (too ${result.realDisplacement < 3 ? 'small' : 'large'})</p>` : ''}
-                                        <p class="text-green-400 font-semibold">✓ Suggested: <span class="text-amber-300">${Math.round(result.constrainedDisplacement)}px</span> for viewing</p>
-                                      </div>
-                                    `;
-                                  }
+                                  resultSpan.textContent = `≈ ${Math.round(result.constrainedDisplacement)}px`;
+                                  
+                                  detailsDiv.innerHTML = `
+                                    <div class="text-[10px] space-y-0.5 text-cosmic-400">
+                                      <p>• Parallax Angle: <span class="text-blue-300">${result.parallaxAngle.toFixed(4)}"</span></p>
+                                      <p>• Plate Scale: <span class="text-blue-300">${result.plateScale.toFixed(3)}"/px</span></p>
+                                      ${result.isConstrained ? `<p>• Real Displacement: <span class="text-orange-300">${result.realDisplacement.toFixed(2)}px</span> (too ${result.realDisplacement < 3 ? 'small' : 'large'})</p>` : ''}
+                                      <p class="text-green-400 font-semibold">✓ Suggested: <span class="text-amber-300">${Math.round(result.constrainedDisplacement)}px</span> for viewing</p>
+                                    </div>
+                                  `;
+                                } else if (resultSpan && detailsDiv) {
+                                  resultSpan.textContent = '≈ 0px';
+                                  detailsDiv.innerHTML = '';
                                 }
-                              }
-                            }}
-                          />
-                          <span className="text-amber-300 font-mono min-w-[60px]">≈ 0px</span>
+                              }}
+                            />
+                            <span id="converter-result-stereo" className="text-amber-300 font-mono min-w-[60px]">≈ 0px</span>
+                          </div>
+                          <div id="converter-details-stereo" className="min-h-[60px]"></div>
                         </div>
-                        <div id="converter-details" className="mt-2"></div>
                         <p className="text-[10px] text-cosmic-400 mt-1 italic">
                           {t('Scientifically calculated based on your equipment', '基于您的设备进行科学计算')}
                         </p>
