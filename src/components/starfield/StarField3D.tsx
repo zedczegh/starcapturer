@@ -185,11 +185,11 @@ const StarField3D: React.FC<StarField3DProps> = ({
       const height = targetHeight;
       
       // Calculate smooth factor for preservation intensity (used throughout star processing)
-      // Use cubic ease-in-out for ultra-smooth transitions: f(x) = x < 0.5 ? 4x^3 : 1 - (-2x + 2)^3 / 2
+      // Use gentle quadratic ease-in-out for smooth, predictable transitions
       const intensityFactor = preserveStarsIntensity / 100;
-      const smoothFactor = intensityFactor < 0.5 
-        ? 4 * Math.pow(intensityFactor, 3)
-        : 1 - Math.pow(-2 * intensityFactor + 2, 3) / 2;
+      const smoothFactor = intensityFactor < 0.5
+        ? 2 * intensityFactor * intensityFactor
+        : 1 - Math.pow(-2 * intensityFactor + 2, 2) / 2;
       
       // === CONDITIONAL STAR CLEANING ===
       // Gradually reduce cleaning intensity based on preservation (0% = full clean, 100% = no clean)
@@ -220,8 +220,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
             const b = data[idx + 2];
             const lum = 0.299 * r + 0.587 * g + 0.114 * b;
             
-            // Only process bright pixels (star cores) - threshold scales with cleaning intensity
-            const brightnessThreshold = 100 + (155 * (1 - cleaningIntensity)); // 100-255 range
+            // Only process bright pixels (star cores) - threshold decreases linearly with more preservation
+            const brightnessThreshold = 100 + (130 * (1 - cleaningIntensity)); // 100-230 range (more gradual)
             if (lum > brightnessThreshold) {
               // Find local maximum (brightest point in neighborhood)
               let maxLum = lum;
@@ -298,9 +298,11 @@ const StarField3D: React.FC<StarField3DProps> = ({
               const normalizedDist = dist / star.radius;
               if (normalizedDist > 1.5) continue; // Don't draw beyond falloff
               
-              // Gaussian intensity falloff - scaled by cleaning intensity
-              const falloffRate = 2 * (1 + (1 - cleaningIntensity) * 1.5); // 2.0-5.0 range
-              const intensity = Math.exp(-normalizedDist * normalizedDist * falloffRate) * cleaningIntensity;
+              // Gaussian intensity falloff - falloff rate increases with cleaning, but preserve brightness
+              const falloffRate = 2 + (3 * cleaningIntensity); // 2.0-5.0 range
+              // Keep stars visible - reduce intensity only slightly based on cleaning
+              const baseIntensity = Math.exp(-normalizedDist * normalizedDist * falloffRate);
+              const intensity = baseIntensity * (0.5 + cleaningIntensity * 0.5); // 50%-100% brightness range
               
               const idx = (y * width + x) * 4;
               
