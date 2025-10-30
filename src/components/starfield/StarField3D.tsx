@@ -1174,7 +1174,20 @@ const StarField3D: React.FC<StarField3DProps> = ({
       const drawX = (canvas.width - scaledWidth) * 0.5 + bgX;
       const drawY = (canvas.height - scaledHeight) * 0.5 + bgY;
       
-      ctx.globalAlpha = 0.85;
+      // Calculate fade-out effect when zoom amplification >= 220%
+      // At 220% zoom (2.2x), background scale will be 1.0 + progress * 2.2
+      // Start fading when background reaches 2.2x scale (220% zoom), fully faded at 2.5x
+      const fadeStartScale = 2.2; // 220% zoom
+      const fadeEndScale = 2.5; // Fully transparent at 250% zoom
+      let bgAlpha = 0.85; // Default background alpha
+      
+      if (bgScale >= fadeStartScale) {
+        // Calculate fade-out: 1.0 at fadeStartScale, 0.0 at fadeEndScale
+        const fadeProgress = Math.min((bgScale - fadeStartScale) / (fadeEndScale - fadeStartScale), 1.0);
+        bgAlpha = 0.85 * (1.0 - fadeProgress); // Fade from 0.85 to 0
+      }
+      
+      ctx.globalAlpha = bgAlpha;
       ctx.globalCompositeOperation = 'source-over';
       ctx.drawImage(backgroundImg, drawX, drawY, scaledWidth, scaledHeight);
     }
