@@ -2085,6 +2085,7 @@ const ParallelVideoGenerator: React.FC = () => {
                       depthIntensity={depthIntensity}
                       horizontalDisplace={0}
                       starShiftAmount={0}
+                      preserveStars={true}
                       videoProgressRef={isGenerating ? videoProgressRef : undefined}
                       frameRenderTrigger={frameRenderTrigger}
                       onProgressUpdate={handleProgressUpdate}
@@ -2113,6 +2114,7 @@ const ParallelVideoGenerator: React.FC = () => {
                       depthIntensity={depthIntensity}
                       horizontalDisplace={0}
                       starShiftAmount={0}
+                      preserveStars={true}
                       videoProgressRef={isGenerating ? videoProgressRef : undefined}
                       frameRenderTrigger={frameRenderTrigger}
                       onProgressUpdate={handleProgressUpdate}

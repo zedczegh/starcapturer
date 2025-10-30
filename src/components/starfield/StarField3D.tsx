@@ -39,6 +39,8 @@ interface StarField3DProps {
   // Override canvas dimensions (if not provided, uses image dimensions)
   canvasWidth?: number;
   canvasHeight?: number;
+  // Preserve all stars without cleaning/filtering (for pre-displaced parallel video images)
+  preserveStars?: boolean;
 }
 
 const StarField3D: React.FC<StarField3DProps> = ({ 
@@ -59,7 +61,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
   horizontalDisplace = 25,
   starShiftAmount = 6,
   canvasWidth,
-  canvasHeight
+  canvasHeight,
+  preserveStars = false
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -178,133 +181,138 @@ const StarField3D: React.FC<StarField3DProps> = ({
       const sourceData = tempCtx.getImageData(0, 0, targetWidth, targetHeight);
       const data = sourceData.data;
       
-      // === EXTRACT ONLY BRIGHT CORES WITH SMOOTH GRADIENTS ===
-      console.log('Extracting clean star cores without halos...');
-      
       const width = targetWidth;
       const height = targetHeight;
       
-      // Find all bright star centers
-      interface StarCore {
-        x: number;
-        y: number;
-        maxBrightness: number;
-        radius: number;
-        color: { r: number; g: number; b: number };
-      }
-      
-      const starCores: StarCore[] = [];
-      const visitedCores = new Uint8Array(width * height);
-      
-      // First pass: Find bright star centers
-      for (let y = 5; y < height - 5; y++) {
-        for (let x = 5; x < width - 5; x++) {
-          const idx = (y * width + x) * 4;
-          if (visitedCores[y * width + x]) continue;
-          
-          const r = data[idx];
-          const g = data[idx + 1];
-          const b = data[idx + 2];
-          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-          
-          // Only process bright pixels (star cores)
-          if (lum > 100) {
-            // Find local maximum (brightest point in neighborhood)
-            let maxLum = lum;
-            let maxX = x;
-            let maxY = y;
+      // === CONDITIONAL STAR CLEANING ===
+      // Skip cleaning if preserveStars is true (for pre-displaced parallel video images)
+      if (!preserveStars) {
+        console.log('Extracting clean star cores without halos...');
+        
+        // Find all bright star centers
+        interface StarCore {
+          x: number;
+          y: number;
+          maxBrightness: number;
+          radius: number;
+          color: { r: number; g: number; b: number };
+        }
+        
+        const starCores: StarCore[] = [];
+        const visitedCores = new Uint8Array(width * height);
+        
+        // First pass: Find bright star centers
+        for (let y = 5; y < height - 5; y++) {
+          for (let x = 5; x < width - 5; x++) {
+            const idx = (y * width + x) * 4;
+            if (visitedCores[y * width + x]) continue;
             
-            for (let dy = -3; dy <= 3; dy++) {
-              for (let dx = -3; dx <= 3; dx++) {
-                const nIdx = ((y + dy) * width + (x + dx)) * 4;
-                const nLum = 0.299 * data[nIdx] + 0.587 * data[nIdx + 1] + 0.114 * data[nIdx + 2];
-                if (nLum > maxLum) {
-                  maxLum = nLum;
-                  maxX = x + dx;
-                  maxY = y + dy;
+            const r = data[idx];
+            const g = data[idx + 1];
+            const b = data[idx + 2];
+            const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+            
+            // Only process bright pixels (star cores)
+            if (lum > 100) {
+              // Find local maximum (brightest point in neighborhood)
+              let maxLum = lum;
+              let maxX = x;
+              let maxY = y;
+              
+              for (let dy = -3; dy <= 3; dy++) {
+                for (let dx = -3; dx <= 3; dx++) {
+                  const nIdx = ((y + dy) * width + (x + dx)) * 4;
+                  const nLum = 0.299 * data[nIdx] + 0.587 * data[nIdx + 1] + 0.114 * data[nIdx + 2];
+                  if (nLum > maxLum) {
+                    maxLum = nLum;
+                    maxX = x + dx;
+                    maxY = y + dy;
+                  }
                 }
               }
-            }
-            
-            // If this is the local maximum, it's a star center
-            if (maxX === x && maxY === y) {
-              // Measure star radius by checking brightness falloff
-              let radius = 1;
-              for (let r = 1; r < 20; r++) {
-                const testIdx = (y * width + (x + r)) * 4;
-                const testLum = 0.299 * data[testIdx] + 0.587 * data[testIdx + 1] + 0.114 * data[testIdx + 2];
-                if (testLum < maxLum * 0.3) break; // Found edge where brightness drops
-                radius = r;
-              }
               
-              starCores.push({
-                x,
-                y,
-                maxBrightness: maxLum,
-                radius: radius * 1.5, // Extend slightly for smooth falloff
-                color: { r, g, b }
-              });
-              
-              // Mark area as visited
-              for (let dy = -radius; dy <= radius; dy++) {
-                for (let dx = -radius; dx <= radius; dx++) {
-                  const vx = x + dx;
-                  const vy = y + dy;
-                  if (vx >= 0 && vx < width && vy >= 0 && vy < height) {
-                    visitedCores[vy * width + vx] = 1;
+              // If this is the local maximum, it's a star center
+              if (maxX === x && maxY === y) {
+                // Measure star radius by checking brightness falloff
+                let radius = 1;
+                for (let r = 1; r < 20; r++) {
+                  const testIdx = (y * width + (x + r)) * 4;
+                  const testLum = 0.299 * data[testIdx] + 0.587 * data[testIdx + 1] + 0.114 * data[testIdx + 2];
+                  if (testLum < maxLum * 0.3) break; // Found edge where brightness drops
+                  radius = r;
+                }
+                
+                starCores.push({
+                  x,
+                  y,
+                  maxBrightness: maxLum,
+                  radius: radius * 1.5, // Extend slightly for smooth falloff
+                  color: { r, g, b }
+                });
+                
+                // Mark area as visited
+                for (let dy = -radius; dy <= radius; dy++) {
+                  for (let dx = -radius; dx <= radius; dx++) {
+                    const vx = x + dx;
+                    const vy = y + dy;
+                    if (vx >= 0 && vx < width && vy >= 0 && vy < height) {
+                      visitedCores[vy * width + vx] = 1;
+                    }
                   }
                 }
               }
             }
           }
         }
-      }
-      
-      console.log(`Found ${starCores.length} clean star cores`);
-      
-      // Second pass: Clear image and redraw only clean cores with smooth gradients
-      for (let i = 0; i < data.length; i++) {
-        data[i] = 0; // Clear everything
-      }
-      
-      // Redraw each star with perfect smooth circular gradient
-      for (const star of starCores) {
-        const startX = Math.max(0, Math.floor(star.x - star.radius * 2));
-        const endX = Math.min(width - 1, Math.ceil(star.x + star.radius * 2));
-        const startY = Math.max(0, Math.floor(star.y - star.radius * 2));
-        const endY = Math.min(height - 1, Math.ceil(star.y + star.radius * 2));
         
-        for (let y = startY; y <= endY; y++) {
-          for (let x = startX; x <= endX; x++) {
-            const dx = x - star.x;
-            const dy = y - star.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            
-            // Smooth Gaussian falloff from center
-            const normalizedDist = dist / star.radius;
-            if (normalizedDist > 1.5) continue; // Don't draw beyond falloff
-            
-            // Gaussian intensity falloff
-            const intensity = Math.exp(-normalizedDist * normalizedDist * 2);
-            
-            const idx = (y * width + x) * 4;
-            
-            // Blend with existing pixel (in case stars overlap)
-            const newR = star.color.r * intensity;
-            const newG = star.color.g * intensity;
-            const newB = star.color.b * intensity;
-            
-            data[idx] = Math.max(data[idx], newR);
-            data[idx + 1] = Math.max(data[idx + 1], newG);
-            data[idx + 2] = Math.max(data[idx + 2], newB);
-            data[idx + 3] = 255;
+        console.log(`Found ${starCores.length} clean star cores`);
+        
+        // Second pass: Clear image and redraw only clean cores with smooth gradients
+        for (let i = 0; i < data.length; i++) {
+          data[i] = 0; // Clear everything
+        }
+        
+        // Redraw each star with perfect smooth circular gradient
+        for (const star of starCores) {
+          const startX = Math.max(0, Math.floor(star.x - star.radius * 2));
+          const endX = Math.min(width - 1, Math.ceil(star.x + star.radius * 2));
+          const startY = Math.max(0, Math.floor(star.y - star.radius * 2));
+          const endY = Math.min(height - 1, Math.ceil(star.y + star.radius * 2));
+          
+          for (let y = startY; y <= endY; y++) {
+            for (let x = startX; x <= endX; x++) {
+              const dx = x - star.x;
+              const dy = y - star.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              
+              // Smooth Gaussian falloff from center
+              const normalizedDist = dist / star.radius;
+              if (normalizedDist > 1.5) continue; // Don't draw beyond falloff
+              
+              // Gaussian intensity falloff
+              const intensity = Math.exp(-normalizedDist * normalizedDist * 2);
+              
+              const idx = (y * width + x) * 4;
+              
+              // Blend with existing pixel (in case stars overlap)
+              const newR = star.color.r * intensity;
+              const newG = star.color.g * intensity;
+              const newB = star.color.b * intensity;
+              
+              data[idx] = Math.max(data[idx], newR);
+              data[idx + 1] = Math.max(data[idx + 1], newG);
+              data[idx + 2] = Math.max(data[idx + 2], newB);
+              data[idx + 3] = 255;
+            }
           }
         }
+        
+        tempCtx.putImageData(sourceData, 0, 0);
+        console.log('Clean star cores extracted with smooth gradients');
+      } else {
+        console.log('🌟 Preserving all stars from pre-displaced image (no cleaning)');
       }
-      
-      tempCtx.putImageData(sourceData, 0, 0);
-      console.log('Clean star cores extracted with smooth gradients');
-      // === END CORE EXTRACTION ===
+      // === END CONDITIONAL STAR CLEANING ===
       
       // Pre-calculate luminance for all pixels using Uint8Array for faster access
       const pixelCount = width * height;
@@ -690,7 +698,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
     };
     
     img.src = starsOnlyImage;
-  }, [starsOnlyImage]);
+  }, [starsOnlyImage, preserveStars, canvasWidth, canvasHeight]);
 
   // Load background image as ImageBitmap for faster rendering
   useEffect(() => {
