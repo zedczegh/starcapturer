@@ -343,14 +343,17 @@ const StarField3D: React.FC<StarField3DProps> = ({
         size: number;
       }[] = [];
       
-      // Calculate thresholds based on preservation intensity (0-100)
-      // intensity 0 = normal (100, 30), intensity 100 = ultra sensitive (8, 2)
+      // Calculate thresholds based on preservation intensity (0-100) with smooth ease-out curve
+      // Use quadratic ease-out for more gradual transitions: f(x) = 1 - (1-x)^2
       const intensityFactor = preserveStarsIntensity / 100;
-      const coreThreshold = 100 - (92 * intensityFactor); // 100 -> 8
-      const expansionThreshold = 30 - (28 * intensityFactor); // 30 -> 2
+      const smoothFactor = 1 - Math.pow(1 - intensityFactor, 2);
+      
+      // Apply smooth curve to thresholds
+      const coreThreshold = 100 - (92 * smoothFactor); // 100 -> 8 (smoothly)
+      const expansionThreshold = 30 - (28 * smoothFactor); // 30 -> 2 (smoothly)
       
       // Reusable queue with pre-allocated capacity - larger when preserving stars
-      const maxQueueSize = 8000 + Math.floor(42000 * intensityFactor); // 8000 -> 50000
+      const maxQueueSize = 8000 + Math.floor(42000 * smoothFactor); // 8000 -> 50000 (smoothly)
       const queueX = new Uint16Array(maxQueueSize);
       const queueY = new Uint16Array(maxQueueSize);
       const pixelBuffer = new Uint32Array(maxQueueSize);
@@ -512,9 +515,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
       console.log(`Detected ${starRegions.length} complete stars in ${(performance.now() - startTime).toFixed(0)}ms`);
       
       // === AUTO-SHRINK ALGORITHM: Reduce oversized stars to prevent artifacts ===
-      // Scale max size and shrink ratio based on preservation intensity
-      const MAX_STAR_SIZE = 40 + Math.floor(160 * intensityFactor); // 40 -> 200
-      const TARGET_SIZE_RATIO = 0.6 + (0.35 * intensityFactor); // 0.6 -> 0.95
+      // Scale max size and shrink ratio based on preservation intensity with smooth curve
+      const MAX_STAR_SIZE = 40 + Math.floor(160 * smoothFactor); // 40 -> 200 (smoothly)
+      const TARGET_SIZE_RATIO = 0.6 + (0.35 * smoothFactor); // 0.6 -> 0.95 (smoothly)
       let shrunkCount = 0;
       
       for (let i = 0; i < starRegions.length; i++) {
