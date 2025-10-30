@@ -427,7 +427,7 @@ const ParallelVideoGenerator: React.FC = () => {
       const data = imageData.data;
       
       const stars: StarData[] = [];
-      const threshold = 100;
+      const threshold = 80; // Lowered to capture more star detail
       const minStarSize = 3;
       const maxStarSize = 500;
       const minDistance = 3;
@@ -492,7 +492,7 @@ const ParallelVideoGenerator: React.FC = () => {
                       const nPixelIdx = nIdx * 4;
                       const nLum = 0.299 * data[nPixelIdx] + 0.587 * data[nPixelIdx + 1] + 0.114 * data[nPixelIdx + 2];
                       
-                      if (nLum > threshold * 0.3) {
+                      if (nLum > threshold * 0.25) { // Lowered expansion threshold to capture more halo
                         visited[nIdx] = 1;
                         queue.push({x: nx, y: ny});
                       }
