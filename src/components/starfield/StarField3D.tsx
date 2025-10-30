@@ -698,27 +698,45 @@ const StarField3D: React.FC<StarField3DProps> = ({
     
     const img = new Image();
     img.onload = () => {
-      // Convert to ImageBitmap for GPU-accelerated rendering with optimal settings
+      // Scale background to match target canvas dimensions (same as stars)
+      const targetWidth = canvasWidth || img.width;
+      const targetHeight = canvasHeight || img.height;
+      
+      // Create a canvas to scale the background
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = targetWidth;
+      tempCanvas.height = targetHeight;
+      const tempCtx = tempCanvas.getContext('2d', { 
+        willReadFrequently: true,
+        alpha: false 
+      })!;
+      
+      // Scale image to target dimensions with high quality
+      tempCtx.imageSmoothingEnabled = true;
+      tempCtx.imageSmoothingQuality = 'high';
+      tempCtx.drawImage(img, 0, 0, targetWidth, targetHeight);
+      
+      // Convert scaled canvas to ImageBitmap for GPU-accelerated rendering
       const bitmapOptions: ImageBitmapOptions = {
         premultiplyAlpha: 'premultiply',
         colorSpaceConversion: 'none',
         resizeQuality: 'high'
       };
       
-      createImageBitmap(img, bitmapOptions).then(bitmap => {
-        console.log('🖼️ [StarField3D] Setting background image bitmap');
+      createImageBitmap(tempCanvas, bitmapOptions).then(bitmap => {
+        console.log(`🖼️ [StarField3D] Setting background image bitmap scaled to ${targetWidth}x${targetHeight}`);
         setBackgroundImg(bitmap);
         // Set dimensions if not already set
         if (imageDimensions.width === 1920 && imageDimensions.height === 1080) {
-          setImageDimensions({ width: img.width, height: img.height });
+          setImageDimensions({ width: targetWidth, height: targetHeight });
         }
-        console.log('✅ [StarField3D] Background image loaded for rendering');
+        console.log('✅ [StarField3D] Background image loaded and scaled for rendering');
       }).catch(error => {
         console.error('❌ [StarField3D] Failed to create background bitmap:', error);
       });
     };
     img.src = backgroundImage;
-  }, [backgroundImage, imageDimensions]);
+  }, [backgroundImage, imageDimensions, canvasWidth, canvasHeight]);
 
   // Animation loop - optimized with cached context and throttled updates
   const animate = useCallback(() => {
