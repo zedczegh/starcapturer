@@ -1278,14 +1278,16 @@ const StarFieldGenerator: React.FC = () => {
           {/* Action Buttons */}
           <div className="space-y-3">
             <div className="flex gap-3">
-              <Button
-                onClick={resetAll}
-                variant="outline"
-                className="flex-1 border-cosmic-700/50 hover:bg-cosmic-800/50"
-              >
-                <RotateCcw className="h-4 w-4 mr-2" />
-                {t('Back to Step 1', '返回步骤1')}
-              </Button>
+              {currentStep !== 'upload' && (
+                <Button
+                  onClick={resetAll}
+                  variant="outline"
+                  className="flex-1 border-cosmic-700/50 hover:bg-cosmic-800/50"
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  {t('Back to Step 1', '返回步骤1')}
+                </Button>
+              )}
               
               {currentStep === 'ready' && !isRecording && (
                 <Button
