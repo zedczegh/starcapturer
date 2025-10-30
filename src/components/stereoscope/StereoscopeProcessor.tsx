@@ -87,6 +87,10 @@ const StereoscopeProcessor: React.FC = () => {
   // Add border size parameter (0-600px)
   const [borderSize, setBorderSize] = useState<number>(300);
   
+  // Displacement controls for starless image
+  const [displacementAmount, setDisplacementAmount] = useState<number>(25); // 0-50 pixels
+  const [displacementDirection, setDisplacementDirection] = useState<'left' | 'right'>('right');
+  
   // Traditional mode parameters - enhanced for better 3D effect
   const [traditionalParams, setTraditionalParams] = useState<TraditionalMorphParams>({
     horizontalDisplace: 25, // Increased for more nebula depth
@@ -297,11 +301,17 @@ const StereoscopeProcessor: React.FC = () => {
     width: number,
     height: number,
     params: ProcessingParams,
-    starMask: Uint8ClampedArray
+    starMask: Uint8ClampedArray,
+    customDisplacement?: number,
+    invertDirection?: boolean
   ): { left: ImageData; right: ImageData } => {
     const originalData = ctx.getImageData(0, 0, width, height);
     const leftData = new ImageData(width, height);
     const rightData = new ImageData(width, height);
+
+    // Use custom displacement if provided, otherwise use params.maxShift
+    const maxShift = customDisplacement !== undefined ? customDisplacement : params.maxShift;
+    const directionMultiplier = invertDirection ? -1 : 1;
 
     // SIMPLE INVERSE MAPPING - Pull pixels from source (prevents gaps and black lines)
     // For each destination pixel, look back to the source and copy the pixel
@@ -317,7 +327,7 @@ const StereoscopeProcessor: React.FC = () => {
         
         // Calculate shift amount based on depth
         // Simple approach: deeper objects shift less, closer objects shift more
-        const shift = depthValue * params.maxShift;
+        const shift = depthValue * maxShift * directionMultiplier;
         
         // LEFT VIEW: Pull from right (shift source to left)
         // When looking at left eye, objects shift left based on depth
@@ -456,6 +466,8 @@ const StereoscopeProcessor: React.FC = () => {
       setProgress(50);
       
       const starMask = detectStars(starlessImageData.data, width, height, params.starThreshold);
+      const invertDisplacement = displacementDirection === 'left';
+      
       const { left: starlessLeft, right: starlessRight } = createStereoViews(
         starlessCanvas, 
         starlessCtx, 
@@ -463,7 +475,9 @@ const StereoscopeProcessor: React.FC = () => {
         width, 
         height, 
         params, 
-        starMask
+        starMask,
+        displacementAmount, // Use custom displacement amount
+        invertDisplacement  // Apply displacement direction
       );
 
       // STEP 4: Process stars if provided
@@ -889,6 +903,56 @@ const StereoscopeProcessor: React.FC = () => {
                 <p className="text-xs text-cosmic-400 mt-1">
                   {t('Size of black borders around stereo pair', '立体对周围黑色边框的大小')}
                 </p>
+              </div>
+
+              <div className="space-y-4 p-4 rounded-lg bg-cosmic-900/40 border border-cosmic-700/30">
+                <div className="flex items-center gap-2 text-amber-400">
+                  <Settings2 className="w-4 h-4" />
+                  <span className="text-sm font-semibold">{t('Starless Displacement Control', '无星图位移控制')}</span>
+                </div>
+                
+                <div>
+                  <Label className="flex items-center justify-between">
+                    <span>{t('Displacement Amount', '位移量')}</span>
+                    <span className="text-amber-400 font-mono text-lg">({displacementAmount}px)</span>
+                  </Label>
+                  <Slider
+                    value={[displacementAmount]}
+                    onValueChange={([value]) => setDisplacementAmount(value)}
+                    min={0}
+                    max={50}
+                    step={1}
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-cosmic-400 mt-1">
+                    {t('Amount of horizontal displacement for starless/nebula image', '无星/星云图像的水平位移量')}
+                  </p>
+                </div>
+
+                <div>
+                  <Label className="text-cosmic-200 mb-2 block">
+                    {t('Displacement Direction', '位移方向')}
+                  </Label>
+                  <Select
+                    value={displacementDirection}
+                    onValueChange={(value: 'left' | 'right') => setDisplacementDirection(value)}
+                  >
+                    <SelectTrigger className="bg-cosmic-800/50 border-cosmic-700">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="right">
+                        {t('Right (Standard)', '右（标准）')}
+                      </SelectItem>
+                      <SelectItem value="left">
+                        {t('Left (Inverted)', '左（反转）')}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-cosmic-400 mt-1">
+                    {t('Direction to displace the starless image for 3D effect', '无星图像的位移方向以产生3D效果')}
+                  </p>
+                </div>
               </div>
 
               {processing && (
