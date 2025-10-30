@@ -70,6 +70,7 @@ const StarFieldGenerator: React.FC = () => {
   
   // 3D depth intensity control (0-500 scale)
   const [depthIntensity, setDepthIntensity] = useState<number>(200);
+  const [preserveStars, setPreserveStars] = useState<boolean>(false);
   
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
@@ -87,8 +88,7 @@ const StarFieldGenerator: React.FC = () => {
     depthMultiplier: 1.0,
     amplification: 150, // 100-300%
     spin: 0, // 0-90 degrees
-    spinDirection: 'clockwise' as 'clockwise' | 'counterclockwise',
-    enableDownscale: false // User-controlled downscaling
+    spinDirection: 'clockwise' as 'clockwise' | 'counterclockwise'
   });
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
@@ -130,7 +130,7 @@ const StarFieldGenerator: React.FC = () => {
       }, 100);
 
       const { dataUrl, element } = await loadImageFromFile(file, {
-        enableDownscale: animationSettings.enableDownscale,
+        enableDownscale: false,
         maxResolution: 4096 * 4096
       });
       
@@ -160,7 +160,7 @@ const StarFieldGenerator: React.FC = () => {
       }));
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
-  }, [animationSettings.enableDownscale]);
+  }, []);
 
   const handleStarsOnlyUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     return handleImageUpload(event, setStarsOnlyImage, setStarsOnlyElement, starsFileInputRef, 'stars');
@@ -1087,10 +1087,10 @@ const StarFieldGenerator: React.FC = () => {
                           depthMultiplier: 1.0,
                           amplification: 150,
                           spin: 0,
-                          spinDirection: 'clockwise',
-                          enableDownscale: false
+                          spinDirection: 'clockwise'
                         });
                         setDepthIntensity(200);
+                        setPreserveStars(false);
                       }}
                       className="h-8 gap-2 text-xs bg-cosmic-800/50 hover:bg-cosmic-700/50 border-cosmic-600"
                     >
@@ -1232,24 +1232,21 @@ const StarFieldGenerator: React.FC = () => {
                 <div className="space-y-4 pt-4 border-t border-cosmic-700/30">
                   <div className="flex items-center justify-between gap-4 p-4 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30 hover:border-cosmic-600/50 transition-colors">
                     <div className="flex-1 space-y-1.5">
-                      <Label htmlFor="enableDownscale" className="text-cosmic-100 text-base font-medium cursor-pointer">
-                        {t('Auto Resolution Scaling', '自动分辨率缩放')}
+                      <Label htmlFor="preserveStars" className="text-cosmic-100 text-base font-medium cursor-pointer">
+                        {t('Preserve Stars', '保留所有星体')}
                       </Label>
                       <p className="text-xs text-cosmic-400 leading-relaxed">
-                        {t('Optimize large images (>16MP) by automatically downscaling to 4K resolution for smoother performance', '自动将大型图像（>1600万像素）优化至4K分辨率，以获得更流畅的性能')}
+                        {t('Keep all stars without filtering dim ones for cleaner animation', '保留所有星体，不过滤暗星以获得更清晰的动画')}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
                       <Switch
-                        id="enableDownscale"
-                        checked={animationSettings.enableDownscale}
-                        onCheckedChange={(checked) => setAnimationSettings(prev => ({
-                          ...prev, 
-                          enableDownscale: checked 
-                        }))}
+                        id="preserveStars"
+                        checked={preserveStars}
+                        onCheckedChange={setPreserveStars}
                       />
-                      <span className={`text-sm font-medium ${animationSettings.enableDownscale ? 'text-blue-400' : 'text-cosmic-500'}`}>
-                        {animationSettings.enableDownscale ? t('Enabled', '已启用') : t('Disabled', '已禁用')}
+                      <span className={`text-sm font-medium ${preserveStars ? 'text-blue-400' : 'text-cosmic-500'}`}>
+                        {preserveStars ? t('Enabled', '已启用') : t('Disabled', '已禁用')}
                       </span>
                     </div>
                   </div>
@@ -1414,6 +1411,7 @@ const StarFieldGenerator: React.FC = () => {
                   frameRenderTrigger={frameRenderTrigger}
                   externalProgress={animationProgress}
                   depthIntensity={depthIntensity}
+                  preserveStars={preserveStars}
                 />
                 
                 {/* Progress Bar and Controls */}
