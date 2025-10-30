@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, Video, Sparkles, Eye, Settings2, Download } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Upload, Video, Sparkles, Eye, Settings2, Download, ChevronDown } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { VideoGenerationService, MotionSettings } from '@/services/VideoGenerationService';
 import { validateImageFile } from '@/utils/imageProcessingUtils';
@@ -107,6 +108,7 @@ const ParallelVideoGenerator: React.FC = () => {
   const [depthIntensity, setDepthIntensity] = useState<number>(200);
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationProgress, setAnimationProgress] = useState(0);
+  const [debugImagesOpen, setDebugImagesOpen] = useState(false);
   
   // Video generation control refs
   const videoProgressRef = useRef<number>(0);
@@ -1241,16 +1243,31 @@ const ParallelVideoGenerator: React.FC = () => {
         {/* Step 2: Motion Settings & Preview */}
         {isReady && (
           <>
-            {/* Debug View: Show all intermediate images */}
-            <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl mb-6">
-              <CardHeader>
-                <CardTitle className="text-xl text-white">Debug: Processed Images</CardTitle>
-                <CardDescription className="text-cosmic-300">
-                  {t('Intermediate results from processing', '处理的中间结果')}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Debug View: Show all intermediate images (Collapsible) */}
+            <Collapsible open={debugImagesOpen} onOpenChange={setDebugImagesOpen}>
+              <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl mb-6">
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer hover:bg-cosmic-800/30 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-xl text-white flex items-center gap-2">
+                          Debug: Processed Images
+                          <ChevronDown 
+                            className={`w-5 h-5 text-cosmic-400 transition-transform ${debugImagesOpen ? 'rotate-180' : ''}`}
+                          />
+                        </CardTitle>
+                        <CardDescription className="text-cosmic-300">
+                          {t('Click to view intermediate results from processing', '点击查看处理的中间结果')}
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                
+                <CollapsibleContent>
+                  <CardContent>
+                    {debugImagesOpen && (
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Left Stars Only with depth map below */}
                   <div className="space-y-2">
                     {leftStarsOnly && (
@@ -1413,8 +1430,11 @@ const ParallelVideoGenerator: React.FC = () => {
                     )}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              )}
+            </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
 
             <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
             <CardHeader>
