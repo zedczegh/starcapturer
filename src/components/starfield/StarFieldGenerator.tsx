@@ -70,7 +70,7 @@ const StarFieldGenerator: React.FC = () => {
   
   // 3D depth intensity control (0-500 scale)
   const [depthIntensity, setDepthIntensity] = useState<number>(200);
-  const [preserveStars, setPreserveStars] = useState<boolean>(true);
+  const [preserveStarsIntensity, setPreserveStarsIntensity] = useState<number>(50);
   
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
@@ -1090,7 +1090,7 @@ const StarFieldGenerator: React.FC = () => {
                           spinDirection: 'clockwise'
                         });
                         setDepthIntensity(200);
-                        setPreserveStars(true);
+                        setPreserveStarsIntensity(50);
                       }}
                       className="h-8 gap-2 text-xs bg-cosmic-800/50 hover:bg-cosmic-700/50 border-cosmic-600"
                     >
@@ -1229,27 +1229,24 @@ const StarFieldGenerator: React.FC = () => {
                   />
                 </div>
 
-                <div className="space-y-4 pt-4 border-t border-cosmic-700/30">
-                  <div className="flex items-center justify-between gap-4 p-4 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30 hover:border-cosmic-600/50 transition-colors">
-                    <div className="flex-1 space-y-1.5">
-                      <Label htmlFor="preserveStars" className="text-cosmic-100 text-base font-medium cursor-pointer">
-                        {t('Preserve Stars', '保留所有星体')}
-                      </Label>
-                      <p className="text-xs text-cosmic-400 leading-relaxed">
-                        {t('Keep all stars without filtering dim ones for cleaner animation', '保留所有星体，不过滤暗星以获得更清晰的动画')}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Switch
-                        id="preserveStars"
-                        checked={preserveStars}
-                        onCheckedChange={setPreserveStars}
-                      />
-                      <span className={`text-sm font-medium ${preserveStars ? 'text-blue-400' : 'text-cosmic-500'}`}>
-                        {preserveStars ? t('Enabled', '已启用') : t('Disabled', '已禁用')}
-                      </span>
-                    </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-cosmic-200">
+                      {t('Star Preservation Intensity', '星体保留强度')}
+                    </Label>
+                    <span className="text-cosmic-300 text-sm font-semibold">{preserveStarsIntensity}%</span>
                   </div>
+                  <Slider
+                    value={[preserveStarsIntensity]}
+                    onValueChange={(value) => setPreserveStarsIntensity(value[0])}
+                    min={0}
+                    max={100}
+                    step={5}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-cosmic-400">
+                    {t('0% = clean cores only, 100% = preserve all star halos and details', '0% = 仅清洁星核, 100% = 保留所有星晕和细节')}
+                  </p>
                 </div>
 
                 <Button
@@ -1411,7 +1408,7 @@ const StarFieldGenerator: React.FC = () => {
                   frameRenderTrigger={frameRenderTrigger}
                   externalProgress={animationProgress}
                   depthIntensity={depthIntensity}
-                  preserveStars={preserveStars}
+                  preserveStarsIntensity={preserveStarsIntensity}
                 />
                 
                 {/* Progress Bar and Controls */}

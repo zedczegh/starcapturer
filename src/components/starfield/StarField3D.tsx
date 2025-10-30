@@ -39,8 +39,8 @@ interface StarField3DProps {
   // Override canvas dimensions (if not provided, uses image dimensions)
   canvasWidth?: number;
   canvasHeight?: number;
-  // Preserve all stars without cleaning/filtering (for pre-displaced parallel video images)
-  preserveStars?: boolean;
+  // Star preservation intensity: 0 = no preservation (normal cleaning), 100 = maximum preservation
+  preserveStarsIntensity?: number;
 }
 
 const StarField3D: React.FC<StarField3DProps> = ({ 
@@ -62,7 +62,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
   starShiftAmount = 6,
   canvasWidth,
   canvasHeight,
-  preserveStars = false
+  preserveStarsIntensity = 0
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -185,8 +185,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
       const height = targetHeight;
       
       // === CONDITIONAL STAR CLEANING ===
-      // Skip cleaning if preserveStars is true (for pre-displaced parallel video images)
-      if (!preserveStars) {
+      // Skip cleaning if preserve intensity is high (for pre-displaced parallel video images)
+      if (preserveStarsIntensity < 50) {
         console.log('Extracting clean star cores without halos...');
         
         // Find all bright star centers
@@ -310,7 +310,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
         tempCtx.putImageData(sourceData, 0, 0);
         console.log('Clean star cores extracted with smooth gradients');
       } else {
-        console.log('🌟 Preserving all stars from image (no cleaning)');
+        console.log(`🌟 Preserving stars from image (intensity: ${preserveStarsIntensity}%, no cleaning)`);
       }
       // === END CONDITIONAL STAR CLEANING ===
       
@@ -343,12 +343,14 @@ const StarField3D: React.FC<StarField3DProps> = ({
         size: number;
       }[] = [];
       
-      // Use extremely low thresholds when preserving stars to capture maximum detail
-      const coreThreshold = preserveStars ? 8 : 100; // Ultra low threshold for faintest stars
-      const expansionThreshold = preserveStars ? 2 : (coreThreshold * 0.3); // Captures all halos and diffraction spikes
+      // Calculate thresholds based on preservation intensity (0-100)
+      // intensity 0 = normal (100, 30), intensity 100 = ultra sensitive (8, 2)
+      const intensityFactor = preserveStarsIntensity / 100;
+      const coreThreshold = 100 - (92 * intensityFactor); // 100 -> 8
+      const expansionThreshold = 30 - (28 * intensityFactor); // 30 -> 2
       
-      // Reusable queue with pre-allocated capacity - much larger when preserving stars
-      const maxQueueSize = preserveStars ? 50000 : 8000; // Allow huge star halos when preserving
+      // Reusable queue with pre-allocated capacity - larger when preserving stars
+      const maxQueueSize = 8000 + Math.floor(42000 * intensityFactor); // 8000 -> 50000
       const queueX = new Uint16Array(maxQueueSize);
       const queueY = new Uint16Array(maxQueueSize);
       const pixelBuffer = new Uint32Array(maxQueueSize);
@@ -510,9 +512,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
       console.log(`Detected ${starRegions.length} complete stars in ${(performance.now() - startTime).toFixed(0)}ms`);
       
       // === AUTO-SHRINK ALGORITHM: Reduce oversized stars to prevent artifacts ===
-      // When preserving stars, allow much larger stars and minimal shrinking
-      const MAX_STAR_SIZE = preserveStars ? 200 : 40; // Much larger max when preserving
-      const TARGET_SIZE_RATIO = preserveStars ? 0.95 : 0.6; // Minimal shrink when preserving
+      // Scale max size and shrink ratio based on preservation intensity
+      const MAX_STAR_SIZE = 40 + Math.floor(160 * intensityFactor); // 40 -> 200
+      const TARGET_SIZE_RATIO = 0.6 + (0.35 * intensityFactor); // 0.6 -> 0.95
       let shrunkCount = 0;
       
       for (let i = 0; i < starRegions.length; i++) {
@@ -702,7 +704,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
     };
     
     img.src = starsOnlyImage;
-  }, [starsOnlyImage, preserveStars, canvasWidth, canvasHeight]);
+  }, [starsOnlyImage, preserveStarsIntensity, canvasWidth, canvasHeight]);
 
   // Load background image as ImageBitmap for faster rendering
   useEffect(() => {

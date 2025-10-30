@@ -112,7 +112,7 @@ const ParallelVideoGenerator: React.FC = () => {
   });
 
   const [depthIntensity, setDepthIntensity] = useState<number>(200);
-  const [preserveStars, setPreserveStars] = useState<boolean>(false);
+  const [preserveStarsIntensity, setPreserveStarsIntensity] = useState<number>(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationProgress, setAnimationProgress] = useState(0);
   const [debugImagesOpen, setDebugImagesOpen] = useState(false);
@@ -1926,7 +1926,7 @@ const ParallelVideoGenerator: React.FC = () => {
                       spinDirection: 'clockwise'
                     });
                     setDepthIntensity(200);
-                    setPreserveStars(false);
+                    setPreserveStarsIntensity(0);
                   }}
                   className="h-8 gap-2 text-xs bg-cosmic-800/50 hover:bg-cosmic-700/50 border-cosmic-600"
                 >
@@ -2050,15 +2050,20 @@ const ParallelVideoGenerator: React.FC = () => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label className="text-cosmic-200">
-                    {t('Preserve Stars', '保留所有星体')}
+                    {t('Star Preservation Intensity', '星体保留强度')}
                   </Label>
-                  <Switch
-                    checked={preserveStars}
-                    onCheckedChange={setPreserveStars}
-                  />
+                  <span className="text-cosmic-300 text-sm font-semibold">{preserveStarsIntensity}%</span>
                 </div>
+                <Slider
+                  value={[preserveStarsIntensity]}
+                  onValueChange={(value) => setPreserveStarsIntensity(value[0])}
+                  min={0}
+                  max={100}
+                  step={5}
+                  className="w-full"
+                />
                 <p className="text-xs text-cosmic-400">
-                  {t('Keep all stars without filtering dim ones', '保留所有星体，不过滤暗星')}
+                  {t('0% = clean cores only, 100% = preserve all star halos and details', '0% = 仅清洁星核, 100% = 保留所有星晕和细节')}
                 </p>
               </div>
 
@@ -2103,7 +2108,7 @@ const ParallelVideoGenerator: React.FC = () => {
                       depthIntensity={depthIntensity}
                       horizontalDisplace={0}
                       starShiftAmount={0}
-                      preserveStars={preserveStars}
+                      preserveStarsIntensity={preserveStarsIntensity}
                       videoProgressRef={isGenerating ? videoProgressRef : undefined}
                       frameRenderTrigger={frameRenderTrigger}
                       externalProgress={animationProgress}
@@ -2133,7 +2138,7 @@ const ParallelVideoGenerator: React.FC = () => {
                       depthIntensity={depthIntensity}
                       horizontalDisplace={0}
                       starShiftAmount={0}
-                      preserveStars={preserveStars}
+                      preserveStarsIntensity={preserveStarsIntensity}
                       videoProgressRef={isGenerating ? videoProgressRef : undefined}
                       frameRenderTrigger={frameRenderTrigger}
                       externalProgress={animationProgress}
