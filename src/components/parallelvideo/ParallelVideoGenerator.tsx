@@ -111,6 +111,7 @@ const ParallelVideoGenerator: React.FC = () => {
   });
 
   const [depthIntensity, setDepthIntensity] = useState<number>(200);
+  const [starCleaningIntensity, setStarCleaningIntensity] = useState<number>(0); // 0 = keep all stars for parallel video
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationProgress, setAnimationProgress] = useState(0);
   const [debugImagesOpen, setDebugImagesOpen] = useState(false);
@@ -1924,6 +1925,7 @@ const ParallelVideoGenerator: React.FC = () => {
                       spinDirection: 'clockwise'
                     });
                     setDepthIntensity(200);
+                    setStarCleaningIntensity(0);
                   }}
                   className="h-8 gap-2 text-xs bg-cosmic-800/50 hover:bg-cosmic-700/50 border-cosmic-600"
                 >
@@ -2046,6 +2048,24 @@ const ParallelVideoGenerator: React.FC = () => {
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
+                  <Label className="text-cosmic-200">{t('Star Cleaning', '星体清理')}</Label>
+                  <span className="text-amber-400 font-mono text-sm font-semibold">{starCleaningIntensity}%</span>
+                </div>
+                <Slider
+                  value={[starCleaningIntensity]}
+                  onValueChange={(value) => setStarCleaningIntensity(value[0])}
+                  min={0}
+                  max={100}
+                  step={5}
+                  className="w-full"
+                />
+                <p className="text-xs text-cosmic-400">
+                  {t('Filter dimmer stars (0% = keep all, 100% = only brightest)', '过滤较暗星体（0% = 保留全部，100% = 仅最亮）')}
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
                   <Label className="text-cosmic-200">{t('Duration (seconds)', '持续时间（秒）')}</Label>
                   <span className="text-amber-400 font-mono text-sm font-semibold">{motionSettings.duration}s</span>
                 </div>
@@ -2085,7 +2105,7 @@ const ParallelVideoGenerator: React.FC = () => {
                       depthIntensity={depthIntensity}
                       horizontalDisplace={0}
                       starShiftAmount={0}
-                      preserveStars={true}
+                      starCleaningIntensity={starCleaningIntensity}
                       videoProgressRef={isGenerating ? videoProgressRef : undefined}
                       frameRenderTrigger={frameRenderTrigger}
                       onProgressUpdate={handleProgressUpdate}
@@ -2114,7 +2134,7 @@ const ParallelVideoGenerator: React.FC = () => {
                       depthIntensity={depthIntensity}
                       horizontalDisplace={0}
                       starShiftAmount={0}
-                      preserveStars={true}
+                      starCleaningIntensity={starCleaningIntensity}
                       videoProgressRef={isGenerating ? videoProgressRef : undefined}
                       frameRenderTrigger={frameRenderTrigger}
                       onProgressUpdate={handleProgressUpdate}
