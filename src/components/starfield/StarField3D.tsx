@@ -162,27 +162,44 @@ const StarField3D: React.FC<StarField3DProps> = ({
       console.log('Detecting complete stars with cores and spikes...');
       const startTime = performance.now();
       
-      // Draw image at target canvas dimensions
+      // IMPORTANT: Create star layers with extra padding to prevent edge clipping during zoom
+      // Calculate maximum possible scale during animation
+      const maxAmplification = 3.0; // Maximum amplification factor (150% default * 2x safety margin)
+      const paddingFactor = maxAmplification; // Need this much extra space on all sides
+      
+      // Create expanded canvas with padding for star layers
+      const paddedWidth = Math.ceil(targetWidth * paddingFactor);
+      const paddedHeight = Math.ceil(targetHeight * paddingFactor);
+      const offsetX = Math.floor((paddedWidth - targetWidth) / 2);
+      const offsetY = Math.floor((paddedHeight - targetHeight) / 2);
+      
+      console.log(`Creating star layers with padding: ${paddedWidth}x${paddedHeight} (original: ${targetWidth}x${targetHeight})`);
+      
+      // Draw image at target canvas dimensions in center of padded canvas
       const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = targetWidth;
-      tempCanvas.height = targetHeight;
+      tempCanvas.width = paddedWidth;
+      tempCanvas.height = paddedHeight;
       const tempCtx = tempCanvas.getContext('2d', { 
         willReadFrequently: true,
-        alpha: false 
+        alpha: true  // Need alpha for transparent padding
       })!;
-      // Scale image to target dimensions with high quality
+      
+      // Clear with transparency
+      tempCtx.clearRect(0, 0, paddedWidth, paddedHeight);
+      
+      // Scale and draw image in center with high quality
       tempCtx.imageSmoothingEnabled = true;
       tempCtx.imageSmoothingQuality = 'high';
-      tempCtx.drawImage(img, 0, 0, targetWidth, targetHeight);
+      tempCtx.drawImage(img, offsetX, offsetY, targetWidth, targetHeight);
       
-      const sourceData = tempCtx.getImageData(0, 0, targetWidth, targetHeight);
+      const sourceData = tempCtx.getImageData(0, 0, paddedWidth, paddedHeight);
       const data = sourceData.data;
       
       // === EXTRACT ONLY BRIGHT CORES WITH SMOOTH GRADIENTS ===
       console.log('Extracting clean star cores without halos...');
       
-      const width = targetWidth;
-      const height = targetHeight;
+      const width = paddedWidth;
+      const height = paddedHeight;
       
       // Find all bright star centers
       interface StarCore {
@@ -342,9 +359,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
       const queueY = new Uint16Array(maxQueueSize);
       const pixelBuffer = new Uint32Array(maxQueueSize);
       
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          const idx = y * width + x;
+      for (let y = 0; y < paddedHeight; y++) {
+        for (let x = 0; x < paddedWidth; x++) {
+          const idx = y * paddedWidth + x;
           if (visited[idx]) continue;
           
           const luminance = luminanceCache[idx];
@@ -369,7 +386,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
               const currY = queueY[queueStart];
               queueStart++;
               
-              const currIdx = currY * width + currX;
+              const currIdx = currY * paddedWidth + currX;
               pixelBuffer[pixelCount++] = currIdx;
               
               const currLum = luminanceCache[currIdx];
@@ -393,7 +410,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
               
               // Top-left
               if (nx1 >= 0 && ny1 >= 0) {
-                const nIdx = ny1 * width + nx1;
+                const nIdx = ny1 * paddedWidth + nx1;
                 if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx1;
@@ -403,7 +420,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
               }
               // Top
               if (ny1 >= 0) {
-                const nIdx = ny1 * width + nx2;
+                const nIdx = ny1 * paddedWidth + nx2;
                 if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx2;
@@ -412,8 +429,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
                 }
               }
               // Top-right
-              if (nx3 < width && ny1 >= 0) {
-                const nIdx = ny1 * width + nx3;
+              if (nx3 < paddedWidth && ny1 >= 0) {
+                const nIdx = ny1 * paddedWidth + nx3;
                 if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx3;
@@ -423,7 +440,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
               }
               // Left
               if (nx1 >= 0) {
-                const nIdx = ny2 * width + nx1;
+                const nIdx = ny2 * paddedWidth + nx1;
                 if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx1;
@@ -432,8 +449,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
                 }
               }
               // Right
-              if (nx3 < width) {
-                const nIdx = ny2 * width + nx3;
+              if (nx3 < paddedWidth) {
+                const nIdx = ny2 * paddedWidth + nx3;
                 if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx3;
@@ -442,8 +459,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
                 }
               }
               // Bottom-left
-              if (nx1 >= 0 && ny3 < height) {
-                const nIdx = ny3 * width + nx1;
+              if (nx1 >= 0 && ny3 < paddedHeight) {
+                const nIdx = ny3 * paddedWidth + nx1;
                 if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx1;
@@ -452,8 +469,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
                 }
               }
               // Bottom
-              if (ny3 < height) {
-                const nIdx = ny3 * width + nx2;
+              if (ny3 < paddedHeight) {
+                const nIdx = ny3 * paddedWidth + nx2;
                 if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx2;
@@ -462,8 +479,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
                 }
               }
               // Bottom-right
-              if (nx3 < width && ny3 < height) {
-                const nIdx = ny3 * width + nx3;
+              if (nx3 < paddedWidth && ny3 < paddedHeight) {
+                const nIdx = ny3 * paddedWidth + nx3;
                 if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx3;
