@@ -69,7 +69,7 @@ const StarFieldGenerator: React.FC = () => {
   });
   
   // 3D depth intensity control (0-200 scale)
-  const [depthIntensity, setDepthIntensity] = useState<number>(100);
+  const [depthIntensity, setDepthIntensity] = useState<number>(200);
   
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
