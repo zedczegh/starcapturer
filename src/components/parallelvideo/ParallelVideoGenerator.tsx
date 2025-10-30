@@ -1399,257 +1399,269 @@ const ParallelVideoGenerator: React.FC = () => {
                   </p>
                 </div>
 
-                {/* Distance-based displacement suggestions - Enhanced */}
-                <div className="space-y-3 p-4 rounded-lg bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-blue-500/10 border border-blue-500/30 backdrop-blur-sm">
-                  <div className="flex items-center gap-2">
-                    <Info className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                    <h4 className="font-semibold text-blue-400 text-sm">
-                      {t('Parallax Reference Guide', '视差参考指南')}
-                    </h4>
-                  </div>
-                  
-                  {/* Deep Sky Objects - Card Grid */}
-                  <div className="space-y-2">
-                    <p className="text-[10px] uppercase tracking-wide text-cosmic-400 font-medium">
-                      {t('Deep Sky Objects', '深空天体')}
-                    </p>
-                    <div className="grid gap-2">
-                      {/* Very Close */}
-                      <div className="group relative overflow-hidden rounded-md bg-cosmic-800/40 border border-cosmic-600/30 p-2.5 hover:border-red-500/40 transition-all duration-200 hover:shadow-lg hover:shadow-red-500/10">
-                        <div className="absolute inset-0 bg-gradient-to-r from-red-500/0 via-red-500/5 to-red-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="relative flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-baseline gap-2 mb-0.5">
-                              <span className="text-red-400 font-bold text-sm">40-50px</span>
-                              <span className="text-[10px] text-cosmic-400">100-500 ly</span>
-                            </div>
-                            <p className="text-[10px] text-cosmic-300 leading-relaxed">
-                              {t('Very close nebulae - Pleiades, Hyades', '极近星云 - 昴星团、毕星团')}
-                            </p>
-                          </div>
-                        </div>
+                {/* Distance-based displacement suggestions - Collapsible */}
+                <Collapsible>
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-auto py-2.5 px-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 hover:from-blue-500/20 hover:to-purple-500/20 border-blue-500/30 justify-between group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Info className="w-4 h-4 text-blue-400" />
+                        <span className="text-sm font-semibold text-blue-400">
+                          {t('Parallax Reference Guide', '视差参考指南')}
+                        </span>
                       </div>
-                      
-                      {/* Close */}
-                      <div className="group relative overflow-hidden rounded-md bg-cosmic-800/40 border border-cosmic-600/30 p-2.5 hover:border-orange-500/40 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/10">
-                        <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/5 to-orange-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="relative flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-baseline gap-2 mb-0.5">
-                              <span className="text-orange-400 font-bold text-sm">25-40px</span>
-                              <span className="text-[10px] text-cosmic-400">500-1500 ly</span>
-                            </div>
-                            <p className="text-[10px] text-cosmic-300 leading-relaxed">
-                              {t('Close nebulae - Orion Nebula, Rosette', '近距星云 - 猎户座星云、玫瑰星云')}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Mid-range */}
-                      <div className="group relative overflow-hidden rounded-md bg-cosmic-800/40 border border-cosmic-600/30 p-2.5 hover:border-yellow-500/40 transition-all duration-200 hover:shadow-lg hover:shadow-yellow-500/10">
-                        <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="relative flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-baseline gap-2 mb-0.5">
-                              <span className="text-yellow-400 font-bold text-sm">15-25px</span>
-                              <span className="text-[10px] text-cosmic-400">1500-3000 ly</span>
-                            </div>
-                            <p className="text-[10px] text-cosmic-300 leading-relaxed">
-                              {t('Mid-range - Eagle Nebula, Lagoon', '中距 - 鹰状星云、礁湖星云')}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Distant */}
-                      <div className="group relative overflow-hidden rounded-md bg-cosmic-800/40 border border-cosmic-600/30 p-2.5 hover:border-green-500/40 transition-all duration-200 hover:shadow-lg hover:shadow-green-500/10">
-                        <div className="absolute inset-0 bg-gradient-to-r from-green-500/0 via-green-500/5 to-green-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="relative flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-baseline gap-2 mb-0.5">
-                              <span className="text-green-400 font-bold text-sm">10-15px</span>
-                              <span className="text-[10px] text-cosmic-400">3000-5000 ly</span>
-                            </div>
-                            <p className="text-[10px] text-cosmic-300 leading-relaxed">
-                              {t('Distant - Carina Nebula, North America', '远距 - 船底座星云、北美洲星云')}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Very Distant */}
-                      <div className="group relative overflow-hidden rounded-md bg-cosmic-800/40 border border-cosmic-600/30 p-2.5 hover:border-blue-500/40 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/10">
-                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/5 to-blue-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="relative flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-baseline gap-2 mb-0.5">
-                              <span className="text-blue-400 font-bold text-sm">5-10px</span>
-                              <span className="text-[10px] text-cosmic-400">5000+ ly</span>
-                            </div>
-                            <p className="text-[10px] text-cosmic-300 leading-relaxed">
-                              {t('Very distant - Most galaxies, distant clusters', '极远 - 大多数星系、遥远星团')}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Planetary distances - Improved */}
-                  <div className="pt-3 border-t border-blue-500/20 space-y-2">
-                    <p className="text-[10px] uppercase tracking-wide text-green-400 font-medium">
-                      {t('Solar System (AU)', '太阳系（天文单位）')}
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      <div className="px-2 py-1 rounded-md bg-green-500/10 border border-green-500/20">
-                        <span className="text-[10px] text-green-300 font-medium">Moon: 0.0026</span>
-                      </div>
-                      <div className="px-2 py-1 rounded-md bg-green-500/10 border border-green-500/20">
-                        <span className="text-[10px] text-green-300 font-medium">Mars: 0.5-2.5</span>
-                      </div>
-                      <div className="px-2 py-1 rounded-md bg-green-500/10 border border-green-500/20">
-                        <span className="text-[10px] text-green-300 font-medium">Jupiter: 4-6</span>
-                      </div>
-                      <div className="px-2 py-1 rounded-md bg-green-500/10 border border-green-500/20">
-                        <span className="text-[10px] text-green-300 font-medium">Saturn: 8-11</span>
-                      </div>
-                      <div className="px-2 py-1 rounded-md bg-green-500/10 border border-green-500/20">
-                        <span className="text-[10px] text-green-300 font-medium">Uranus: 18-20</span>
-                      </div>
-                      <div className="px-2 py-1 rounded-md bg-green-500/10 border border-green-500/20">
-                        <span className="text-[10px] text-green-300 font-medium">Neptune: 29-31</span>
-                      </div>
-                    </div>
-                    <p className="text-[9px] text-cosmic-400 italic flex items-start gap-1">
-                      <Info className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                      <span>{t('Note: Please process planetary/solar/lunar images on default settings.', '注：请使用默认设置处理行星/太阳/月球图像。')}</span>
-                    </p>
-                  </div>
-                      
-                      {/* Light Years to Pixels Converter - Enhanced */}
-                      <div className="mt-3 pt-3 border-t border-blue-500/20">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Sparkles className="w-4 h-4 text-blue-400" />
-                          <p className="font-semibold text-blue-400">
-                            {t('Distance to Parallax Converter', '距离视差转换器')}
-                          </p>
-                        </div>
-                        
-                        <div className="space-y-3">
-                          {/* Input Section */}
-                          <div className="relative">
-                            <Label className="text-[10px] text-cosmic-400 mb-1.5 block">
-                              {t('Enter distance in light years:', '输入光年距离：')}
-                            </Label>
-                            <div className="relative group">
-                              <input
-                                id="ly-converter-input"
-                                type="number"
-                                min="50"
-                                max="10000"
-                                placeholder={t('e.g., 1350', '例如：1350')}
-                                className="w-full px-3 py-2.5 bg-cosmic-900/60 border border-cosmic-600/50 rounded-lg text-sm text-white placeholder:text-cosmic-500 focus:outline-none focus:border-blue-500/70 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 hover:border-cosmic-500/70"
-                                onChange={(e) => {
-                                  const ly = parseFloat(e.target.value);
-                                  const resultElement = document.getElementById('converter-result');
-                                  const categoryElement = document.getElementById('converter-category');
-                                  const applyBtn = document.getElementById('apply-converter-btn') as HTMLButtonElement;
-                                  
-                                  if (!isNaN(ly) && ly > 0) {
-                                    let suggestedPx: number;
-                                    let category: string;
-                                    let categoryColor: string;
-                                    
-                                    if (ly <= 500) {
-                                      suggestedPx = 50 - ((ly - 100) / 400) * 10;
-                                      category = t('Very Close Nebulae', '极近星云');
-                                      categoryColor = 'text-red-400';
-                                    } else if (ly <= 1500) {
-                                      suggestedPx = 40 - ((ly - 500) / 1000) * 15;
-                                      category = t('Close Nebulae', '近距星云');
-                                      categoryColor = 'text-orange-400';
-                                    } else if (ly <= 3000) {
-                                      suggestedPx = 25 - ((ly - 1500) / 1500) * 10;
-                                      category = t('Mid-Range', '中距');
-                                      categoryColor = 'text-yellow-400';
-                                    } else if (ly <= 5000) {
-                                      suggestedPx = 15 - ((ly - 3000) / 2000) * 5;
-                                      category = t('Distant', '远距');
-                                      categoryColor = 'text-green-400';
-                                    } else {
-                                      const logFactor = Math.log10(ly / 5000);
-                                      suggestedPx = Math.max(5, 10 - logFactor * 5);
-                                      category = t('Very Distant', '极远');
-                                      categoryColor = 'text-blue-400';
-                                    }
-                                    
-                                    const finalPx = Math.round(suggestedPx);
-                                    
-                                    if (resultElement) {
-                                      resultElement.textContent = `${finalPx}px`;
-                                      resultElement.className = `text-2xl font-bold text-amber-400 animate-scale-in`;
-                                    }
-                                    if (categoryElement) {
-                                      categoryElement.textContent = category;
-                                      categoryElement.className = `text-xs font-medium ${categoryColor} animate-fade-in`;
-                                    }
-                                    if (applyBtn) {
-                                      applyBtn.disabled = false;
-                                      applyBtn.onclick = () => setDisplacementAmount(finalPx);
-                                    }
-                                  } else {
-                                    if (resultElement) resultElement.textContent = '—';
-                                    if (categoryElement) categoryElement.textContent = '';
-                                    if (applyBtn) applyBtn.disabled = true;
-                                  }
-                                }}
-                              />
-                              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-cosmic-500 text-xs">
-                                ly
+                      <ChevronDown className="w-4 h-4 text-blue-400 transition-transform group-data-[state=open]:rotate-180" />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="space-y-3 p-4 mt-2 rounded-lg bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-blue-500/10 border border-blue-500/30 backdrop-blur-sm">
+                      {/* Deep Sky Objects - Card Grid */}
+                      <div className="space-y-2">
+                        <p className="text-[10px] uppercase tracking-wide text-cosmic-400 font-medium">
+                          {t('Deep Sky Objects', '深空天体')}
+                        </p>
+                        <div className="grid gap-2">
+                          {/* Very Close */}
+                          <div className="group relative overflow-hidden rounded-md bg-cosmic-800/40 border border-cosmic-600/30 p-2.5 hover:border-red-500/40 transition-all duration-200 hover:shadow-lg hover:shadow-red-500/10">
+                            <div className="absolute inset-0 bg-gradient-to-r from-red-500/0 via-red-500/5 to-red-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="relative flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-baseline gap-2 mb-0.5">
+                                  <span className="text-red-400 font-bold text-sm">40-50px</span>
+                                  <span className="text-[10px] text-cosmic-400">100-500 ly</span>
+                                </div>
+                                <p className="text-[10px] text-cosmic-300 leading-relaxed">
+                                  {t('Very close nebulae - Pleiades, Hyades', '极近星云 - 昴星团、毕星团')}
+                                </p>
                               </div>
                             </div>
                           </div>
                           
-                          {/* Result Display */}
-                          <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-cosmic-800/60 to-cosmic-900/60 border border-cosmic-600/30 p-4">
-                            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5" />
-                            <div className="relative space-y-2">
-                              <div className="flex items-baseline justify-between">
-                                <span className="text-[10px] uppercase tracking-wide text-cosmic-400 font-medium">
-                                  {t('Suggested Displacement', '建议位移')}
-                                </span>
-                                <span id="converter-category" className="text-xs font-medium text-cosmic-400"></span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span id="converter-result" className="text-2xl font-bold text-cosmic-500">
-                                  —
-                                </span>
-                                <Button
-                                  id="apply-converter-btn"
-                                  disabled
-                                  onClick={() => {}}
-                                  size="sm"
-                                  className="h-8 px-3 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
-                                >
-                                  {t('Apply', '应用')}
-                                </Button>
+                          {/* Close */}
+                          <div className="group relative overflow-hidden rounded-md bg-cosmic-800/40 border border-cosmic-600/30 p-2.5 hover:border-orange-500/40 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/10">
+                            <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/5 to-orange-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="relative flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-baseline gap-2 mb-0.5">
+                                  <span className="text-orange-400 font-bold text-sm">25-40px</span>
+                                  <span className="text-[10px] text-cosmic-400">500-1500 ly</span>
+                                </div>
+                                <p className="text-[10px] text-cosmic-300 leading-relaxed">
+                                  {t('Close nebulae - Orion Nebula, Rosette', '近距星云 - 猎户座星云、玫瑰星云')}
+                                </p>
                               </div>
                             </div>
                           </div>
                           
-                          {/* Info Footer */}
-                          <div className="flex items-start gap-1.5 px-2">
-                            <Info className="w-3 h-3 text-cosmic-500 mt-0.5 flex-shrink-0" />
-                            <p className="text-[9px] text-cosmic-500 leading-relaxed">
-                              {t('Based on inverse distance-parallax relationship. Closer objects have stronger parallax (more displacement).', '基于距离-视差反比关系。较近的天体具有更强的视差（更多位移）。')}
-                            </p>
+                          {/* Mid-range */}
+                          <div className="group relative overflow-hidden rounded-md bg-cosmic-800/40 border border-cosmic-600/30 p-2.5 hover:border-yellow-500/40 transition-all duration-200 hover:shadow-lg hover:shadow-yellow-500/10">
+                            <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/5 to-yellow-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="relative flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-baseline gap-2 mb-0.5">
+                                  <span className="text-yellow-400 font-bold text-sm">15-25px</span>
+                                  <span className="text-[10px] text-cosmic-400">1500-3000 ly</span>
+                                </div>
+                                <p className="text-[10px] text-cosmic-300 leading-relaxed">
+                                  {t('Mid-range - Eagle Nebula, Lagoon', '中距 - 鹰状星云、礁湖星云')}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Distant */}
+                          <div className="group relative overflow-hidden rounded-md bg-cosmic-800/40 border border-cosmic-600/30 p-2.5 hover:border-green-500/40 transition-all duration-200 hover:shadow-lg hover:shadow-green-500/10">
+                            <div className="absolute inset-0 bg-gradient-to-r from-green-500/0 via-green-500/5 to-green-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="relative flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-baseline gap-2 mb-0.5">
+                                  <span className="text-green-400 font-bold text-sm">10-15px</span>
+                                  <span className="text-[10px] text-cosmic-400">3000-5000 ly</span>
+                                </div>
+                                <p className="text-[10px] text-cosmic-300 leading-relaxed">
+                                  {t('Distant - Carina Nebula, North America', '远距 - 船底座星云、北美洲星云')}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Very Distant */}
+                          <div className="group relative overflow-hidden rounded-md bg-cosmic-800/40 border border-cosmic-600/30 p-2.5 hover:border-blue-500/40 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/10">
+                            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/5 to-blue-500/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="relative flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-baseline gap-2 mb-0.5">
+                                  <span className="text-blue-400 font-bold text-sm">5-10px</span>
+                                  <span className="text-[10px] text-cosmic-400">5000+ ly</span>
+                                </div>
+                                <p className="text-[10px] text-cosmic-300 leading-relaxed">
+                                  {t('Very distant - Most galaxies, distant clusters', '极远 - 大多数星系、遥远星团')}
+                                </p>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                </div>
+                      
+                      {/* Planetary distances - Improved */}
+                      <div className="pt-3 border-t border-blue-500/20 space-y-2">
+                        <p className="text-[10px] uppercase tracking-wide text-green-400 font-medium">
+                          {t('Solar System (AU)', '太阳系（天文单位）')}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          <div className="px-2 py-1 rounded-md bg-green-500/10 border border-green-500/20">
+                            <span className="text-[10px] text-green-300 font-medium">Moon: 0.0026</span>
+                          </div>
+                          <div className="px-2 py-1 rounded-md bg-green-500/10 border border-green-500/20">
+                            <span className="text-[10px] text-green-300 font-medium">Mars: 0.5-2.5</span>
+                          </div>
+                          <div className="px-2 py-1 rounded-md bg-green-500/10 border border-green-500/20">
+                            <span className="text-[10px] text-green-300 font-medium">Jupiter: 4-6</span>
+                          </div>
+                          <div className="px-2 py-1 rounded-md bg-green-500/10 border border-green-500/20">
+                            <span className="text-[10px] text-green-300 font-medium">Saturn: 8-11</span>
+                          </div>
+                          <div className="px-2 py-1 rounded-md bg-green-500/10 border border-green-500/20">
+                            <span className="text-[10px] text-green-300 font-medium">Uranus: 18-20</span>
+                          </div>
+                          <div className="px-2 py-1 rounded-md bg-green-500/10 border border-green-500/20">
+                            <span className="text-[10px] text-green-300 font-medium">Neptune: 29-31</span>
+                          </div>
+                        </div>
+                        <p className="text-[9px] text-cosmic-400 italic flex items-start gap-1">
+                          <Info className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                          <span>{t('Note: Please process planetary/solar/lunar images on default settings.', '注：请使用默认设置处理行星/太阳/月球图像。')}</span>
+                        </p>
+                      </div>
+                          
+                          {/* Light Years to Pixels Converter - Enhanced */}
+                          <div className="mt-3 pt-3 border-t border-blue-500/20">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Sparkles className="w-4 h-4 text-blue-400" />
+                              <p className="font-semibold text-blue-400">
+                                {t('Distance to Parallax Converter', '距离视差转换器')}
+                              </p>
+                            </div>
+                            
+                            <div className="space-y-3">
+                              {/* Input Section */}
+                              <div className="relative">
+                                <Label className="text-[10px] text-cosmic-400 mb-1.5 block">
+                                  {t('Enter distance in light years:', '输入光年距离：')}
+                                </Label>
+                                <div className="relative group">
+                                  <input
+                                    id="ly-converter-input"
+                                    type="number"
+                                    min="50"
+                                    max="10000"
+                                    placeholder={t('e.g., 1350', '例如：1350')}
+                                    className="w-full px-3 py-2.5 bg-cosmic-900/60 border border-cosmic-600/50 rounded-lg text-sm text-white placeholder:text-cosmic-500 focus:outline-none focus:border-blue-500/70 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 hover:border-cosmic-500/70"
+                                    onChange={(e) => {
+                                      const ly = parseFloat(e.target.value);
+                                      const resultElement = document.getElementById('converter-result');
+                                      const categoryElement = document.getElementById('converter-category');
+                                      const applyBtn = document.getElementById('apply-converter-btn') as HTMLButtonElement;
+                                      
+                                      if (!isNaN(ly) && ly > 0) {
+                                        let suggestedPx: number;
+                                        let category: string;
+                                        let categoryColor: string;
+                                        
+                                        if (ly <= 500) {
+                                          suggestedPx = 50 - ((ly - 100) / 400) * 10;
+                                          category = t('Very Close Nebulae', '极近星云');
+                                          categoryColor = 'text-red-400';
+                                        } else if (ly <= 1500) {
+                                          suggestedPx = 40 - ((ly - 500) / 1000) * 15;
+                                          category = t('Close Nebulae', '近距星云');
+                                          categoryColor = 'text-orange-400';
+                                        } else if (ly <= 3000) {
+                                          suggestedPx = 25 - ((ly - 1500) / 1500) * 10;
+                                          category = t('Mid-Range', '中距');
+                                          categoryColor = 'text-yellow-400';
+                                        } else if (ly <= 5000) {
+                                          suggestedPx = 15 - ((ly - 3000) / 2000) * 5;
+                                          category = t('Distant', '远距');
+                                          categoryColor = 'text-green-400';
+                                        } else {
+                                          const logFactor = Math.log10(ly / 5000);
+                                          suggestedPx = Math.max(5, 10 - logFactor * 5);
+                                          category = t('Very Distant', '极远');
+                                          categoryColor = 'text-blue-400';
+                                        }
+                                        
+                                        const finalPx = Math.round(suggestedPx);
+                                        
+                                        if (resultElement) {
+                                          resultElement.textContent = `${finalPx}px`;
+                                          resultElement.className = `text-2xl font-bold text-amber-400 animate-scale-in`;
+                                        }
+                                        if (categoryElement) {
+                                          categoryElement.textContent = category;
+                                          categoryElement.className = `text-xs font-medium ${categoryColor} animate-fade-in`;
+                                        }
+                                        if (applyBtn) {
+                                          applyBtn.disabled = false;
+                                          applyBtn.onclick = () => setDisplacementAmount(finalPx);
+                                        }
+                                      } else {
+                                        if (resultElement) resultElement.textContent = '—';
+                                        if (categoryElement) categoryElement.textContent = '';
+                                        if (applyBtn) applyBtn.disabled = true;
+                                      }
+                                    }}
+                                  />
+                                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-cosmic-500 text-xs">
+                                    ly
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Result Display */}
+                              <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-cosmic-800/60 to-cosmic-900/60 border border-cosmic-600/30 p-4">
+                                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5" />
+                                <div className="relative space-y-2">
+                                  <div className="flex items-baseline justify-between">
+                                    <span className="text-[10px] uppercase tracking-wide text-cosmic-400 font-medium">
+                                      {t('Suggested Displacement', '建议位移')}
+                                    </span>
+                                    <span id="converter-category" className="text-xs font-medium text-cosmic-400"></span>
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <span id="converter-result" className="text-2xl font-bold text-cosmic-500">
+                                      —
+                                    </span>
+                                    <Button
+                                      id="apply-converter-btn"
+                                      disabled
+                                      onClick={() => {}}
+                                      size="sm"
+                                      className="h-8 px-3 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
+                                    >
+                                      {t('Apply', '应用')}
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Info Footer */}
+                              <div className="flex items-start gap-1.5 px-2">
+                                <Info className="w-3 h-3 text-cosmic-500 mt-0.5 flex-shrink-0" />
+                                <p className="text-[9px] text-cosmic-500 leading-relaxed">
+                                  {t('Based on inverse distance-parallax relationship. Closer objects have stronger parallax (more displacement).', '基于距离-视差反比关系。较近的天体具有更强的视差（更多位移）。')}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            </div>
 
             {/* Process Button */}
             <Button
