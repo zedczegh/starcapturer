@@ -7,13 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Upload, Video, Download, Sparkles, Eye, Settings2, Image as ImageIcon, Play, Pause, RotateCcw } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { UploadProgress } from '@/components/ui/upload-progress';
 import StarField3D from './StarField3D';
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { CanvasPool } from '@/lib/performance/CanvasPool';
 import { MemoryManager } from '@/lib/performance/MemoryManager';
 import { ChunkedProcessor } from '@/lib/performance/ChunkedProcessor';
@@ -62,12 +59,7 @@ const StarFieldGenerator: React.FC = () => {
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const videoProgressRef = useRef<number>(0); // Direct ref for frame-by-frame control
   const [frameRenderTrigger, setFrameRenderTrigger] = useState(0); // Trigger to force frame render
-  const [showFormatDialog, setShowFormatDialog] = useState(false);
   const [videoProgress, setVideoProgress] = useState({ stage: '', percent: 0 });
-  const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
-  const [mp4Progress, setMp4Progress] = useState(0);
-  const [mp4Blob, setMp4Blob] = useState<Blob | null>(null);
-  const [isEncodingMP4, setIsEncodingMP4] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   
   // Upload progress tracking
@@ -82,7 +74,6 @@ const StarFieldGenerator: React.FC = () => {
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const ffmpegRef = useRef<FFmpeg | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const recordingStopCallbackRef = useRef<(() => void) | null>(null);
@@ -101,27 +92,6 @@ const StarFieldGenerator: React.FC = () => {
   });
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
-  
-  // Initialize FFmpeg instance (but don't load it yet - load on demand)
-  useEffect(() => {
-    if (!ffmpegRef.current) {
-      const ffmpeg = new FFmpeg();
-      
-      // Add logging callbacks
-      ffmpeg.on('log', ({ message }) => {
-        console.log('[FFmpeg]:', message);
-      });
-      
-      ffmpeg.on('progress', ({ progress, time }) => {
-        console.log('[FFmpeg Progress]:', `${Math.round(progress * 100)}%`, time);
-        setMp4Progress(50 + (progress * 40)); // FFmpeg progress from 50% to 90%
-      });
-      
-      ffmpegRef.current = ffmpeg;
-      console.log('FFmpeg instance created (not loaded yet)');
-    }
-  }, []);
-  
 
   // Unified image upload handler using new utilities
   const handleImageUpload = useCallback(async (
@@ -550,7 +520,8 @@ const StarFieldGenerator: React.FC = () => {
   }, []);
 
   const initiateDownload = useCallback(() => {
-    setShowFormatDialog(true);
+    // Directly download WebM
+    downloadVideoWebM();
   }, []);
 
   const stopRecording = useCallback(() => {
@@ -831,375 +802,6 @@ const StarFieldGenerator: React.FC = () => {
     }
   }, [animationSettings.duration, currentStep]);
 
-  const downloadVideoMP4 = useCallback(async () => {
-    if (currentStep !== 'ready') {
-      return;
-    }
-    
-    return MemoryManager.monitorOperation(async () => {
-      try {
-        setIsEncodingMP4(true);
-        setIsGeneratingVideo(true);
-        setMp4Progress(0);
-        setMp4Blob(null);
-        
-        console.log('=== Starting MP4 Generation with Frame-by-Frame Rendering ===');
-      
-      const fps = 30; // Use 30fps for better compatibility and faster encoding
-      const duration = animationSettings.duration;
-      
-      // Step 1: Setup (0-5%)
-      setMp4Progress(0);
-      
-      // Stop any current animation
-      setIsAnimating(false);
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Step 2: Get canvas
-      let sourceCanvas = canvasRef.current;
-      
-      if (!sourceCanvas) {
-        const canvasElements = document.querySelectorAll('canvas');
-        for (const canvasEl of canvasElements) {
-          if (canvasEl instanceof HTMLCanvasElement && canvasEl.width > 0 && canvasEl.height > 0) {
-            sourceCanvas = canvasEl;
-            canvasRef.current = sourceCanvas;
-            break;
-          }
-        }
-      }
-      
-      if (!sourceCanvas) {
-        throw new Error('Canvas not available');
-      }
-      
-      const sourceWidth = sourceCanvas.width;
-      const sourceHeight = sourceCanvas.height;
-      const megapixels = (sourceWidth * sourceHeight) / 1000000;
-      
-      console.log(`Source canvas: ${sourceWidth}x${sourceHeight} (${megapixels.toFixed(1)}MP)`);
-      
-      // Cap resolution for performance
-      let recordWidth = sourceWidth;
-      let recordHeight = sourceHeight;
-      const maxWidth = 1920;
-      const maxHeight = 1080;
-      
-      if (recordWidth > maxWidth || recordHeight > maxHeight) {
-        const scale = Math.min(maxWidth / recordWidth, maxHeight / recordHeight);
-        recordWidth = Math.round(recordWidth * scale);
-        recordHeight = Math.round(recordHeight * scale);
-        console.log(`Scaled down to ${recordWidth}x${recordHeight} for better performance`);
-      }
-      
-      const totalFrames = Math.ceil(duration * fps);
-      console.log(`Will render ${totalFrames} frames at ${fps}fps`);
-      
-      setMp4Progress(5);
-      
-      // Step 3: Frame-by-Frame Rendering (5-35%)
-      console.log('Stage 1: Rendering frames with precise control...');
-      
-      const canvasPool = CanvasPool.getInstance();
-      const renderCanvas = canvasPool.acquire(recordWidth, recordHeight);
-      const renderCtx = renderCanvas.getContext('2d', {
-        alpha: false,
-        willReadFrequently: false
-      })!;
-      
-      renderCtx.imageSmoothingEnabled = true;
-      renderCtx.imageSmoothingQuality = 'high';
-      
-      const frames: ImageData[] = [];
-      
-      // Render frames with precise progress control
-      for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
-        const frameProgress = (frameIndex / (totalFrames - 1)) * 100;
-        
-        videoProgressRef.current = frameProgress;
-        setFrameRenderTrigger(prev => prev + 1);
-        
-        // Wait for rendering
-        await new Promise(resolve => requestAnimationFrame(resolve));
-        await new Promise(resolve => requestAnimationFrame(resolve));
-        await new Promise(resolve => requestAnimationFrame(resolve));
-        
-        if (sourceWidth * sourceHeight > 10000000) {
-          await new Promise(resolve => setTimeout(resolve, 50));
-        } else if (sourceWidth * sourceHeight > 5000000) {
-          await new Promise(resolve => setTimeout(resolve, 20));
-        }
-        
-        // Capture frame
-        renderCtx.fillStyle = '#000000';
-        renderCtx.fillRect(0, 0, recordWidth, recordHeight);
-        renderCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
-        
-        frames.push(renderCtx.getImageData(0, 0, recordWidth, recordHeight));
-        
-        const renderProgress = 5 + (frameIndex / totalFrames) * 30;
-        setMp4Progress(renderProgress);
-        
-        if ((frameIndex + 1) % 15 === 0 || frameIndex === 0) {
-          console.log(`Rendered ${frameIndex + 1}/${totalFrames} frames for MP4`);
-        }
-      }
-      
-      setIsAnimating(false);
-      console.log(`✓ ${frames.length} frames rendered`);
-      setMp4Progress(35);
-      // Step 4: Encode to WebM (35-65%)
-      console.log('Stage 2: Encoding frames to WebM...');
-      
-      const encodingCanvas = canvasPool.acquire(recordWidth, recordHeight);
-      const encodingCtx = encodingCanvas.getContext('2d')!;
-      
-      const stream = encodingCanvas.captureStream(fps);
-      
-      let mimeType = 'video/webm;codecs=vp9';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'video/webm;codecs=vp8';
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
-          mimeType = 'video/webm';
-        }
-      }
-      
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType,
-        videoBitsPerSecond: 25000000
-      });
-      
-      const chunks: Blob[] = [];
-      
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-          chunks.push(e.data);
-        }
-      };
-      
-      mediaRecorder.start();
-      
-      // Playback pre-rendered frames
-      const frameInterval = 1000 / fps;
-      let currentFrame = 0;
-      
-      const playbackPromise = new Promise<void>((resolve) => {
-        const playFrame = () => {
-          if (currentFrame >= frames.length) {
-            mediaRecorder.stop();
-            resolve();
-            return;
-          }
-          
-          encodingCtx.putImageData(frames[currentFrame], 0, 0);
-          currentFrame++;
-          
-          const encodeProgress = 35 + ((currentFrame / frames.length) * 30);
-          setMp4Progress(encodeProgress);
-          
-          setTimeout(playFrame, frameInterval);
-        };
-        playFrame();
-      });
-      
-      await playbackPromise;
-      
-      await new Promise<void>((resolve) => {
-        mediaRecorder.onstop = () => resolve();
-      });
-      
-      stream.getTracks().forEach(track => track.stop());
-      
-      const webmBlob = new Blob(chunks, { type: mimeType });
-      console.log(`✓ WebM encoded: ${(webmBlob.size / 1024 / 1024).toFixed(2)} MB`);
-      
-      canvasPool.release(renderCanvas);
-      canvasPool.release(encodingCanvas);
-      
-      setMp4Progress(65);
-      // Step 5: Load FFmpeg if needed (65-70%)
-      console.log('=== FFmpeg Loading Phase ===');
-      console.log('FFmpeg loaded:', ffmpegLoaded);
-      console.log('FFmpeg ref exists:', !!ffmpegRef.current);
-      
-      if (!ffmpegRef.current) {
-        throw new Error('FFmpeg instance not initialized');
-      }
-      
-      if (!ffmpegLoaded) {
-        console.log('=== Loading FFmpeg (~32MB download) ===');
-        
-        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
-        
-        try {
-          console.log('[1/3] Fetching core JS...');
-          const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
-          console.log('✓ Core JS ready');
-          setMp4Progress(67);
-          
-          console.log('[2/3] Fetching WASM file (~32MB)...');
-          const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
-          console.log('✓ WASM ready');
-          setMp4Progress(69);
-          
-          // Step 3: Initialize FFmpeg with proper timeout
-          console.log('[3/3] Initializing FFmpeg (this can take 20-30s)...');
-          console.log('Note: If this hangs, your browser may not support the encoder');
-          
-          let initResolved = false;
-          
-          const initPromise = new Promise(async (resolve, reject) => {
-            try {
-              await ffmpegRef.current!.load({
-                coreURL,
-                wasmURL,
-              });
-              if (!initResolved) {
-                initResolved = true;
-                resolve(true);
-              }
-            } catch (e) {
-              if (!initResolved) {
-                initResolved = true;
-                reject(e);
-              }
-            }
-          });
-          
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => {
-              if (!initResolved) {
-                initResolved = true;
-                console.error('✗ FFmpeg initialization timeout after 30s');
-                reject(new Error('FFmpeg took too long to initialize. Your browser may not support MP4 encoding. Please use WebM format instead.'));
-              }
-            }, 30000);
-          });
-          
-          await Promise.race([initPromise, timeoutPromise]);
-          
-          if (initResolved) {
-            console.log('✓ FFmpeg initialized successfully!');
-            setFfmpegLoaded(true);
-            setMp4Progress(70);
-          }
-        } catch (error) {
-          console.error('=== FFmpeg Loading Failed ===');
-          console.error('Error:', error);
-          
-          const errorMsg = error instanceof Error ? error.message : String(error);
-          
-          throw new Error(`FFmpeg initialization failed: ${errorMsg}`);
-        }
-      } else {
-        setMp4Progress(70);
-        console.log('✓ FFmpeg already loaded');
-      }
-      
-      // Step 6: Convert WebM to MP4 (70-100%)
-      console.log('=== MP4 Conversion Phase ===');
-      const ffmpeg = ffmpegRef.current;
-      
-      try {
-        // Write WebM to FFmpeg virtual filesystem
-        console.log('Writing WebM to FFmpeg filesystem...');
-        const webmData = await fetchFile(webmBlob);
-        console.log(`WebM data size: ${webmData.byteLength} bytes`);
-        await ffmpeg.writeFile('input.webm', webmData);
-        console.log('✓ WebM written to FFmpeg filesystem');
-        
-        setMp4Progress(75);
-        
-        // Convert with settings optimized for compatibility
-        console.log('Executing FFmpeg conversion (this may take a moment)...');
-        await ffmpeg.exec([
-          '-i', 'input.webm',
-          '-c:v', 'libx264',      // H.264 codec for maximum compatibility
-          '-preset', 'fast',       // Faster encoding
-          '-crf', '23',            // Good quality
-          '-pix_fmt', 'yuv420p',   // Required for compatibility
-          '-movflags', '+faststart', // Web streaming optimization
-          '-r', fps.toString(),    // Match source framerate
-          'output.mp4'
-        ]);
-        console.log('✓ FFmpeg conversion completed successfully');
-        
-        setMp4Progress(95);
-        
-        // Read the converted MP4 file
-        console.log('Reading MP4 output...');
-        const mp4Data = await ffmpeg.readFile('output.mp4') as Uint8Array;
-        const mp4ArrayBuffer = new Uint8Array(mp4Data).buffer;
-        const mp4Blob = new Blob([mp4ArrayBuffer], { type: 'video/mp4' });
-        
-        console.log(`✓ MP4 created: ${mp4Blob.size} bytes (${(mp4Blob.size / 1024 / 1024).toFixed(2)} MB)`);
-        
-        if (mp4Blob.size < 1000) {
-          throw new Error(`MP4 file too small: ${mp4Blob.size} bytes`);
-        }
-        
-        // Clean up FFmpeg filesystem
-        console.log('Cleaning up...');
-        try {
-          await ffmpeg.deleteFile('input.webm');
-          await ffmpeg.deleteFile('output.mp4');
-          console.log('✓ Cleanup complete');
-        } catch (cleanupError) {
-          console.warn('Cleanup warning (non-critical):', cleanupError);
-        }
-        
-        setMp4Progress(100);
-        setMp4Blob(mp4Blob);
-        setIsGeneratingVideo(false);
-        setIsAnimating(false);
-        setAnimationProgress(0);
-        
-        console.log('=== MP4 Generation Complete ===');
-        
-      } catch (conversionError) {
-        console.error('✗ Conversion failed:', conversionError);
-        throw conversionError;
-      }
-      
-      } catch (error) {
-        console.error('=== MP4 Generation Failed ===');
-        console.error('Error:', error);
-        
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.error('Error message:', errorMessage);
-        
-        setIsEncodingMP4(false);
-        setIsGeneratingVideo(false);
-        setIsAnimating(false);
-        setMp4Progress(0);
-        
-        MemoryManager.forceGarbageCollection();
-        throw error;
-      }
-    }, 'MP4 Recording').catch(() => {
-      setIsEncodingMP4(false);
-      setIsGeneratingVideo(false);
-      setIsAnimating(false);
-    });
-  }, [animationSettings.duration, ffmpegLoaded, isAnimating, currentStep, t]);
-
-  const downloadMP4File = useCallback(() => {
-    if (!mp4Blob) return;
-    
-    const url = URL.createObjectURL(mp4Blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `starfield-${Date.now()}.mp4`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    // Reset
-    setMp4Blob(null);
-    setMp4Progress(0);
-    setIsEncodingMP4(false);
-  }, [mp4Blob, t]);
 
   const resetAll = useCallback(() => {
     // Stop any recording first
@@ -1210,10 +812,6 @@ const StarFieldGenerator: React.FC = () => {
     // Force stop any ongoing video generation immediately
     setIsGeneratingVideo(false);
     setIsRecording(false);
-    setIsEncodingMP4(false);
-    setMp4Progress(0);
-    setMp4Blob(null);
-    setShowFormatDialog(false);
     
     // Stop animation immediately
     setIsAnimating(false);
@@ -1238,7 +836,7 @@ const StarFieldGenerator: React.FC = () => {
     if (starlessFileInputRef.current) {
       starlessFileInputRef.current.value = '';
     }
-  }, [isRecording, stopRecording, t]);
+  }, [isRecording, stopRecording]);
 
   return (
     <div className="space-y-8">
@@ -1690,63 +1288,8 @@ const StarFieldGenerator: React.FC = () => {
                 </Button>
               )}
             </div>
-            
-            {/* MP4 Encoding Progress Bar - Only show when ready */}
-            {currentStep === 'ready' && isEncodingMP4 && mp4Progress > 0 && (
-              <Card className="bg-cosmic-900/50 border-cosmic-700/50">
-                <CardContent className="p-4 space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-cosmic-200 font-medium">
-                      {mp4Progress < 40 
-                        ? t('Recording video...', '录制视频...')
-                        : mp4Progress < 50
-                        ? t('Loading encoder...', '加载编码器...')
-                        : t('Converting to MP4...', '转换为MP4...')
-                      }
-                    </span>
-                    <span className="text-cosmic-300 font-semibold">
-                      {Math.round(mp4Progress)}%
-                    </span>
-                  </div>
-                  <div className="w-full h-2 bg-cosmic-800 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 transition-all duration-300 animate-pulse"
-                      style={{ width: `${mp4Progress}%` }}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
         </div>
-
-        {/* Format Selection Dialog */}
-        <Dialog open={showFormatDialog} onOpenChange={setShowFormatDialog}>
-          <DialogContent className="bg-cosmic-900 border-cosmic-700">
-            <DialogHeader>
-              <DialogTitle className="text-white">
-                {t('Choose Video Format', '选择视频格式')}
-              </DialogTitle>
-              <DialogDescription className="text-cosmic-300">
-                {t('Select the format for your downloaded video', '选择下载视频的格式')}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <Button
-                onClick={() => {
-                  setShowFormatDialog(false);
-                  downloadVideoWebM();
-                }}
-                disabled={isGeneratingVideo}
-                className="w-full bg-cosmic-800 hover:bg-cosmic-700 text-white"
-              >
-                <Video className="h-4 w-4 mr-2" />
-                {t('WebM (Fast, Browser Native)', 'WebM（快速，浏览器原生）')}
-              </Button>
-              
-            </div>
-          </DialogContent>
-        </Dialog>
 
         {/* Right Panel - 3D Preview */}
         <div className="lg:col-span-2">
