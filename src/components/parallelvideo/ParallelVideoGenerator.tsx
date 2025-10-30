@@ -1556,13 +1556,16 @@ const ParallelVideoGenerator: React.FC = () => {
                                   
                                   resultSpan.textContent = `≈ ${Math.round(result.constrainedDisplacement)}px`;
                                   
+                                  const tooLarge = result.realDisplacement > 50;
+                                  
                                   detailsDiv.innerHTML = `
                                     <div class="text-[10px] space-y-0.5 text-cosmic-400">
-                                      <p>• Effective Baseline: <span class="text-blue-300">${enhancementFactor} AU</span></p>
+                                      <p>• Effective Baseline: <span class="text-blue-300">${enhancementFactor.toLocaleString()} AU</span></p>
                                       <p>• Parallax Angle: <span class="text-blue-300">${result.parallaxAngle.toFixed(4)}"</span></p>
                                       <p>• Plate Scale: <span class="text-blue-300">${result.plateScale.toFixed(3)}"/px</span></p>
-                                      <p>• Raw Displacement: <span class="text-blue-300">${result.realDisplacement.toFixed(2)}px</span></p>
-                                      <p class="text-green-400 font-semibold">✓ Suggested: <span class="text-amber-300">${Math.round(result.constrainedDisplacement)}px</span> ${result.isConstrained ? '(constrained)' : ''}</p>
+                                      ${tooLarge ? `<p>• Calculated: <span class="text-orange-300">${result.realDisplacement.toFixed(1)}px</span> (capped at 50px)</p>` : `<p>• Calculated: <span class="text-blue-300">${result.realDisplacement.toFixed(2)}px</span></p>`}
+                                      <p class="text-green-400 font-semibold">✓ Use: <span class="text-amber-300">${Math.round(result.constrainedDisplacement)}px</span> displacement</p>
+                                      ${result.constrainedDisplacement < 5 ? `<p class="text-amber-400 text-[9px]">💡 Increase Enhancement Factor for stronger 3D</p>` : ''}
                                     </div>
                                   `;
                                 } else if (resultSpan && detailsDiv) {

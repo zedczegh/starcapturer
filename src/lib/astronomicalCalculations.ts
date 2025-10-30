@@ -55,7 +55,7 @@ export const calculatePlateScale = (
  * 
  * @param parallaxAngleArcsec - Parallax angle in arcseconds
  * @param plateScaleArcsecPerPixel - Plate scale in arcseconds per pixel
- * @param constrainForViewing - Whether to constrain the result to comfortable viewing range (3-50px)
+ * @param constrainForViewing - Whether to constrain the result to comfortable viewing maximum (50px)
  * @returns Pixel displacement amount
  */
 export const calculateDisplacementFromParallax = (
@@ -66,8 +66,9 @@ export const calculateDisplacementFromParallax = (
   const rawDisplacement = parallaxAngleArcsec / plateScaleArcsecPerPixel;
 
   if (constrainForViewing) {
-    // Constrain to comfortable stereoscopic viewing range
-    return Math.max(3, Math.min(50, rawDisplacement));
+    // Only constrain maximum for comfortable stereoscopic viewing
+    // No minimum - let users see even subtle effects
+    return Math.min(50, rawDisplacement);
   }
 
   return rawDisplacement;
