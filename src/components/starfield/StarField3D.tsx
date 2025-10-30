@@ -845,8 +845,24 @@ const StarField3D: React.FC<StarField3DProps> = ({
     const displacementRatio = horizontalDisplace > 0 ? starShiftAmount / horizontalDisplace : 0.24;
     const baseParallaxScale = depthIntensity / 100;
     
-    // Calculate scale needed to fill frame when rotated (optimized)
-    const rotationScale = spin > 0 ? 1 + (Math.abs(Math.sin(currentRotation)) * 0.414) : 1;
+    // Calculate scale needed to fill frame when rotated - prevents black edges during spin
+    // Formula ensures rotated rectangle always covers the original viewport
+    let rotationScale = 1;
+    if (spin > 0) {
+      const aspectRatio = canvas.width / canvas.height;
+      const absRotation = Math.abs(currentRotation);
+      const absSin = Math.abs(Math.sin(absRotation));
+      const absCos = Math.abs(Math.cos(absRotation));
+      
+      // Calculate the scale needed to ensure full coverage at this rotation angle
+      // This accounts for both width and height of the rectangular canvas
+      const scaleX = absCos + (absSin / aspectRatio);
+      const scaleY = absSin + (absCos * aspectRatio);
+      rotationScale = Math.max(scaleX, scaleY / aspectRatio);
+      
+      // Add small safety margin to prevent edge artifacts
+      rotationScale *= 1.02;
+    }
     
     // Amplification factor from settings (50-300%, default 150%)
     // This controls the overall scale change magnitude for all layers
