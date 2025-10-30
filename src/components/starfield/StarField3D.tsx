@@ -311,10 +311,54 @@ const StarField3D: React.FC<StarField3DProps> = ({
         console.log('Clean star cores extracted with smooth gradients');
       } else {
         console.log('🌟 Preserving all stars from image (no cleaning)');
+        
+        // When preserveStars is true, skip ALL detection and just duplicate the entire image across layers
+        console.log('🌟 PRESERVE MODE: Duplicating entire image to all 12 layers without detection');
+        
+        const canvases = Array(12).fill(null).map(() => {
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: false })!;
+          ctx.putImageData(sourceData, 0, 0);
+          return canvas;
+        });
+        
+        const bitmapOptions: ImageBitmapOptions = {
+          premultiplyAlpha: 'premultiply',
+          colorSpaceConversion: 'none',
+          resizeQuality: 'high'
+        };
+        
+        Promise.all(
+          canvases.map(canvas => createImageBitmap(canvas, bitmapOptions))
+        ).then((bitmaps) => {
+          setStarLayers({
+            layer1: bitmaps[0],
+            layer2: bitmaps[1],
+            layer3: bitmaps[2],
+            layer4: bitmaps[3],
+            layer5: bitmaps[4],
+            layer6: bitmaps[5],
+            layer7: bitmaps[6],
+            layer8: bitmaps[7],
+            layer9: bitmaps[8],
+            layer10: bitmaps[9],
+            layer11: bitmaps[10],
+            layer12: bitmaps[11]
+          });
+          
+          const totalTime = (performance.now() - startTime).toFixed(0);
+          console.log(`✅ [StarField3D] 12 layers ready (PRESERVE MODE - complete image duplicated): ${totalTime}ms`);
+        }).catch(error => {
+          console.error('❌ [StarField3D] Failed to create star layer bitmaps:', error);
+        });
+        
+        return; // Exit early - no detection needed
       }
       // === END CONDITIONAL STAR CLEANING ===
       
-      // === STAR DETECTION AND LAYER ASSIGNMENT (ALWAYS RUNS) ===
+      // === STAR DETECTION AND LAYER ASSIGNMENT (ONLY WHEN NOT PRESERVING) ===
       console.log('🔍 Detecting stars with halos and spikes for layer assignment...');
       
       // Pre-calculate luminance for all pixels using Uint8Array for faster access
