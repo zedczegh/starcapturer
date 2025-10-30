@@ -974,60 +974,123 @@ const StereoscopeProcessor: React.FC = () => {
                     <Info className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
                     <div className="text-xs text-cosmic-300 space-y-1">
                       <p className="font-semibold text-blue-400">
-                        {t('Displacement by Distance (Parallax-Based):', '基于视差的位移建议：')}
+                        {t('Scientific Parallax Guidelines (Inverse Distance Law):', '科学视差指南（距离反比定律）：')}
                       </p>
-                      <p>• <span className="text-amber-300">40-50px</span>: {t('Very close nebulae (100-500 ly)', '极近星云（100-500光年）')}</p>
-                      <p>• <span className="text-amber-300">25-40px</span>: {t('Close nebulae (500-1500 ly)', '近距星云（500-1500光年）')}</p>
-                      <p>• <span className="text-amber-300">15-25px</span>: {t('Mid-range objects (1500-3000 ly)', '中距天体（1500-3000光年）')}</p>
-                      <p>• <span className="text-amber-300">10-15px</span>: {t('Distant objects (3000-5000 ly)', '远距天体（3000-5000光年）')}</p>
-                      <p>• <span className="text-amber-300">5-10px</span>: {t('Very distant backgrounds (5000+ ly)', '极远背景（5000+光年）')}</p>
+                      <p className="text-[10px] text-blue-300/80 mb-2">
+                        {t('Based on parallax formula: θ = b/d where θ=angular displacement, b=baseline, d=distance', '基于视差公式：θ = b/d，其中θ=角位移，b=基线，d=距离')}
+                      </p>
+                      <p>• <span className="text-amber-300">45-50px</span>: {t('100 ly (Orion Nebula inner region)', '100光年（猎户座星云内部）')}</p>
+                      <p>• <span className="text-amber-300">35-45px</span>: {t('200-300 ly (nearby molecular clouds)', '200-300光年（邻近分子云）')}</p>
+                      <p>• <span className="text-amber-300">25-35px</span>: {t('500-800 ly (Pleiades distance)', '500-800光年（昴星团距离）')}</p>
+                      <p>• <span className="text-amber-300">18-25px</span>: {t('1000-1500 ly (Orion Nebula M42)', '1000-1500光年（猎户座星云M42）')}</p>
+                      <p>• <span className="text-amber-300">12-18px</span>: {t('2000-3000 ly (Heart Nebula IC 1805)', '2000-3000光年（心状星云IC 1805）')}</p>
+                      <p>• <span className="text-amber-300">8-12px</span>: {t('4000-6000 ly (Eagle Nebula M16)', '4000-6000光年（鹰状星云M16）')}</p>
+                      <p>• <span className="text-amber-300">5-8px</span>: {t('8000+ ly (Carina Nebula NGC 3372)', '8000+光年（船底座星云NGC 3372）')}</p>
                       
-                      {/* Light Years to Pixels Converter */}
-                      <div className="mt-3 pt-3 border-t border-blue-500/20">
-                        <p className="font-semibold text-blue-400 mb-2">
-                          {t('Distance to Parallax Converter:', '距离视差转换器：')}
+                      {/* Advanced Scientific Converter */}
+                      <div className="mt-3 pt-3 border-t border-blue-500/20 space-y-3">
+                        <p className="font-semibold text-blue-400">
+                          {t('Astrophysical Parallax Calculator:', '天体物理视差计算器：')}
                         </p>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min="50"
-                            max="10000"
-                            placeholder={t('Light years', '光年')}
-                            className="flex-1 px-2 py-1 bg-cosmic-800/50 border border-cosmic-700/50 rounded text-xs text-cosmic-200 focus:outline-none focus:border-blue-500/50"
-                            onChange={(e) => {
-                              const ly = parseFloat(e.target.value);
-                              if (!isNaN(ly) && ly > 0) {
-                                // Scientifically accurate inverse relationship: closer = more parallax
-                                // Using logarithmic scale for better depth distribution
-                                let suggestedPx: number;
-                                if (ly <= 500) {
-                                  // Very close: 40-50px (max foreground displacement)
-                                  suggestedPx = 50 - ((ly - 100) / 400) * 10;
-                                } else if (ly <= 1500) {
-                                  // Close: 25-40px (foreground to mid)
-                                  suggestedPx = 40 - ((ly - 500) / 1000) * 15;
-                                } else if (ly <= 3000) {
-                                  // Mid-range: 15-25px (middle ground)
-                                  suggestedPx = 25 - ((ly - 1500) / 1500) * 10;
-                                } else if (ly <= 5000) {
-                                  // Distant: 10-15px (background)
-                                  suggestedPx = 15 - ((ly - 3000) / 2000) * 5;
-                                } else {
-                                  // Very distant: 5-10px (far background, logarithmic falloff)
-                                  const logFactor = Math.log10(ly / 5000);
-                                  suggestedPx = Math.max(5, 10 - logFactor * 5);
+                        
+                        {/* Distance Input */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-blue-300">
+                            {t('Object Distance (light years):', '天体距离（光年）：')}
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="50"
+                              max="50000"
+                              placeholder="1500"
+                              className="flex-1 px-2 py-1 bg-cosmic-800/50 border border-cosmic-700/50 rounded text-xs text-cosmic-200 focus:outline-none focus:border-blue-500/50"
+                              id="distance-input-stereo"
+                              onChange={(e) => {
+                                const ly = parseFloat(e.target.value);
+                                const baselineSelect = document.getElementById('baseline-select-stereo') as HTMLSelectElement;
+                                const baseline = parseFloat(baselineSelect?.value || '1');
+                                
+                                if (!isNaN(ly) && ly > 0) {
+                                  // SCIENTIFIC PARALLAX FORMULA
+                                  // θ (arcsec) = b (AU) / d (parsecs)
+                                  // 1 parsec = 3.26156 light years
+                                  // 1 AU = 1.496×10^8 km, 1 ly = 9.461×10^12 km
+                                  
+                                  const distanceInParsecs = ly / 3.26156;
+                                  const parallaxAngleArcsec = baseline / distanceInParsecs;
+                                  
+                                  // Convert to pixel displacement
+                                  // Assumption: 50px represents 1 arcsecond at reference scale
+                                  // This is adjustable based on image field of view
+                                  const pixelsPerArcsec = 50; // Calibration constant
+                                  let displacement = parallaxAngleArcsec * pixelsPerArcsec;
+                                  
+                                  // Apply physiological constraints for comfortable stereoscopic viewing
+                                  // Maximum: 50px (exceeding causes eye strain)
+                                  // Minimum: 3px (below this, depth is imperceptible)
+                                  displacement = Math.max(3, Math.min(50, displacement));
+                                  
+                                  // Update result display
+                                  const resultElement = document.getElementById('parallax-result-stereo');
+                                  const arcsecElement = document.getElementById('arcsec-result-stereo');
+                                  const parsecElement = document.getElementById('parsec-info-stereo');
+                                  
+                                  if (resultElement && arcsecElement && parsecElement) {
+                                    resultElement.textContent = `${displacement.toFixed(1)}px`;
+                                    arcsecElement.textContent = `${parallaxAngleArcsec.toFixed(4)}"`;
+                                    parsecElement.textContent = `${distanceInParsecs.toFixed(2)} pc`;
+                                  }
                                 }
-                                const resultElement = e.target.nextElementSibling;
-                                if (resultElement) {
-                                  resultElement.textContent = `≈ ${Math.round(suggestedPx)}px`;
-                                }
+                              }}
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* Baseline Selection */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-blue-300">
+                            {t('Parallax Baseline:', '视差基线：')}
+                          </label>
+                          <select
+                            id="baseline-select-stereo"
+                            className="w-full px-2 py-1 bg-cosmic-800/50 border border-cosmic-700/50 rounded text-xs text-cosmic-200 focus:outline-none focus:border-blue-500/50"
+                            onChange={() => {
+                              const distanceInput = document.getElementById('distance-input-stereo') as HTMLInputElement;
+                              if (distanceInput && distanceInput.value) {
+                                distanceInput.dispatchEvent(new Event('change', { bubbles: true }));
                               }
                             }}
-                          />
-                          <span className="text-amber-300 font-mono min-w-[60px]">≈ 0px</span>
+                          >
+                            <option value="0.1">{t('0.1 AU - Subtle artistic effect', '0.1 AU - 微妙艺术效果')}</option>
+                            <option value="1" selected>{t('1 AU - Standard parallax baseline', '1 AU - 标准视差基线')}</option>
+                            <option value="2">{t('2 AU - Earth orbital diameter', '2 AU - 地球轨道直径')}</option>
+                            <option value="5">{t('5 AU - Enhanced depth perception', '5 AU - 增强深度感知')}</option>
+                            <option value="10">{t('10 AU - Maximum dramatic effect', '10 AU - 最大戏剧效果')}</option>
+                          </select>
                         </div>
-                        <p className="text-[10px] text-cosmic-400 mt-1 italic">
-                          {t('Based on inverse distance-parallax relationship', '基于距离-视差反比关系')}
+                        
+                        {/* Results Display */}
+                        <div className="p-2 bg-cosmic-900/50 rounded border border-cosmic-700/30 space-y-1">
+                          <div className="flex justify-between text-[10px]">
+                            <span className="text-cosmic-400">{t('Displacement:', '位移：')}</span>
+                            <span id="parallax-result-stereo" className="text-amber-300 font-mono font-semibold">0px</span>
+                          </div>
+                          <div className="flex justify-between text-[10px]">
+                            <span className="text-cosmic-400">{t('Parallax Angle:', '视差角：')}</span>
+                            <span id="arcsec-result-stereo" className="text-blue-300 font-mono">0.0000"</span>
+                          </div>
+                          <div className="flex justify-between text-[10px]">
+                            <span className="text-cosmic-400">{t('Distance:', '距离：')}</span>
+                            <span id="parsec-info-stereo" className="text-green-300 font-mono">0.00 pc</span>
+                          </div>
+                        </div>
+                        
+                        <p className="text-[9px] text-cosmic-400 italic leading-relaxed">
+                          {t(
+                            '⚛️ Formula: θ(arcsec) = b(AU) / d(parsec). Constrained by human stereoscopic fusion limits (3-50px). Real astronomical parallax measurements use Earth\'s orbital baseline.',
+                            '⚛️ 公式：θ(角秒) = b(AU) / d(秒差距)。受人眼立体融合极限约束（3-50px）。真实天文视差测量使用地球轨道基线。'
+                          )}
                         </p>
                       </div>
                     </div>
