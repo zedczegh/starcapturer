@@ -1006,32 +1006,18 @@ const StereoscopeProcessor: React.FC = () => {
                               placeholder="1500"
                               className="flex-1 px-2 py-1 bg-cosmic-800/50 border border-cosmic-700/50 rounded text-xs text-cosmic-200 focus:outline-none focus:border-blue-500/50"
                               id="distance-input-stereo"
-                              onChange={(e) => {
-                                const ly = parseFloat(e.target.value);
+                              onInput={(e) => {
+                                const ly = parseFloat((e.target as HTMLInputElement).value);
                                 const baselineSelect = document.getElementById('baseline-select-stereo') as HTMLSelectElement;
                                 const baseline = parseFloat(baselineSelect?.value || '1');
                                 
                                 if (!isNaN(ly) && ly > 0) {
-                                  // SCIENTIFIC PARALLAX FORMULA
-                                  // θ (arcsec) = b (AU) / d (parsecs)
-                                  // 1 parsec = 3.26156 light years
-                                  // 1 AU = 1.496×10^8 km, 1 ly = 9.461×10^12 km
-                                  
                                   const distanceInParsecs = ly / 3.26156;
                                   const parallaxAngleArcsec = baseline / distanceInParsecs;
-                                  
-                                  // Convert to pixel displacement
-                                  // Assumption: 50px represents 1 arcsecond at reference scale
-                                  // This is adjustable based on image field of view
-                                  const pixelsPerArcsec = 50; // Calibration constant
+                                  const pixelsPerArcsec = 50;
                                   let displacement = parallaxAngleArcsec * pixelsPerArcsec;
-                                  
-                                  // Apply physiological constraints for comfortable stereoscopic viewing
-                                  // Maximum: 50px (exceeding causes eye strain)
-                                  // Minimum: 3px (below this, depth is imperceptible)
                                   displacement = Math.max(3, Math.min(50, displacement));
                                   
-                                  // Update result display
                                   const resultElement = document.getElementById('parallax-result-stereo');
                                   const arcsecElement = document.getElementById('arcsec-result-stereo');
                                   const parsecElement = document.getElementById('parsec-info-stereo');
@@ -1058,7 +1044,7 @@ const StereoscopeProcessor: React.FC = () => {
                             onChange={() => {
                               const distanceInput = document.getElementById('distance-input-stereo') as HTMLInputElement;
                               if (distanceInput && distanceInput.value) {
-                                distanceInput.dispatchEvent(new Event('change', { bubbles: true }));
+                                distanceInput.dispatchEvent(new Event('input', { bubbles: true }));
                               }
                             }}
                           >
