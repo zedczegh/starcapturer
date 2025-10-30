@@ -379,81 +379,140 @@ const ParallelVideoGenerator: React.FC = () => {
     return element; // Already loaded by handleImageUpload
   }, []);
 
-  // Extract stars from composite image
-  const extractStarsFromComposite = useCallback((
-    compositeCanvas: HTMLCanvasElement,
-    starlessImage: HTMLImageElement,
-    depthMap: HTMLCanvasElement
-  ): { starsOnly: HTMLCanvasElement; stars: StarData[] } => {
+  // Extract star positions from original stars-only image - matching StarFieldGenerator logic
+  const extractStarPositions = useCallback((img: HTMLImageElement, depthMap: HTMLCanvasElement): StarData[] => {
     const canvasPool = CanvasPool.getInstance();
-    const starsCanvas = canvasPool.acquire(compositeCanvas.width, compositeCanvas.height);
-    const ctx = starsCanvas.getContext('2d')!;
-
-    // Get composite data
-    const compositeCtx = compositeCanvas.getContext('2d')!;
-    const compositeData = compositeCtx.getImageData(0, 0, compositeCanvas.width, compositeCanvas.height);
-
-    // Draw starless to temp canvas
-    const tempCanvas = canvasPool.acquire(starlessImage.width, starlessImage.height);
-    const tempCtx = tempCanvas.getContext('2d')!;
-    tempCtx.drawImage(starlessImage, 0, 0);
-    const starlessData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-
-    // Subtract starless from composite to get stars only
-    const starsData = ctx.createImageData(compositeCanvas.width, compositeCanvas.height);
-    for (let i = 0; i < compositeData.data.length; i += 4) {
-      starsData.data[i] = Math.max(0, compositeData.data[i] - starlessData.data[i]);
-      starsData.data[i + 1] = Math.max(0, compositeData.data[i + 1] - starlessData.data[i + 1]);
-      starsData.data[i + 2] = Math.max(0, compositeData.data[i + 2] - starlessData.data[i + 2]);
-      starsData.data[i + 3] = 255;
-    }
-
-    ctx.putImageData(starsData, 0, 0);
-
-    // Detect star positions
-    const stars: StarData[] = [];
-    const threshold = 50;
-    const visited = new Uint8Array(compositeCanvas.width * compositeCanvas.height);
-    const depthCtx = depthMap.getContext('2d')!;
-    const depthData = depthCtx.getImageData(0, 0, depthMap.width, depthMap.height);
-
-    for (let y = 1; y < compositeCanvas.height - 1; y++) {
-      for (let x = 1; x < compositeCanvas.width - 1; x++) {
-        const idx = y * compositeCanvas.width + x;
-        if (visited[idx]) continue;
-
-        const pixelIdx = idx * 4;
-        const luminance = 0.299 * starsData.data[pixelIdx] + 
-                         0.587 * starsData.data[pixelIdx + 1] + 
-                         0.114 * starsData.data[pixelIdx + 2];
-
-        if (luminance > threshold) {
-          visited[idx] = 1;
+    const canvas = canvasPool.acquire(img.width, img.height);
+    const ctx = canvas.getContext('2d')!;
+    
+    try {
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      
+      const stars: StarData[] = [];
+      const threshold = 100;
+      const minStarSize = 3;
+      const maxStarSize = 500;
+      const minDistance = 3;
+      
+      const visited = new Uint8Array(canvas.width * canvas.height);
+      const depthCtx = depthMap.getContext('2d')!;
+      const depthData = depthCtx.getImageData(0, 0, depthMap.width, depthMap.height);
+      
+      // Calculate intensity multiplier
+      const intensityMultiplier = 0.2 + (depthIntensity / 100) * 1.8;
+      
+      // Scan for bright regions
+      for (let y = 1; y < canvas.height - 1; y++) {
+        for (let x = 1; x < canvas.width - 1; x++) {
+          const idx = y * canvas.width + x;
+          if (visited[idx]) continue;
           
-          // Get depth
-          const depthIdx = (Math.floor(y) * depthMap.width + Math.floor(x)) * 4;
-          const depth = depthData.data[depthIdx] / 255;
-
-          // Calculate 3D coordinates
-          const centerX = compositeCanvas.width / 2;
-          const centerY = compositeCanvas.height / 2;
-          const scale = 0.08;
-
-          stars.push({
-            x: (x - centerX) * scale,
-            y: -(y - centerY) * scale,
-            z: (depth - 0.5) * 200 * (0.2 + (depthIntensity / 100) * 1.8),
-            brightness: luminance / 255,
-            size: 3,
-            color3d: `rgb(${starsData.data[pixelIdx]}, ${starsData.data[pixelIdx + 1]}, ${starsData.data[pixelIdx + 2]})`
-          });
+          const pixelIdx = idx * 4;
+          const luminance = 0.299 * data[pixelIdx] + 0.587 * data[pixelIdx + 1] + 0.114 * data[pixelIdx + 2];
+          
+          if (luminance > threshold) {
+            // Found a bright pixel - grow the star region
+            const starPixels: {x: number, y: number, lum: number}[] = [];
+            const queue: {x: number, y: number}[] = [{x, y}];
+            visited[idx] = 1;
+            
+            let minX = x, maxX = x, minY = y, maxY = y;
+            let totalLum = 0, maxLum = 0;
+            let totalX = 0, totalY = 0;
+            
+            while (queue.length > 0 && starPixels.length < maxStarSize) {
+              const curr = queue.shift()!;
+              const currIdx = curr.y * canvas.width + curr.x;
+              const currPixelIdx = currIdx * 4;
+              const currLum = 0.299 * data[currPixelIdx] + 0.587 * data[currPixelIdx + 1] + 0.114 * data[currPixelIdx + 2];
+              
+              starPixels.push({x: curr.x, y: curr.y, lum: currLum});
+              totalLum += currLum;
+              if (currLum > maxLum) maxLum = currLum;
+              
+              // Weighted centroid calculation
+              const weight = currLum * currLum;
+              totalX += curr.x * weight;
+              totalY += curr.y * weight;
+              
+              minX = Math.min(minX, curr.x);
+              maxX = Math.max(maxX, curr.x);
+              minY = Math.min(minY, curr.y);
+              maxY = Math.max(maxY, curr.y);
+              
+              // Check 8-connected neighbors
+              for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                  if (dx === 0 && dy === 0) continue;
+                  
+                  const nx = curr.x + dx;
+                  const ny = curr.y + dy;
+                  
+                  if (nx >= 0 && nx < canvas.width && ny >= 0 && ny < canvas.height) {
+                    const nIdx = ny * canvas.width + nx;
+                    if (!visited[nIdx]) {
+                      const nPixelIdx = nIdx * 4;
+                      const nLum = 0.299 * data[nPixelIdx] + 0.587 * data[nPixelIdx + 1] + 0.114 * data[nPixelIdx + 2];
+                      
+                      if (nLum > threshold * 0.3) {
+                        visited[nIdx] = 1;
+                        queue.push({x: nx, y: ny});
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            
+            // Validate star region
+            if (starPixels.length >= minStarSize && starPixels.length <= maxStarSize) {
+              const totalWeight = starPixels.reduce((sum, p) => sum + p.lum * p.lum, 0);
+              const centroidX = Math.round(totalX / totalWeight);
+              const centroidY = Math.round(totalY / totalWeight);
+              
+              // Check minimum distance from existing stars
+              const tooClose = stars.some(s => {
+                const dx = (s.x / 0.08 + canvas.width / 2) - centroidX;
+                const dy = -(s.y / 0.08 - canvas.height / 2) - centroidY;
+                return Math.sqrt(dx * dx + dy * dy) < minDistance;
+              });
+              
+              if (!tooClose) {
+                const centerIdx = (centroidY * canvas.width + centroidX) * 4;
+                const starWidth = maxX - minX + 1;
+                const starHeight = maxY - minY + 1;
+                const actualSize = Math.max(starWidth, starHeight);
+                
+                // Get depth from depth map at star position
+                const depthIdx = (Math.floor(centroidY) * depthMap.width + Math.floor(centroidX)) * 4;
+                const depth = depthData.data[depthIdx] / 255;
+                
+                // Convert to 3D coordinates - matching StarFieldGenerator
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                const scale = 0.08;
+                
+                stars.push({
+                  x: (centroidX - centerX) * scale,
+                  y: -(centroidY - centerY) * scale, // Invert Y for correct orientation
+                  z: (depth - 0.5) * 200 * intensityMultiplier,
+                  brightness: maxLum / 255,
+                  size: actualSize,
+                  color3d: `rgb(${data[centerIdx]}, ${data[centerIdx + 1]}, ${data[centerIdx + 2]})`
+                });
+              }
+            }
+          }
         }
       }
+      
+      console.log(`Detected ${stars.length} stars with diffraction spikes`);
+      return stars;
+    } finally {
+      canvasPool.release(canvas);
     }
-
-    canvasPool.release(tempCanvas);
-    console.log(`Detected ${stars.length} stars in composite`);
-    return { starsOnly: starsCanvas, stars };
   }, [depthIntensity]);
 
   // Helper to create stereo views from Fast Mode displacement logic
@@ -682,31 +741,20 @@ const ParallelVideoGenerator: React.FC = () => {
       });
       
       
-      // Step 2: Detect stars from composited images for 3D rendering
+      // Step 2: Detect stars from ORIGINAL stars-only image for 3D rendering
       setProcessingStep(t('Detecting stars for 3D...', '检测3D星点...'));
       setProgress(90);
 
-      const canvasPool = CanvasPool.getInstance();
+      // Extract stars from original stars-only image using starless depth map
+      // This matches StarFieldGenerator's approach of detecting from the original image
+      const starsData = extractStarPositions(starsElement, starlessDepthCanvas);
       
-      // Extract stars from left composite
-      const leftExtractCanvas = canvasPool.acquire(width, height);
-      const leftExtractCtx = leftExtractCanvas.getContext('2d')!;
-      leftExtractCtx.putImageData(compositeLeft, 0, 0);
-      
-      const leftStarData = extractStarsFromComposite(leftExtractCanvas, starlessElement, starlessDepthCanvas);
-      setLeftStars(leftStarData.stars);
-      canvasPool.release(leftExtractCanvas);
-      
-      // Extract stars from right composite
-      const rightExtractCanvas = canvasPool.acquire(width, height);
-      const rightExtractCtx = rightExtractCanvas.getContext('2d')!;
-      rightExtractCtx.putImageData(compositeRight, 0, 0);
-      
-      const rightStarData = extractStarsFromComposite(rightExtractCanvas, starlessElement, starlessDepthCanvas);
-      setRightStars(rightStarData.stars);
-      canvasPool.release(rightExtractCanvas);
+      // Use the same star data for both left and right views since stars are positioned
+      // based on the original image before stereo processing
+      setLeftStars(starsData);
+      setRightStars(starsData);
 
-      console.log(`✓ Detected ${leftStarData.stars.length} left stars and ${rightStarData.stars.length} right stars for 3D rendering`);
+      console.log(`✓ Detected ${starsData.length} stars for 3D rendering`);
       
       console.log('✓ Prepared separated layers for 3D rendering');
       console.log('Left background:', leftBackground ? 'SET' : 'NULL');
@@ -750,7 +798,7 @@ const ParallelVideoGenerator: React.FC = () => {
     } finally {
       setIsProcessing(false);
     }
-  }, [starlessFile, starsFile, starlessElement, starsElement, horizontalDisplace, starShiftAmount, t, extractStarsFromComposite]);
+  }, [starlessFile, starsFile, starlessElement, starsElement, horizontalDisplace, starShiftAmount, displacementDirection, t, extractStarPositions]);
 
   // Generate stitched parallel video with frame-by-frame rendering
   const generateParallelVideo = useCallback(async () => {
