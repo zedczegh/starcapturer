@@ -606,17 +606,23 @@ const StarFieldGenerator: React.FC = () => {
       
       console.log('Source canvas:', sourceWidth, 'x', sourceHeight);
       
-      // Cap resolution at 1920x1080
+      // CRITICAL: Cap resolution at 1920x1080 for performance
+      // Large canvases (>10MP) cause severe frame drops during rendering
       let recordWidth = sourceWidth;
       let recordHeight = sourceHeight;
       const maxWidth = 1920;
       const maxHeight = 1080;
       
+      // Calculate megapixels
+      const megapixels = (sourceWidth * sourceHeight) / 1000000;
+      console.log(`Source canvas: ${megapixels.toFixed(1)}MP`);
+      
       if (recordWidth > maxWidth || recordHeight > maxHeight) {
         const scale = Math.min(maxWidth / recordWidth, maxHeight / recordHeight);
         recordWidth = Math.round(recordWidth * scale);
         recordHeight = Math.round(recordHeight * scale);
-        console.log(`Scaled to ${recordWidth}x${recordHeight}`);
+        const scaledMP = (recordWidth * recordHeight) / 1000000;
+        console.log(`Scaled down from ${megapixels.toFixed(1)}MP to ${scaledMP.toFixed(1)}MP (${recordWidth}x${recordHeight})`);
       }
       
       const fps = 30;
@@ -625,7 +631,7 @@ const StarFieldGenerator: React.FC = () => {
       
       console.log(`Will render ${totalFrames} frames at ${fps}fps with precise frame control`);
       
-      // Create offscreen canvas for rendering
+      // Create offscreen canvas for rendering at reasonable resolution
       const canvasPool = CanvasPool.getInstance();
       const renderCanvas = canvasPool.acquire(recordWidth, recordHeight);
       const renderCtx = renderCanvas.getContext('2d', {
@@ -633,16 +639,21 @@ const StarFieldGenerator: React.FC = () => {
         willReadFrequently: false
       })!;
       
-      renderCtx.imageSmoothingEnabled = false;
+      renderCtx.imageSmoothingEnabled = true;
+      renderCtx.imageSmoothingQuality = 'high';
       
-      // STAGE 1: Pre-render all frames with PRECISE progress control
+      // STAGE 1: Pre-render all frames with PRECISE progress control and proper sync
       setVideoProgress({ stage: 'Rendering frames...', percent: 0 });
       console.log('Stage 1: Pre-rendering frames with precise control...');
+      console.log(`Note: Each frame render may take 100-500ms depending on complexity`);
       
       const frames: ImageData[] = [];
       
       // Enable controlled rendering mode - stop normal animation
       setIsAnimating(false);
+      
+      // Add small delay to ensure animation has fully stopped
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       // Render each frame precisely by controlling animation progress via ref
       for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
@@ -655,13 +666,26 @@ const StarFieldGenerator: React.FC = () => {
         // Trigger a re-render to update the canvas
         setFrameRenderTrigger(prev => prev + 1);
         
-        // Wait for rendering to complete
+        // IMPROVED: Wait longer for complex rendering with multiple layers
+        // Triple RAF + timeout ensures all layers are fully rendered
         await new Promise(resolve => requestAnimationFrame(resolve));
-        await new Promise(resolve => requestAnimationFrame(resolve)); // Double RAF for stability
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        await new Promise(resolve => requestAnimationFrame(resolve));
         
-        // Capture frame from source canvas
+        // Additional wait for very large canvases (give GPU time to finish)
+        if (sourceWidth * sourceHeight > 10000000) { // >10MP
+          await new Promise(resolve => setTimeout(resolve, 50));
+        } else if (sourceWidth * sourceHeight > 5000000) { // >5MP
+          await new Promise(resolve => setTimeout(resolve, 20));
+        }
+        
+        // Capture frame from source canvas with high quality scaling
         renderCtx.fillStyle = '#000000';
         renderCtx.fillRect(0, 0, recordWidth, recordHeight);
+        
+        // Use high-quality scaling for the final render
+        renderCtx.imageSmoothingEnabled = true;
+        renderCtx.imageSmoothingQuality = 'high';
         renderCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
         
         // Store frame data
@@ -675,14 +699,28 @@ const StarFieldGenerator: React.FC = () => {
           percent: renderProgress 
         });
         
-        if ((frameIndex + 1) % 30 === 0) {
-          console.log(`Rendered ${frameIndex + 1}/${totalFrames} frames (${frameProgress.toFixed(1)}% animation)`);
+        // More frequent logging for large renders
+        if ((frameIndex + 1) % 15 === 0 || frameIndex === 0) {
+          const timePerFrame = frameIndex > 0 ? 
+            ((Date.now() - (window as any)._renderStartTime) / (frameIndex + 1)).toFixed(0) : 
+            'N/A';
+          console.log(`Rendered ${frameIndex + 1}/${totalFrames} frames (${frameProgress.toFixed(1)}% animation, ~${timePerFrame}ms/frame)`);
+        }
+        
+        // Track render start time
+        if (frameIndex === 0) {
+          (window as any)._renderStartTime = Date.now();
         }
       }
       
-      // Stop animation
+      // Stop animation and log performance stats
       setIsAnimating(false);
+      const totalRenderTime = Date.now() - (window as any)._renderStartTime;
+      const avgTimePerFrame = totalRenderTime / frames.length;
       console.log(`✓ All ${frames.length} frames rendered with precise timing`);
+      console.log(`  Total render time: ${(totalRenderTime / 1000).toFixed(1)}s`);
+      console.log(`  Average per frame: ${avgTimePerFrame.toFixed(0)}ms`);
+      console.log(`  Render speed: ${(frames.length / (totalRenderTime / 1000)).toFixed(1)} fps`);
       
       // STAGE 2: Encode frames to WebM video
       setVideoProgress({ stage: 'Encoding video...', percent: 50 });
@@ -805,175 +843,181 @@ const StarFieldGenerator: React.FC = () => {
         setMp4Progress(0);
         setMp4Blob(null);
         
-        console.log('=== Starting MP4 Generation ===');
-        // toast.info(t('Preparing recording...', '准备录制...'));
+        console.log('=== Starting MP4 Generation with Frame-by-Frame Rendering ===');
       
-      const fps = 60;
+      const fps = 30; // Use 30fps for better compatibility and faster encoding
       const duration = animationSettings.duration;
       
-      // Step 1: Setup and ensure animation is ready (0-5%)
+      // Step 1: Setup (0-5%)
       setMp4Progress(0);
       
-      // Stop any current animation and reset
+      // Stop any current animation
       setIsAnimating(false);
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
       
-      // Reset animation to start
-      setAnimationProgress(0);
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Step 2: Get canvas
+      let sourceCanvas = canvasRef.current;
       
-      // Start animation before recording
-      setIsAnimating(true);
-      console.log('Animation started, waiting for frames to render...');
-      
-      // Wait longer for initial frames to render
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setMp4Progress(5);
-      // toast.info(t('Recording video...', '录制视频...'));
-      
-      // Step 2: Record WebM (5-40%)
-      let canvas = canvasRef.current;
-      
-      if (!canvas) {
+      if (!sourceCanvas) {
         const canvasElements = document.querySelectorAll('canvas');
         for (const canvasEl of canvasElements) {
           if (canvasEl instanceof HTMLCanvasElement && canvasEl.width > 0 && canvasEl.height > 0) {
-            canvas = canvasEl;
-            canvasRef.current = canvas;
+            sourceCanvas = canvasEl;
+            canvasRef.current = sourceCanvas;
             break;
           }
         }
       }
       
-      if (!canvas) {
+      if (!sourceCanvas) {
         throw new Error('Canvas not available');
       }
       
-      console.log('Canvas found:', canvas.width, 'x', canvas.height);
+      const sourceWidth = sourceCanvas.width;
+      const sourceHeight = sourceCanvas.height;
+      const megapixels = (sourceWidth * sourceHeight) / 1000000;
       
-      const stream = canvas.captureStream(fps);
+      console.log(`Source canvas: ${sourceWidth}x${sourceHeight} (${megapixels.toFixed(1)}MP)`);
       
-      const videoTracks = stream.getVideoTracks();
-      console.log('Video tracks:', videoTracks.length);
+      // Cap resolution for performance
+      let recordWidth = sourceWidth;
+      let recordHeight = sourceHeight;
+      const maxWidth = 1920;
+      const maxHeight = 1080;
       
-      if (videoTracks.length === 0) {
-        throw new Error('No video tracks available from canvas');
+      if (recordWidth > maxWidth || recordHeight > maxHeight) {
+        const scale = Math.min(maxWidth / recordWidth, maxHeight / recordHeight);
+        recordWidth = Math.round(recordWidth * scale);
+        recordHeight = Math.round(recordHeight * scale);
+        console.log(`Scaled down to ${recordWidth}x${recordHeight} for better performance`);
       }
       
-      // Check track settings
-      const trackSettings = videoTracks[0].getSettings();
-      console.log('Track settings:', trackSettings);
+      const totalFrames = Math.ceil(duration * fps);
+      console.log(`Will render ${totalFrames} frames at ${fps}fps`);
+      
+      setMp4Progress(5);
+      
+      // Step 3: Frame-by-Frame Rendering (5-35%)
+      console.log('Stage 1: Rendering frames with precise control...');
+      
+      const canvasPool = CanvasPool.getInstance();
+      const renderCanvas = canvasPool.acquire(recordWidth, recordHeight);
+      const renderCtx = renderCanvas.getContext('2d', {
+        alpha: false,
+        willReadFrequently: false
+      })!;
+      
+      renderCtx.imageSmoothingEnabled = true;
+      renderCtx.imageSmoothingQuality = 'high';
+      
+      const frames: ImageData[] = [];
+      
+      // Render frames with precise progress control
+      for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
+        const frameProgress = (frameIndex / (totalFrames - 1)) * 100;
+        
+        videoProgressRef.current = frameProgress;
+        setFrameRenderTrigger(prev => prev + 1);
+        
+        // Wait for rendering
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        
+        if (sourceWidth * sourceHeight > 10000000) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+        } else if (sourceWidth * sourceHeight > 5000000) {
+          await new Promise(resolve => setTimeout(resolve, 20));
+        }
+        
+        // Capture frame
+        renderCtx.fillStyle = '#000000';
+        renderCtx.fillRect(0, 0, recordWidth, recordHeight);
+        renderCtx.drawImage(sourceCanvas, 0, 0, recordWidth, recordHeight);
+        
+        frames.push(renderCtx.getImageData(0, 0, recordWidth, recordHeight));
+        
+        const renderProgress = 5 + (frameIndex / totalFrames) * 30;
+        setMp4Progress(renderProgress);
+        
+        if ((frameIndex + 1) % 15 === 0 || frameIndex === 0) {
+          console.log(`Rendered ${frameIndex + 1}/${totalFrames} frames for MP4`);
+        }
+      }
+      
+      setIsAnimating(false);
+      console.log(`✓ ${frames.length} frames rendered`);
+      setMp4Progress(35);
+      // Step 4: Encode to WebM (35-65%)
+      console.log('Stage 2: Encoding frames to WebM...');
+      
+      const encodingCanvas = canvasPool.acquire(recordWidth, recordHeight);
+      const encodingCtx = encodingCanvas.getContext('2d')!;
+      
+      const stream = encodingCanvas.captureStream(fps);
       
       let mimeType = 'video/webm;codecs=vp9';
       if (!MediaRecorder.isTypeSupported(mimeType)) {
-        console.log('VP9 not supported, trying VP8');
         mimeType = 'video/webm;codecs=vp8';
         if (!MediaRecorder.isTypeSupported(mimeType)) {
-          console.log('VP8 not supported, using default webm');
           mimeType = 'video/webm';
         }
       }
-      console.log('Using MIME type:', mimeType);
       
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType,
-        videoBitsPerSecond: 10000000
+        videoBitsPerSecond: 25000000
       });
       
       const chunks: Blob[] = [];
-      let recordingStartTime = 0;
-      let chunkCount = 0;
       
-      const webmBlob = await new Promise<Blob>((resolve, reject) => {
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data && e.data.size > 0) {
-            chunks.push(e.data);
-            chunkCount++;
-            console.log(`Chunk ${chunkCount}: ${e.data.size} bytes`);
-          }
-        };
-        
-        mediaRecorder.onstart = () => {
-          recordingStartTime = Date.now();
-          console.log('✓ Recording started at', new Date(recordingStartTime).toISOString());
-        };
-        
-        mediaRecorder.onstop = () => {
-          const recordingDuration = Date.now() - recordingStartTime;
-          console.log(`Recording stopped after ${recordingDuration}ms`);
-          console.log(`Total chunks: ${chunks.length}, Total size: ${chunks.reduce((sum, c) => sum + c.size, 0)} bytes`);
-          
-          if (chunks.length === 0) {
-            reject(new Error('No data recorded - recording failed to capture frames'));
-            return;
-          }
-          
-          const blob = new Blob(chunks, { type: mimeType });
-          console.log(`✓ WebM blob created: ${blob.size} bytes`);
-          
-          if (blob.size === 0) {
-            reject(new Error('WebM blob is empty - no frames captured'));
-            return;
-          }
-          
-          setMp4Progress(40);
-          resolve(blob);
-        };
-        
-        mediaRecorder.onerror = (e) => {
-          console.error('MediaRecorder error:', e);
-          reject(new Error('MediaRecorder error during recording'));
-        };
-        
-        // Ensure animation is definitely running
-        if (!isAnimating) {
-          console.log('Animation not running, starting it now');
-          setIsAnimating(true);
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          chunks.push(e.data);
         }
-        
-        // Start recording after ensuring everything is ready
-        setTimeout(() => {
-          if (mediaRecorder.state === 'inactive') {
-            console.log('Starting MediaRecorder with 100ms timeslice...');
-            mediaRecorder.start(100); // Request data every 100ms
-            console.log('MediaRecorder state:', mediaRecorder.state);
-            
-            // Update progress during recording
-            const progressInterval = setInterval(() => {
-              if (mediaRecorder.state === 'recording') {
-                const elapsed = Date.now() - recordingStartTime;
-                const progress = Math.min((elapsed / (duration * 1000)) * 35, 35);
-                setMp4Progress(5 + progress);
-              } else {
-                clearInterval(progressInterval);
-              }
-            }, 200);
-            
-            // Stop after duration + buffer
-            const stopTimeout = setTimeout(() => {
-              clearInterval(progressInterval);
-              if (mediaRecorder.state === 'recording') {
-                console.log('Stopping MediaRecorder after duration');
-                mediaRecorder.stop();
-                stream.getTracks().forEach(track => {
-                  track.stop();
-                  console.log('Track stopped');
-                });
-              }
-            }, (duration * 1000) + 2000); // 2 second buffer
+      };
+      
+      mediaRecorder.start();
+      
+      // Playback pre-rendered frames
+      const frameInterval = 1000 / fps;
+      let currentFrame = 0;
+      
+      const playbackPromise = new Promise<void>((resolve) => {
+        const playFrame = () => {
+          if (currentFrame >= frames.length) {
+            mediaRecorder.stop();
+            resolve();
+            return;
           }
-        }, 500); // Wait 500ms before starting recording to ensure frames are rendering
+          
+          encodingCtx.putImageData(frames[currentFrame], 0, 0);
+          currentFrame++;
+          
+          const encodeProgress = 35 + ((currentFrame / frames.length) * 30);
+          setMp4Progress(encodeProgress);
+          
+          setTimeout(playFrame, frameInterval);
+        };
+        playFrame();
       });
       
-      console.log(`✓ WebM recording complete: ${webmBlob.size} bytes`);
+      await playbackPromise;
       
-      if (webmBlob.size < 1000) {
-        throw new Error(`WebM recording too small: ${webmBlob.size} bytes - likely no frames captured`);
-      }
+      await new Promise<void>((resolve) => {
+        mediaRecorder.onstop = () => resolve();
+      });
       
-      // Step 2: Load FFmpeg if needed (40-50%)
-      setMp4Progress(40);
+      stream.getTracks().forEach(track => track.stop());
+      
+      const webmBlob = new Blob(chunks, { type: mimeType });
+      console.log(`✓ WebM encoded: ${(webmBlob.size / 1024 / 1024).toFixed(2)} MB`);
+      
+      canvasPool.release(renderCanvas);
+      canvasPool.release(encodingCanvas);
+      
+      setMp4Progress(65);
+      // Step 5: Load FFmpeg if needed (65-70%)
       console.log('=== FFmpeg Loading Phase ===');
       console.log('FFmpeg loaded:', ffmpegLoaded);
       console.log('FFmpeg ref exists:', !!ffmpegRef.current);
@@ -988,17 +1032,15 @@ const StarFieldGenerator: React.FC = () => {
         const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
         
         try {
-          // Step 1: Fetch core JS
           console.log('[1/3] Fetching core JS...');
           const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
           console.log('✓ Core JS ready');
-          setMp4Progress(43);
+          setMp4Progress(67);
           
-          // Step 2: Fetch WASM
           console.log('[2/3] Fetching WASM file (~32MB)...');
           const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
           console.log('✓ WASM ready');
-          setMp4Progress(46);
+          setMp4Progress(69);
           
           // Step 3: Initialize FFmpeg with proper timeout
           console.log('[3/3] Initializing FFmpeg (this can take 20-30s)...');
@@ -1039,7 +1081,7 @@ const StarFieldGenerator: React.FC = () => {
           if (initResolved) {
             console.log('✓ FFmpeg initialized successfully!');
             setFfmpegLoaded(true);
-            setMp4Progress(50);
+            setMp4Progress(70);
           }
         } catch (error) {
           console.error('=== FFmpeg Loading Failed ===');
@@ -1050,11 +1092,11 @@ const StarFieldGenerator: React.FC = () => {
           throw new Error(`FFmpeg initialization failed: ${errorMsg}`);
         }
       } else {
-        setMp4Progress(50);
+        setMp4Progress(70);
         console.log('✓ FFmpeg already loaded');
       }
       
-      // Step 3: Convert WebM to MP4 (50-100%)
+      // Step 6: Convert WebM to MP4 (70-100%)
       console.log('=== MP4 Conversion Phase ===');
       const ffmpeg = ffmpegRef.current;
       
@@ -1066,7 +1108,7 @@ const StarFieldGenerator: React.FC = () => {
         await ffmpeg.writeFile('input.webm', webmData);
         console.log('✓ WebM written to FFmpeg filesystem');
         
-        setMp4Progress(60);
+        setMp4Progress(75);
         
         // Convert with settings optimized for compatibility
         console.log('Executing FFmpeg conversion (this may take a moment)...');
@@ -1082,7 +1124,7 @@ const StarFieldGenerator: React.FC = () => {
         ]);
         console.log('✓ FFmpeg conversion completed successfully');
         
-        setMp4Progress(90);
+        setMp4Progress(95);
         
         // Read the converted MP4 file
         console.log('Reading MP4 output...');
