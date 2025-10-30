@@ -6,6 +6,7 @@ import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Switch } from '@/components/ui/switch';
 import { Upload, Video, Sparkles, Eye, Settings2, Download, ChevronDown, RotateCcw, Info } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { VideoGenerationService, MotionSettings } from '@/services/VideoGenerationService';
@@ -111,6 +112,7 @@ const ParallelVideoGenerator: React.FC = () => {
   });
 
   const [depthIntensity, setDepthIntensity] = useState<number>(200);
+  const [preserveStars, setPreserveStars] = useState<boolean>(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationProgress, setAnimationProgress] = useState(0);
   const [debugImagesOpen, setDebugImagesOpen] = useState(false);
@@ -1924,6 +1926,7 @@ const ParallelVideoGenerator: React.FC = () => {
                       spinDirection: 'clockwise'
                     });
                     setDepthIntensity(200);
+                    setPreserveStars(false);
                   }}
                   className="h-8 gap-2 text-xs bg-cosmic-800/50 hover:bg-cosmic-700/50 border-cosmic-600"
                 >
@@ -2046,6 +2049,21 @@ const ParallelVideoGenerator: React.FC = () => {
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
+                  <Label className="text-cosmic-200">
+                    {t('Preserve Stars', '保留所有星体')}
+                  </Label>
+                  <Switch
+                    checked={preserveStars}
+                    onCheckedChange={setPreserveStars}
+                  />
+                </div>
+                <p className="text-xs text-cosmic-400">
+                  {t('Keep all stars without filtering dim ones', '保留所有星体，不过滤暗星')}
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
                   <Label className="text-cosmic-200">{t('Duration (seconds)', '持续时间（秒）')}</Label>
                   <span className="text-amber-400 font-mono text-sm font-semibold">{motionSettings.duration}s</span>
                 </div>
@@ -2085,7 +2103,7 @@ const ParallelVideoGenerator: React.FC = () => {
                       depthIntensity={depthIntensity}
                       horizontalDisplace={0}
                       starShiftAmount={0}
-                      preserveStars={true}
+                      preserveStars={preserveStars}
                       videoProgressRef={isGenerating ? videoProgressRef : undefined}
                       frameRenderTrigger={frameRenderTrigger}
                       onProgressUpdate={handleProgressUpdate}
@@ -2114,7 +2132,7 @@ const ParallelVideoGenerator: React.FC = () => {
                       depthIntensity={depthIntensity}
                       horizontalDisplace={0}
                       starShiftAmount={0}
-                      preserveStars={true}
+                      preserveStars={preserveStars}
                       videoProgressRef={isGenerating ? videoProgressRef : undefined}
                       frameRenderTrigger={frameRenderTrigger}
                       onProgressUpdate={handleProgressUpdate}
