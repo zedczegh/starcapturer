@@ -344,11 +344,11 @@ const StarField3D: React.FC<StarField3DProps> = ({
       }[] = [];
       
       // Use extremely low thresholds when preserving stars to capture maximum detail
-      const coreThreshold = preserveStars ? 15 : 100; // Extremely low threshold for faintest stars
-      const expansionThreshold = preserveStars ? 5 : (coreThreshold * 0.3); // Captures all halos and diffraction spikes
+      const coreThreshold = preserveStars ? 8 : 100; // Ultra low threshold for faintest stars
+      const expansionThreshold = preserveStars ? 2 : (coreThreshold * 0.3); // Captures all halos and diffraction spikes
       
-      // Reusable queue with pre-allocated capacity
-      const maxQueueSize = 8000; // Larger to capture full star halos
+      // Reusable queue with pre-allocated capacity - much larger when preserving stars
+      const maxQueueSize = preserveStars ? 50000 : 8000; // Allow huge star halos when preserving
       const queueX = new Uint16Array(maxQueueSize);
       const queueY = new Uint16Array(maxQueueSize);
       const pixelBuffer = new Uint32Array(maxQueueSize);
@@ -510,8 +510,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
       console.log(`Detected ${starRegions.length} complete stars in ${(performance.now() - startTime).toFixed(0)}ms`);
       
       // === AUTO-SHRINK ALGORITHM: Reduce oversized stars to prevent artifacts ===
-      const MAX_STAR_SIZE = 40; // Maximum allowed star size
-      const TARGET_SIZE_RATIO = 0.6; // Shrink to 60% of original size
+      // When preserving stars, allow much larger stars and minimal shrinking
+      const MAX_STAR_SIZE = preserveStars ? 200 : 40; // Much larger max when preserving
+      const TARGET_SIZE_RATIO = preserveStars ? 0.95 : 0.6; // Minimal shrink when preserving
       let shrunkCount = 0;
       
       for (let i = 0; i < starRegions.length; i++) {
