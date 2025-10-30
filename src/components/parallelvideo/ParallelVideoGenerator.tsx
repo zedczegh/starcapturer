@@ -103,8 +103,9 @@ const ParallelVideoGenerator: React.FC = () => {
 
   // Equipment parameters for scientific parallax calculation
   const [focalLength, setFocalLength] = useState<number>(1000); // mm
-  const [selectedSensor, setSelectedSensor] = useState<string>('IMX294');
+  const [selectedSensor, setSelectedSensor] = useState<string>('ASI294MC');
   const [customPixelSize, setCustomPixelSize] = useState<number>(4.63); // μm
+  const [enhancementFactor, setEnhancementFactor] = useState<number>(15000); // Multiplier for visible stereoscopic effect
   
   // Get current pixel size from sensor or custom input
   const getCurrentPixelSize = (): number => {
@@ -1422,19 +1423,38 @@ const ParallelVideoGenerator: React.FC = () => {
                     {t('Imaging Equipment (for Scientific Calibration)', '成像设备（科学校准）')}
                   </p>
                   
-                  <div>
-                    <Label className="text-xs text-cosmic-300 mb-1 block">
-                      {t('Telescope Focal Length (mm)', '望远镜焦距（毫米）')}
-                    </Label>
-                    <input
-                      type="number"
-                      min="200"
-                      max="5000"
-                      value={focalLength}
-                      onChange={(e) => setFocalLength(parseFloat(e.target.value) || 1000)}
-                      className="w-full px-2 py-1 bg-cosmic-800/50 border border-cosmic-700/50 rounded text-xs text-cosmic-200 focus:outline-none focus:border-purple-500/50"
-                    />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs text-cosmic-300 mb-1 block">
+                        {t('Focal Length (mm)', '焦距（毫米）')}
+                      </Label>
+                      <input
+                        type="number"
+                        min="200"
+                        max="5000"
+                        value={focalLength}
+                        onChange={(e) => setFocalLength(parseFloat(e.target.value) || 1000)}
+                        className="w-full px-2 py-1 bg-cosmic-800/50 border border-cosmic-700/50 rounded text-xs text-cosmic-200 focus:outline-none focus:border-purple-500/50"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-cosmic-300 mb-1 block">
+                        {t('3D Enhancement', '3D增强')} ×
+                      </Label>
+                      <input
+                        type="number"
+                        min="1000"
+                        max="50000"
+                        step="1000"
+                        value={enhancementFactor}
+                        onChange={(e) => setEnhancementFactor(parseFloat(e.target.value) || 15000)}
+                        className="w-full px-2 py-1 bg-cosmic-800/50 border border-cosmic-700/50 rounded text-xs text-cosmic-200 focus:outline-none focus:border-purple-500/50"
+                      />
+                    </div>
                   </div>
+                  <p className="text-[10px] text-cosmic-400 italic">
+                    {t('Enhancement factor: larger values = stronger 3D effect', '增强因子：数值越大，3D效果越强')}
+                  </p>
 
                   <div>
                     <Label className="text-xs text-cosmic-300 mb-1 block">
@@ -1505,11 +1525,11 @@ const ParallelVideoGenerator: React.FC = () => {
                                 const detailsDiv = document.getElementById('converter-details-parallel');
                                 
                                 if (!isNaN(ly) && ly > 0 && resultSpan && detailsDiv) {
-                                  // Use scientific calculation
+                                  // Use scientific calculation with enhancement
                                   const pixelSize = getCurrentPixelSize();
                                   const result = calculateStereoscopicDisplacement(
                                     ly,
-                                    1.0, // 1 AU baseline
+                                    enhancementFactor, // Enhanced baseline for visible effect
                                     focalLength,
                                     pixelSize
                                   );
@@ -1518,10 +1538,11 @@ const ParallelVideoGenerator: React.FC = () => {
                                   
                                   detailsDiv.innerHTML = `
                                     <div class="text-[10px] space-y-0.5 text-cosmic-400">
+                                      <p>• Effective Baseline: <span class="text-blue-300">${enhancementFactor} AU</span></p>
                                       <p>• Parallax Angle: <span class="text-blue-300">${result.parallaxAngle.toFixed(4)}"</span></p>
                                       <p>• Plate Scale: <span class="text-blue-300">${result.plateScale.toFixed(3)}"/px</span></p>
-                                      ${result.isConstrained ? `<p>• Real Displacement: <span class="text-orange-300">${result.realDisplacement.toFixed(2)}px</span> (too ${result.realDisplacement < 3 ? 'small' : 'large'})</p>` : ''}
-                                      <p class="text-green-400 font-semibold">✓ Suggested: <span class="text-amber-300">${Math.round(result.constrainedDisplacement)}px</span> for viewing</p>
+                                      <p>• Raw Displacement: <span class="text-blue-300">${result.realDisplacement.toFixed(2)}px</span></p>
+                                      <p class="text-green-400 font-semibold">✓ Suggested: <span class="text-amber-300">${Math.round(result.constrainedDisplacement)}px</span> ${result.isConstrained ? '(constrained)' : ''}</p>
                                     </div>
                                   `;
                                 } else if (resultSpan && detailsDiv) {
