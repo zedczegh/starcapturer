@@ -314,6 +314,62 @@ const StarField3D: React.FC<StarField3DProps> = ({
       }
       // === END CONDITIONAL STAR CLEANING ===
       
+      // === CONDITIONAL STAR PROCESSING ===
+      // When preserveStars is true, skip all detection and just use the image as-is across layers
+      if (preserveStars) {
+        console.log('🌟 PRESERVE MODE: Using original image without any detection or processing');
+        
+        // Create twelve separate canvases and simply copy the entire image to each layer
+        const canvases = Array(12).fill(null).map(() => {
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: false })!;
+          // Copy entire image to each layer
+          ctx.putImageData(sourceData, 0, 0);
+          return canvas;
+        });
+        
+        console.log('🌟 All 12 layers created with complete original image (no star filtering)');
+        
+        // Convert canvases directly to ImageBitmaps for faster GPU-accelerated rendering
+        const bitmapOptions: ImageBitmapOptions = {
+          premultiplyAlpha: 'premultiply',
+          colorSpaceConversion: 'none',
+          resizeQuality: 'high'
+        };
+        
+        Promise.all(
+          canvases.map(canvas => createImageBitmap(canvas, bitmapOptions))
+        ).then((bitmaps) => {
+          console.log('🌟 [StarField3D] Setting star layers state with bitmaps (PRESERVE MODE)');
+          setStarLayers({
+            layer1: bitmaps[0],
+            layer2: bitmaps[1],
+            layer3: bitmaps[2],
+            layer4: bitmaps[3],
+            layer5: bitmaps[4],
+            layer6: bitmaps[5],
+            layer7: bitmaps[6],
+            layer8: bitmaps[7],
+            layer9: bitmaps[8],
+            layer10: bitmaps[9],
+            layer11: bitmaps[10],
+            layer12: bitmaps[11]
+          });
+          
+          const totalTime = (performance.now() - startTime).toFixed(0);
+          console.log(`✅ [StarField3D] 12 star layers ready (PRESERVE MODE - all stars kept): (${totalTime}ms total)`);
+        }).catch(error => {
+          console.error('❌ [StarField3D] Failed to create star layer bitmaps:', error);
+        });
+        
+        return; // Exit early - skip all detection processing
+      }
+      
+      // === NORMAL DETECTION MODE ===
+      console.log('🔍 DETECTION MODE: Processing stars with detection and layer assignment');
+      
       // Pre-calculate luminance for all pixels using Uint8Array for faster access
       const pixelCount = width * height;
       const luminanceCache = new Float32Array(pixelCount);
