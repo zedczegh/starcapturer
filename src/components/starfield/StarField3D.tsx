@@ -194,7 +194,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
       // === CONDITIONAL STAR CLEANING ===
       // Gradually reduce cleaning intensity based on preservation (0% = full clean, 100% = no clean)
       const cleaningIntensity = 1 - smoothFactor; // Inverse of preservation
-      if (cleaningIntensity > 0.1) { // Only clean if preservation is less than ~90%
+      
+      // Only run cleaning if preservation is below 95% (allow stars to be drawn at higher values)
+      if (preserveStarsIntensity < 95) {
         console.log(`Extracting clean star cores (cleaning intensity: ${(cleaningIntensity * 100).toFixed(1)}%)...`);
         
         // Find all bright star centers
@@ -298,11 +300,13 @@ const StarField3D: React.FC<StarField3DProps> = ({
               const normalizedDist = dist / star.radius;
               if (normalizedDist > 1.5) continue; // Don't draw beyond falloff
               
-              // Gaussian intensity falloff - falloff rate increases with cleaning, but preserve brightness
+              // Gaussian intensity falloff - tighter with more cleaning
               const falloffRate = 2 + (3 * cleaningIntensity); // 2.0-5.0 range
-              // Keep stars visible - reduce intensity only slightly based on cleaning
               const baseIntensity = Math.exp(-normalizedDist * normalizedDist * falloffRate);
-              const intensity = baseIntensity * (0.5 + cleaningIntensity * 0.5); // 50%-100% brightness range
+              
+              // Star brightness based on PRESERVATION (not cleaning) - higher preservation = brighter stars
+              // 0% preservation = 0% brightness, 100% preservation = 100% brightness
+              const intensity = baseIntensity * smoothFactor;
               
               const idx = (y * width + x) * 4;
               
