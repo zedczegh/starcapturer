@@ -114,12 +114,45 @@ const ParallelVideoGenerator: React.FC = () => {
   const [animationProgress, setAnimationProgress] = useState(0);
   const [debugImagesOpen, setDebugImagesOpen] = useState(false);
   
+  // Store original image dimensions
+  const [originalDimensions, setOriginalDimensions] = useState<{ width: number; height: number } | null>(null);
+  
   // Resolution control: 720p for preview, 1080p for download
-  const PREVIEW_WIDTH = 1280;
-  const PREVIEW_HEIGHT = 720;
-  const RENDER_WIDTH = 1920;
-  const RENDER_HEIGHT = 1080;
+  const PREVIEW_MAX_WIDTH = 1280;
+  const PREVIEW_MAX_HEIGHT = 720;
+  const RENDER_MAX_WIDTH = 1920;
+  const RENDER_MAX_HEIGHT = 1080;
   const [useHighRes, setUseHighRes] = useState(false); // Switch for video generation
+  
+  // Calculate canvas dimensions respecting original aspect ratio
+  const getCanvasDimensions = useCallback(() => {
+    if (!originalDimensions) return { width: PREVIEW_MAX_WIDTH, height: PREVIEW_MAX_HEIGHT };
+    
+    const maxWidth = useHighRes ? RENDER_MAX_WIDTH : PREVIEW_MAX_WIDTH;
+    const maxHeight = useHighRes ? RENDER_MAX_HEIGHT : PREVIEW_MAX_HEIGHT;
+    
+    const aspectRatio = originalDimensions.width / originalDimensions.height;
+    
+    // Scale to fit within max dimensions while preserving aspect ratio
+    let width = originalDimensions.width;
+    let height = originalDimensions.height;
+    
+    if (width > maxWidth || height > maxHeight) {
+      if (width / maxWidth > height / maxHeight) {
+        // Width is the limiting factor
+        width = maxWidth;
+        height = Math.round(width / aspectRatio);
+      } else {
+        // Height is the limiting factor
+        height = maxHeight;
+        width = Math.round(height * aspectRatio);
+      }
+    }
+    
+    return { width, height };
+  }, [originalDimensions, useHighRes]);
+  
+  const canvasDimensions = getCanvasDimensions();
   
   // Video generation control refs
   const videoProgressRef = useRef<number>(0);
@@ -584,6 +617,9 @@ const ParallelVideoGenerator: React.FC = () => {
 
       const width = Math.max(starlessElement.width, starsElement.width);
       const height = Math.max(starlessElement.height, starsElement.height);
+
+      // Store original dimensions for aspect ratio calculation
+      setOriginalDimensions({ width, height });
 
       // Create canvases
       const starlessCanvas = document.createElement('canvas');
@@ -1786,8 +1822,8 @@ const ParallelVideoGenerator: React.FC = () => {
                         leftCanvasRef.current = canvas;
                         console.log('✅ Left canvas ready for stitching');
                       }}
-                      canvasWidth={useHighRes ? RENDER_WIDTH : PREVIEW_WIDTH}
-                      canvasHeight={useHighRes ? RENDER_HEIGHT : PREVIEW_HEIGHT}
+                      canvasWidth={canvasDimensions.width}
+                      canvasHeight={canvasDimensions.height}
                     />
                   ) : (
                     <div>Left view waiting: stars={leftStars.length}, bg={leftBackground ? 'yes' : 'no'}, starsOnly={leftStarsOnly ? 'yes' : 'no'}</div>
@@ -1814,8 +1850,8 @@ const ParallelVideoGenerator: React.FC = () => {
                         rightCanvasRef.current = canvas;
                         console.log('✅ Right canvas ready for stitching');
                       }}
-                      canvasWidth={useHighRes ? RENDER_WIDTH : PREVIEW_WIDTH}
-                      canvasHeight={useHighRes ? RENDER_HEIGHT : PREVIEW_HEIGHT}
+                      canvasWidth={canvasDimensions.width}
+                      canvasHeight={canvasDimensions.height}
                     />
                   ) : (
                     <div>Right view waiting: stars={rightStars.length}, bg={rightBackground ? 'yes' : 'no'}, starsOnly={rightStarsOnly ? 'yes' : 'no'}</div>
