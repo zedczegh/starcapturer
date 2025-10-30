@@ -39,8 +39,8 @@ interface StarField3DProps {
   // Override canvas dimensions (if not provided, uses image dimensions)
   canvasWidth?: number;
   canvasHeight?: number;
-  // Star cleaning intensity: 0-100 (0 = keep all stars, 100 = only brightest stars)
-  starCleaningIntensity?: number;
+  // Preserve all stars without cleaning/filtering (for pre-displaced parallel video images)
+  preserveStars?: boolean;
 }
 
 const StarField3D: React.FC<StarField3DProps> = ({ 
@@ -62,7 +62,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
   starShiftAmount = 6,
   canvasWidth,
   canvasHeight,
-  starCleaningIntensity = 50
+  preserveStars = false
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -184,13 +184,10 @@ const StarField3D: React.FC<StarField3DProps> = ({
       const width = targetWidth;
       const height = targetHeight;
       
-      // === STAR CLEANING WITH INTENSITY CONTROL ===
-      // Calculate brightness threshold based on cleaning intensity (0-100)
-      // 0 = no cleaning (keep all stars), 100 = aggressive cleaning (only brightest stars)
-      const brightnessThreshold = starCleaningIntensity / 100 * 0.5; // Maps 0-100 to 0-0.5
-      
-      if (starCleaningIntensity > 0) {
-        console.log(`Extracting star cores (cleaning intensity: ${starCleaningIntensity}%, threshold: ${brightnessThreshold.toFixed(2)})...`);
+      // === CONDITIONAL STAR CLEANING ===
+      // Skip cleaning if preserveStars is true (for pre-displaced parallel video images)
+      if (!preserveStars) {
+        console.log('Extracting clean star cores without halos...');
         
         // Find all bright star centers
         interface StarCore {
@@ -268,15 +265,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
           }
         }
         
-        console.log(`Found ${starCores.length} star cores before filtering`);
-        
-        // Filter stars based on brightness threshold
-        const filteredStarCores = starCores.filter(star => {
-          const normalizedBrightness = star.maxBrightness / 255; // Normalize to 0-1
-          return normalizedBrightness > brightnessThreshold;
-        });
-        
-        console.log(`After filtering: ${filteredStarCores.length} stars (threshold: ${brightnessThreshold.toFixed(2)}, removed: ${starCores.length - filteredStarCores.length})`);
+        console.log(`Found ${starCores.length} clean star cores`);
         
         // Second pass: Clear image and redraw only clean cores with smooth gradients
         for (let i = 0; i < data.length; i++) {
@@ -284,7 +273,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
         }
         
         // Redraw each star with perfect smooth circular gradient
-        for (const star of filteredStarCores) {
+        for (const star of starCores) {
           const startX = Math.max(0, Math.floor(star.x - star.radius * 2));
           const endX = Math.min(width - 1, Math.ceil(star.x + star.radius * 2));
           const startY = Math.max(0, Math.floor(star.y - star.radius * 2));
@@ -709,7 +698,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
     };
     
     img.src = starsOnlyImage;
-  }, [starsOnlyImage, starCleaningIntensity, canvasWidth, canvasHeight]);
+  }, [starsOnlyImage, preserveStars, canvasWidth, canvasHeight]);
 
   // Load background image as ImageBitmap for faster rendering
   useEffect(() => {

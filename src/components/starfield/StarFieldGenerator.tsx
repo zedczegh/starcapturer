@@ -90,9 +90,6 @@ const StarFieldGenerator: React.FC = () => {
     spinDirection: 'clockwise' as 'clockwise' | 'counterclockwise',
     enableDownscale: false // User-controlled downscaling
   });
-  
-  // Star cleaning intensity (0-100)
-  const [starCleaningIntensity, setStarCleaningIntensity] = useState<number>(50);
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
 
@@ -1094,7 +1091,6 @@ const StarFieldGenerator: React.FC = () => {
                           enableDownscale: false
                         });
                         setDepthIntensity(200);
-                        setStarCleaningIntensity(50);
                       }}
                       className="h-8 gap-2 text-xs bg-cosmic-800/50 hover:bg-cosmic-700/50 border-cosmic-600"
                     >
@@ -1211,24 +1207,6 @@ const StarFieldGenerator: React.FC = () => {
                   />
                   <p className="text-xs text-cosmic-400">
                     {t('Controls the depth range of the 3D parallax effect (higher = more dramatic)', '控制3D视差效果的深度范围（越高越戏剧化）')}
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-cosmic-200">{t('Star Cleaning', '星体清理')}</Label>
-                    <span className="text-amber-400 font-mono text-sm font-semibold">{starCleaningIntensity}%</span>
-                  </div>
-                  <Slider
-                    value={[starCleaningIntensity]}
-                    onValueChange={(value) => setStarCleaningIntensity(value[0])}
-                    min={0}
-                    max={100}
-                    step={5}
-                    className="w-full"
-                  />
-                  <p className="text-xs text-cosmic-400">
-                    {t('Filter dimmer stars (0% = keep all, 100% = only brightest)', '过滤较暗星体（0% = 保留全部，100% = 仅最亮）')}
                   </p>
                 </div>
 
@@ -1436,7 +1414,6 @@ const StarFieldGenerator: React.FC = () => {
                   frameRenderTrigger={frameRenderTrigger}
                   externalProgress={animationProgress}
                   depthIntensity={depthIntensity}
-                  starCleaningIntensity={starCleaningIntensity}
                 />
                 
                 {/* Progress Bar and Controls */}
