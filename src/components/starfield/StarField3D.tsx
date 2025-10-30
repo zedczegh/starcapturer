@@ -1169,21 +1169,35 @@ const StarField3D: React.FC<StarField3DProps> = ({
       const bgX = offsetsRef.current.background.x;
       const bgY = offsetsRef.current.background.y;
       
-      // Calculate fade-out effect when zoom amplification >= 220%
-      // Apply scale acceleration during fade to enhance "flying through nebula" effect
-      const fadeStartScale = 2.2; // 220% zoom - start fading
-      const fadeEndScale = 2.5; // Fully transparent at 250% zoom
+      // Calculate dynamic fade-out timing based on video duration and amplification
+      // Goal: Fade ends ~1 second before video end, leaving just stars for the final second
+      // Helper function to calculate eased progress (matches main easing function)
+      const calculateEasedProgress = (ratio: number) => {
+        return ratio < 0.5
+          ? 4 * ratio * ratio * ratio
+          : 1 - Math.pow(-2 * ratio + 2, 3) / 2;
+      };
+      
+      // Calculate the progress at which fade should END (1 second before video ends)
+      const fadeEndProgressRatio = Math.max(0, (duration - 1) / duration);
+      const fadeEndEasedProgress = calculateEasedProgress(fadeEndProgressRatio);
+      const fadeEndScale = 1.0 + (fadeEndEasedProgress * ampFactor);
+      
+      // Start fade when background reaches 2.0x scale or 70% through the zoom range (whichever comes first)
+      const maxScale = 1.0 + ampFactor; // Maximum scale at 100% progress
+      const fadeStartScale = Math.min(2.0, 1.0 + ((maxScale - 1.0) * 0.7));
+      
       let bgAlpha = 0.85; // Default background alpha
       let finalBgScale = bgScale; // Final scale with potential acceleration
       
-      if (bgScale >= fadeStartScale) {
+      if (bgScale >= fadeStartScale && fadeEndScale > fadeStartScale) {
         // Calculate fade-out: 1.0 at fadeStartScale, 0.0 at fadeEndScale
         const fadeProgress = Math.min((bgScale - fadeStartScale) / (fadeEndScale - fadeStartScale), 1.0);
         bgAlpha = 0.85 * (1.0 - fadeProgress); // Fade from 0.85 to 0
         
         // Accelerate scale during fade-out to make flying-through effect more obvious
-        // Scale increases by an additional 20% during the fade phase
-        const scaleBoost = 1.0 + (fadeProgress * 0.2);
+        // Scale increases by an additional 30% during the fade phase
+        const scaleBoost = 1.0 + (fadeProgress * 0.3);
         finalBgScale = bgScale * scaleBoost;
       }
       
