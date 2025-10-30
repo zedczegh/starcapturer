@@ -70,8 +70,6 @@ const ParallelVideoGenerator: React.FC = () => {
   const rightCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const stitchedCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const stitchedCtxRef = useRef<CanvasRenderingContext2D | null>(null);
-  const lastFrameTimeRef = useRef<number>(0);
-  const frameSkipThreshold = 1000 / 60; // Target 60fps
   
   // Two depth maps: starless and stars
   const [starlessDepthMapUrl, setStarlessDepthMapUrl] = useState<string | null>(null);
@@ -163,16 +161,8 @@ const ParallelVideoGenerator: React.FC = () => {
     }, 100);
   }, []);
 
-  // Function to stitch left and right canvases together with optimized rendering
+  // Function to stitch left and right canvases together with highly optimized rendering
   const stitchCanvases = useCallback(() => {
-    const currentTime = performance.now();
-    
-    // Frame pacing - ensure we don't render faster than 60fps
-    if (currentTime - lastFrameTimeRef.current < frameSkipThreshold) {
-      return;
-    }
-    lastFrameTimeRef.current = currentTime;
-    
     if (!leftCanvasRef.current || !rightCanvasRef.current) return;
     
     // Find or ensure stitched canvas ref is set
@@ -207,12 +197,11 @@ const ParallelVideoGenerator: React.FC = () => {
     if (!stitchedCtxRef.current || needsResize) {
       stitchedCtxRef.current = stitchedCanvas.getContext('2d', {
         alpha: false,
-        desynchronized: true, // Allow desynchronized rendering for better performance
+        desynchronized: true,
         willReadFrequently: false
       });
       
       if (stitchedCtxRef.current) {
-        // Optimize for performance over quality during animation
         stitchedCtxRef.current.imageSmoothingEnabled = false;
       }
     }
@@ -220,27 +209,14 @@ const ParallelVideoGenerator: React.FC = () => {
     const ctx = stitchedCtxRef.current;
     if (!ctx) return;
 
-    // Batch drawing operations for better performance
+    // Use a single fillRect for background (fastest)
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, totalWidth, totalHeight);
 
-    // Draw both views in one batch
-    ctx.drawImage(
-      leftCanvas,
-      borderSize,
-      borderSize,
-      viewWidth,
-      viewHeight
-    );
-
-    ctx.drawImage(
-      rightCanvas,
-      borderSize + viewWidth + stereoSpacing,
-      borderSize,
-      viewWidth,
-      viewHeight
-    );
-  }, [stereoSpacing, borderSize, frameSkipThreshold]);
+    // Draw both canvases with no transforms (fastest path)
+    ctx.drawImage(leftCanvas, borderSize, borderSize);
+    ctx.drawImage(rightCanvas, borderSize + viewWidth + stereoSpacing, borderSize);
+  }, [stereoSpacing, borderSize]);
 
   // Ensure stitched canvas is rendered and perform initial stitch
   useEffect(() => {
@@ -280,14 +256,20 @@ const ParallelVideoGenerator: React.FC = () => {
     }
   }, [isReady, stitchCanvases]);
 
-  // Stitch canvases together during normal animation using requestAnimationFrame for smooth 60fps
+  // Stitch canvases together during normal animation with throttled updates for smooth performance
   useEffect(() => {
     if (!isAnimating || isGenerating) return;
 
     let animationFrameId: number;
+    let lastStitchTime = 0;
+    const stitchInterval = 1000 / 30; // 30fps for preview (smoother than trying 60fps with dual renders)
     
-    const animate = () => {
-      stitchCanvases();
+    const animate = (currentTime: number) => {
+      // Throttle stitching to 30fps for better performance
+      if (currentTime - lastStitchTime >= stitchInterval) {
+        stitchCanvases();
+        lastStitchTime = currentTime;
+      }
       animationFrameId = requestAnimationFrame(animate);
     };
     
