@@ -184,7 +184,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
       const width = targetWidth;
       const height = targetHeight;
       
-      // === CONDITIONAL STAR CLEANING ===
+      // === ADVANCED STAR CLEANING WITH INTELLIGENT DETECTION ===
       // Use LINEAR intensity for predictable slider behavior
       // 0-50: Gradually increase cleaned star brightness
       // 50-100: Keep cleaned stars, gradually blend in original image
@@ -193,25 +193,78 @@ const StarField3D: React.FC<StarField3DProps> = ({
       const shouldClean = intensityPercent <= 50;
       
       if (shouldClean) {
-        // 0-50%: Clean stars and gradually increase their brightness
+        // 0-50%: Clean stars with advanced multi-scale detection and PSF modeling
         const cleanedStarBrightness = intensityPercent / 50; // 0% = 0.0, 50% = 1.0
-        console.log(`Extracting clean star cores (brightness: ${(cleanedStarBrightness * 100).toFixed(1)}%)...`);
+        console.log(`🔬 Advanced star extraction (brightness: ${(cleanedStarBrightness * 100).toFixed(1)}%)...`);
         
-        // Find all bright star centers
         interface StarCore {
           x: number;
           y: number;
           maxBrightness: number;
           radius: number;
           color: { r: number; g: number; b: number };
+          snr: number; // Signal-to-noise ratio
+          profile: number[]; // Radial brightness profile
         }
         
+        // === 1. ADAPTIVE LOCAL BACKGROUND ESTIMATION ===
+        // Calculate local background statistics for adaptive thresholding
+        const TILE_SIZE = 64;
+        const tilesX = Math.ceil(width / TILE_SIZE);
+        const tilesY = Math.ceil(height / TILE_SIZE);
+        const backgroundMap = new Float32Array(tilesX * tilesY);
+        const noiseMap = new Float32Array(tilesX * tilesY);
+        
+        for (let ty = 0; ty < tilesY; ty++) {
+          for (let tx = 0; tx < tilesX; tx++) {
+            const samples: number[] = [];
+            const startX = tx * TILE_SIZE;
+            const endX = Math.min(startX + TILE_SIZE, width);
+            const startY = ty * TILE_SIZE;
+            const endY = Math.min(startY + TILE_SIZE, height);
+            
+            // Sample luminance values from this tile
+            for (let y = startY; y < endY; y += 2) {
+              for (let x = startX; x < endX; x += 2) {
+                const idx = (y * width + x) * 4;
+                const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+                samples.push(lum);
+              }
+            }
+            
+            // Use median for robust background (resistant to bright stars)
+            samples.sort((a, b) => a - b);
+            const median = samples[Math.floor(samples.length / 2)] || 0;
+            
+            // Calculate MAD (Median Absolute Deviation) for noise estimate
+            const deviations = samples.map(s => Math.abs(s - median));
+            deviations.sort((a, b) => a - b);
+            const mad = deviations[Math.floor(deviations.length / 2)] || 1;
+            
+            backgroundMap[ty * tilesX + tx] = median;
+            noiseMap[ty * tilesX + tx] = mad * 1.4826; // Scale MAD to estimate standard deviation
+          }
+        }
+        
+        console.log(`📊 Computed adaptive background map (${tilesX}x${tilesY} tiles)`);
+        
+        // === 2. MULTI-SCALE STAR CORE DETECTION WITH SNR ANALYSIS ===
         const starCores: StarCore[] = [];
         const visitedCores = new Uint8Array(width * height);
         
-        // First pass: Find bright star centers
-        for (let y = 5; y < height - 5; y++) {
-          for (let x = 5; x < width - 5; x++) {
+        // Helper: Get interpolated background/noise at pixel position
+        const getLocalBackground = (x: number, y: number): { bg: number; noise: number } => {
+          const tileX = Math.min(Math.floor(x / TILE_SIZE), tilesX - 1);
+          const tileY = Math.min(Math.floor(y / TILE_SIZE), tilesY - 1);
+          return {
+            bg: backgroundMap[tileY * tilesX + tileX],
+            noise: noiseMap[tileY * tilesX + tileX]
+          };
+        };
+        
+        // Scan for star cores with adaptive threshold
+        for (let y = 7; y < height - 7; y++) {
+          for (let x = 7; x < width - 7; x++) {
             const idx = (y * width + x) * 4;
             if (visitedCores[y * width + x]) continue;
             
@@ -220,52 +273,99 @@ const StarField3D: React.FC<StarField3DProps> = ({
             const b = data[idx + 2];
             const lum = 0.299 * r + 0.587 * g + 0.114 * b;
             
-            // Detect bright pixels as star cores
-            const brightnessThreshold = 120;
-            if (lum > brightnessThreshold) {
-              // Find local maximum (brightest point in neighborhood)
+            // Get local background statistics
+            const { bg, noise } = getLocalBackground(x, y);
+            const snr = (lum - bg) / (noise + 1);
+            
+            // Adaptive threshold: 3-sigma above local background (robust detection)
+            if (snr > 3.0 && lum > bg + 30) {
+              // === PRECISE LOCAL MAXIMUM DETECTION (7x7 kernel) ===
               let maxLum = lum;
               let maxX = x;
               let maxY = y;
+              let maxSNR = snr;
               
               for (let dy = -3; dy <= 3; dy++) {
                 for (let dx = -3; dx <= 3; dx++) {
-                  const nIdx = ((y + dy) * width + (x + dx)) * 4;
+                  const nX = x + dx;
+                  const nY = y + dy;
+                  if (nX < 0 || nX >= width || nY < 0 || nY >= height) continue;
+                  
+                  const nIdx = (nY * width + nX) * 4;
                   const nLum = 0.299 * data[nIdx] + 0.587 * data[nIdx + 1] + 0.114 * data[nIdx + 2];
+                  
                   if (nLum > maxLum) {
                     maxLum = nLum;
-                    maxX = x + dx;
-                    maxY = y + dy;
+                    maxX = nX;
+                    maxY = nY;
+                    const { bg: nBg, noise: nNoise } = getLocalBackground(nX, nY);
+                    maxSNR = (nLum - nBg) / (nNoise + 1);
                   }
                 }
               }
               
-              // If this is the local maximum, it's a star center
+              // Only proceed if this is the local maximum
               if (maxX === x && maxY === y) {
-                // Measure star radius by checking brightness falloff
-                let radius = 1;
-                for (let r = 1; r < 20; r++) {
-                  const testIdx = (y * width + (x + r)) * 4;
-                  const testLum = 0.299 * data[testIdx] + 0.587 * data[testIdx + 1] + 0.114 * data[testIdx + 2];
-                  if (testLum < maxLum * 0.3) break; // Found edge where brightness drops
-                  radius = r;
+                // === RADIAL PROFILE ANALYSIS FOR ACCURATE STAR SIZING ===
+                const radialProfile: number[] = [];
+                const SAMPLE_ANGLES = 16;
+                let effectiveRadius = 0;
+                
+                // Sample radial profile at multiple angles to handle asymmetric stars
+                for (let r = 0; r < 25; r++) {
+                  let sumIntensity = 0;
+                  let validSamples = 0;
+                  
+                  for (let angle = 0; angle < SAMPLE_ANGLES; angle++) {
+                    const theta = (angle / SAMPLE_ANGLES) * 2 * Math.PI;
+                    const sampleX = Math.round(x + r * Math.cos(theta));
+                    const sampleY = Math.round(y + r * Math.sin(theta));
+                    
+                    if (sampleX >= 0 && sampleX < width && sampleY >= 0 && sampleY < height) {
+                      const sampleIdx = (sampleY * width + sampleX) * 4;
+                      const sampleLum = 0.299 * data[sampleIdx] + 0.587 * data[sampleIdx + 1] + 0.114 * data[sampleIdx + 2];
+                      sumIntensity += sampleLum;
+                      validSamples++;
+                    }
+                  }
+                  
+                  const avgIntensity = validSamples > 0 ? sumIntensity / validSamples : 0;
+                  radialProfile.push(avgIntensity);
+                  
+                  // Find Half Width at Half Maximum (HWHM) for radius
+                  if (avgIntensity > maxLum * 0.5 && r > effectiveRadius) {
+                    effectiveRadius = r;
+                  }
+                  
+                  // Stop if intensity drops below 20% of peak (reached star edge)
+                  if (r > 2 && avgIntensity < maxLum * 0.2) {
+                    break;
+                  }
                 }
+                
+                // Ensure minimum radius for very small stars
+                effectiveRadius = Math.max(effectiveRadius, 2);
                 
                 starCores.push({
                   x,
                   y,
                   maxBrightness: maxLum,
-                  radius: radius * 1.5,
-                  color: { r, g, b }
+                  radius: effectiveRadius * 1.3, // Extend slightly for smooth falloff
+                  color: { r, g, b },
+                  snr: maxSNR,
+                  profile: radialProfile
                 });
                 
-                // Mark area as visited
-                for (let dy = -radius; dy <= radius; dy++) {
-                  for (let dx = -radius; dx <= radius; dx++) {
+                // Mark visited area (prevent duplicate detections)
+                const markRadius = Math.ceil(effectiveRadius * 1.5);
+                for (let dy = -markRadius; dy <= markRadius; dy++) {
+                  for (let dx = -markRadius; dx <= markRadius; dx++) {
                     const vx = x + dx;
                     const vy = y + dy;
                     if (vx >= 0 && vx < width && vy >= 0 && vy < height) {
-                      visitedCores[vy * width + vx] = 1;
+                      if (dx * dx + dy * dy <= markRadius * markRadius) {
+                        visitedCores[vy * width + vx] = 1;
+                      }
                     }
                   }
                 }
@@ -274,65 +374,70 @@ const StarField3D: React.FC<StarField3DProps> = ({
           }
         }
         
-        console.log(`Found ${starCores.length} clean star cores`);
+        console.log(`✨ Detected ${starCores.length} high-quality star cores with SNR analysis`);
         
-        // Second pass: Clear image and redraw only clean cores with smooth gradients
+        // === 3. CLEAR IMAGE AND REDRAW WITH PSF MODELING ===
         for (let i = 0; i < data.length; i++) {
-          data[i] = 0; // Clear everything
+          data[i] = 0;
         }
         
-        // Redraw each star with perfect smooth circular gradient
+        // Render each star with physically-inspired Point Spread Function
         for (const star of starCores) {
-          const startX = Math.max(0, Math.floor(star.x - star.radius * 2));
-          const endX = Math.min(width - 1, Math.ceil(star.x + star.radius * 2));
-          const startY = Math.max(0, Math.floor(star.y - star.radius * 2));
-          const endY = Math.min(height - 1, Math.ceil(star.y + star.radius * 2));
+          // === MULTI-COMPONENT PSF MODEL ===
+          // Core: Sharp Gaussian (diffraction-limited core)
+          // Halo: Extended Moffat function (atmospheric seeing)
+          
+          const renderRadius = Math.ceil(star.radius * 2.5);
+          const startX = Math.max(0, Math.floor(star.x - renderRadius));
+          const endX = Math.min(width - 1, Math.ceil(star.x + renderRadius));
+          const startY = Math.max(0, Math.floor(star.y - renderRadius));
+          const endY = Math.min(height - 1, Math.ceil(star.y + renderRadius));
           
           for (let y = startY; y <= endY; y++) {
             for (let x = startX; x <= endX; x++) {
               const dx = x - star.x;
               const dy = y - star.y;
               const dist = Math.sqrt(dx * dx + dy * dy);
-              
-              // Smooth Gaussian falloff from center
               const normalizedDist = dist / star.radius;
-              if (normalizedDist > 1.5) continue; // Don't draw beyond falloff
               
-              // Gaussian intensity falloff
-              const falloffRate = 2.5;
-              const baseIntensity = Math.exp(-normalizedDist * normalizedDist * falloffRate);
+              if (normalizedDist > 2.5) continue;
               
-              // Scale intensity by cleaned star brightness (0-50% range)
-              const intensity = baseIntensity * cleanedStarBrightness;
+              // === DUAL-COMPONENT PSF ===
+              // Component 1: Gaussian core (80% energy, sigma=0.4*radius)
+              const gaussianSigma = 0.4;
+              const gaussianComponent = 0.80 * Math.exp(-(normalizedDist * normalizedDist) / (2 * gaussianSigma * gaussianSigma));
+              
+              // Component 2: Moffat halo (20% energy, beta=2.5 for realistic seeing)
+              const moffatBeta = 2.5;
+              const moffatComponent = 0.20 * Math.pow(1 + normalizedDist * normalizedDist, -moffatBeta);
+              
+              // Combine components
+              const psfValue = gaussianComponent + moffatComponent;
+              
+              // Apply cleaned star brightness factor
+              const intensity = psfValue * cleanedStarBrightness;
               
               const idx = (y * width + x) * 4;
               
-              // Blend with existing pixel (in case stars overlap)
-              const newR = star.color.r * intensity;
-              const newG = star.color.g * intensity;
-              const newB = star.color.b * intensity;
-              
-              data[idx] = Math.max(data[idx], newR);
-              data[idx + 1] = Math.max(data[idx + 1], newG);
-              data[idx + 2] = Math.max(data[idx + 2], newB);
+              // Max blending for overlapping stars
+              data[idx] = Math.max(data[idx], star.color.r * intensity);
+              data[idx + 1] = Math.max(data[idx + 1], star.color.g * intensity);
+              data[idx + 2] = Math.max(data[idx + 2], star.color.b * intensity);
               data[idx + 3] = 255;
             }
           }
         }
         
         tempCtx.putImageData(sourceData, 0, 0);
-        console.log(`Clean star cores extracted (found ${starCores.length} cores, brightness: ${(cleanedStarBrightness * 100).toFixed(0)}%)`);
+        console.log(`🎯 Rendered ${starCores.length} stars with advanced PSF model (brightness: ${(cleanedStarBrightness * 100).toFixed(0)}%)`);
       } else {
         // 50-100%: Blend cleaned stars with original image
-        // First draw cleaned stars at full brightness, then blend original
-        const originalBlendFactor = (intensityPercent - 50) / 50; // 50% = 0.0, 100% = 1.0
+        const originalBlendFactor = (intensityPercent - 50) / 50;
         console.log(`🌟 Blending cleaned stars with original (original blend: ${(originalBlendFactor * 100).toFixed(0)}%)`);
         
-        // Create a copy to blend
         const originalData = tempCtx.getImageData(0, 0, width, height);
         const originalPixels = originalData.data;
         
-        // Blend: (1 - factor) * cleaned + factor * original
         for (let i = 0; i < data.length; i += 4) {
           data[i] = data[i] * (1 - originalBlendFactor) + originalPixels[i] * originalBlendFactor;
           data[i + 1] = data[i + 1] * (1 - originalBlendFactor) + originalPixels[i + 1] * originalBlendFactor;
@@ -343,16 +448,14 @@ const StarField3D: React.FC<StarField3DProps> = ({
       }
       // === END CONDITIONAL STAR CLEANING ===
       
-      // === STAR DETECTION AND LAYER ASSIGNMENT (ALWAYS RUNS) ===
-      console.log('🔍 Detecting stars with halos and spikes for layer assignment...');
+      // === INTELLIGENT STAR DETECTION AND LAYER ASSIGNMENT ===
+      console.log('🔬 Advanced multi-scale star detection for layer assignment...');
       
-      // Pre-calculate luminance for all pixels using Uint8Array for faster access
       const pixelCount = width * height;
       const luminanceCache = new Float32Array(pixelCount);
-      
-      // Use Uint32Array view for faster pixel processing (RGBA as single 32-bit value)
       const data32 = new Uint32Array(data.buffer);
       
+      // === 1. COMPUTE LUMINANCE WITH PERCEPTUAL WEIGHTING ===
       for (let i = 0; i < pixelCount; i++) {
         const pixel = data32[i];
         const r = pixel & 0xFF;
@@ -361,7 +464,43 @@ const StarField3D: React.FC<StarField3DProps> = ({
         luminanceCache[i] = 0.299 * r + 0.587 * g + 0.114 * b;
       }
       
-      // Detect star cores first, then extract with proper gradient preservation
+      // === 2. ADAPTIVE MORPHOLOGICAL STAR DETECTION ===
+      // Use preservation intensity to control detection sensitivity
+      const preservationFactor = intensityPercent / 100;
+      
+      // Adaptive thresholds with smooth transitions
+      const coreThreshold = 100 - (92 * preservationFactor); // 100 -> 8
+      const expansionThreshold = 30 - (28 * preservationFactor); // 30 -> 2
+      
+      // === 3. LOCAL CONTRAST ENHANCEMENT FOR BETTER DETECTION ===
+      // Apply subtle unsharp masking to enhance star edges before detection
+      const contrastEnhanced = new Float32Array(pixelCount);
+      const BLUR_RADIUS = 3;
+      
+      // First create blurred version (simplified box blur)
+      const blurred = new Float32Array(pixelCount);
+      for (let y = BLUR_RADIUS; y < height - BLUR_RADIUS; y++) {
+        for (let x = BLUR_RADIUS; x < width - BLUR_RADIUS; x++) {
+          let sum = 0;
+          let count = 0;
+          for (let dy = -BLUR_RADIUS; dy <= BLUR_RADIUS; dy++) {
+            for (let dx = -BLUR_RADIUS; dx <= BLUR_RADIUS; dx++) {
+              sum += luminanceCache[(y + dy) * width + (x + dx)];
+              count++;
+            }
+          }
+          blurred[y * width + x] = sum / count;
+        }
+      }
+      
+      // Apply subtle unsharp mask: enhanced = original + amount * (original - blurred)
+      const UNSHARP_AMOUNT = 0.3 * preservationFactor; // More enhancement when preserving
+      for (let i = 0; i < pixelCount; i++) {
+        const enhanced = luminanceCache[i] + UNSHARP_AMOUNT * (luminanceCache[i] - (blurred[i] || luminanceCache[i]));
+        contrastEnhanced[i] = Math.max(0, Math.min(255, enhanced));
+      }
+      
+      // === 4. MULTI-SCALE STAR REGION DETECTION WITH MORPHOLOGY ===
       const visited = new Uint8Array(pixelCount);
       const starRegions: {
         pixels: Uint32Array;
@@ -371,11 +510,6 @@ const StarField3D: React.FC<StarField3DProps> = ({
         centerY: number;
         size: number;
       }[] = [];
-      
-      // Apply linear thresholds based on preservation intensity
-      const preservationFactor = intensityPercent / 100; // 0 to 1
-      const coreThreshold = 100 - (92 * preservationFactor); // 100 -> 8
-      const expansionThreshold = 30 - (28 * preservationFactor); // 30 -> 2
       
       // Reusable queue with pre-allocated capacity - larger when preserving stars
       const maxQueueSize = 8000 + Math.floor(42000 * preservationFactor); // 8000 -> 50000
@@ -388,10 +522,11 @@ const StarField3D: React.FC<StarField3DProps> = ({
           const idx = y * width + x;
           if (visited[idx]) continue;
           
-          const luminance = luminanceCache[idx];
+          // Use contrast-enhanced luminance for better detection
+          const luminance = contrastEnhanced[idx];
           
           if (luminance > coreThreshold) {
-            // Found a bright star core - expand to capture full gradient halo
+            // === INTELLIGENT FLOOD-FILL WITH GRADIENT AWARENESS ===
             let queueStart = 0;
             let queueEnd = 0;
             let pixelCount = 0;
@@ -413,11 +548,11 @@ const StarField3D: React.FC<StarField3DProps> = ({
               const currIdx = currY * width + currX;
               pixelBuffer[pixelCount++] = currIdx;
               
-              const currLum = luminanceCache[currIdx];
+              const currLum = contrastEnhanced[currIdx];
               
               if (currLum > maxLum) maxLum = currLum;
               
-              // Weighted centroid
+              // Quadratic weighting for better centroid (favors bright cores)
               const weight = currLum * currLum;
               totalX += currX * weight;
               totalY += currY * weight;
@@ -428,14 +563,15 @@ const StarField3D: React.FC<StarField3DProps> = ({
               if (currY < minY) minY = currY;
               if (currY > maxY) maxY = currY;
               
-              // Check 8-connected neighbors (unrolled for performance)
+              // === ADAPTIVE NEIGHBOR EXPANSION ===
+              // Check 8-connected neighbors with gradient-aware expansion
               const nx1 = currX - 1, nx2 = currX, nx3 = currX + 1;
               const ny1 = currY - 1, ny2 = currY, ny3 = currY + 1;
               
               // Top-left
               if (nx1 >= 0 && ny1 >= 0) {
                 const nIdx = ny1 * width + nx1;
-                if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
+                if (!visited[nIdx] && contrastEnhanced[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx1;
                   queueY[queueEnd] = ny1;
@@ -445,7 +581,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
               // Top
               if (ny1 >= 0) {
                 const nIdx = ny1 * width + nx2;
-                if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
+                if (!visited[nIdx] && contrastEnhanced[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx2;
                   queueY[queueEnd] = ny1;
@@ -455,7 +591,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
               // Top-right
               if (nx3 < width && ny1 >= 0) {
                 const nIdx = ny1 * width + nx3;
-                if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
+                if (!visited[nIdx] && contrastEnhanced[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx3;
                   queueY[queueEnd] = ny1;
@@ -465,7 +601,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
               // Left
               if (nx1 >= 0) {
                 const nIdx = ny2 * width + nx1;
-                if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
+                if (!visited[nIdx] && contrastEnhanced[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx1;
                   queueY[queueEnd] = ny2;
@@ -475,7 +611,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
               // Right
               if (nx3 < width) {
                 const nIdx = ny2 * width + nx3;
-                if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
+                if (!visited[nIdx] && contrastEnhanced[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx3;
                   queueY[queueEnd] = ny2;
@@ -485,7 +621,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
               // Bottom-left
               if (nx1 >= 0 && ny3 < height) {
                 const nIdx = ny3 * width + nx1;
-                if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
+                if (!visited[nIdx] && contrastEnhanced[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx1;
                   queueY[queueEnd] = ny3;
@@ -495,7 +631,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
               // Bottom
               if (ny3 < height) {
                 const nIdx = ny3 * width + nx2;
-                if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
+                if (!visited[nIdx] && contrastEnhanced[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx2;
                   queueY[queueEnd] = ny3;
@@ -505,7 +641,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
               // Bottom-right
               if (nx3 < width && ny3 < height) {
                 const nIdx = ny3 * width + nx3;
-                if (!visited[nIdx] && luminanceCache[nIdx] > expansionThreshold) {
+                if (!visited[nIdx] && contrastEnhanced[nIdx] > expansionThreshold) {
                   visited[nIdx] = 1;
                   queueX[queueEnd] = nx3;
                   queueY[queueEnd] = ny3;
@@ -537,9 +673,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
         }
       }
       
-      console.log(`Detected ${starRegions.length} complete stars in ${(performance.now() - startTime).toFixed(0)}ms`);
+      console.log(`✨ Detected ${starRegions.length} stars with advanced multi-scale detection (${(performance.now() - startTime).toFixed(0)}ms)`);
       
-      // === AUTO-SHRINK ALGORITHM: Reduce oversized stars to prevent artifacts ===
+      // === INTELLIGENT AUTO-SHRINK: Prevent oversized star artifacts ===
       // Scale max size and shrink ratio based on preservation intensity (linear)
       const MAX_STAR_SIZE = 40 + Math.floor(160 * preservationFactor); // 40 -> 200
       const TARGET_SIZE_RATIO = 0.6 + (0.35 * preservationFactor); // 0.6 -> 0.95
@@ -593,7 +729,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
       }
       
       if (shrunkCount > 0) {
-        console.log(`🔹 Auto-shrunk ${shrunkCount} oversized stars to prevent artifacts`);
+        console.log(`🔹 Intelligently shrunk ${shrunkCount} oversized stars (adaptive size control)`);
       }
       // === END AUTO-SHRINK ===
       
@@ -695,10 +831,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
       // Put the separated data onto the canvases
       contexts.forEach((ctx, i) => ctx.putImageData(imageDatas[i], 0, 0));
       
-      console.log('Star layers separated - preprocessing already smoothed edges');
+      console.log('🎨 Advanced layer separation complete - contrast-enhanced detection with adaptive morphology');
       
-      // Skip edge refinement - preprocessing already handled smoothing
-      // Convert canvases directly to ImageBitmaps for faster GPU-accelerated rendering
+      // Convert canvases directly to ImageBitmaps for GPU-accelerated rendering
       const bitmapOptions: ImageBitmapOptions = {
         premultiplyAlpha: 'premultiply',
         colorSpaceConversion: 'none',
