@@ -2106,6 +2106,7 @@ const ParallelVideoGenerator: React.FC = () => {
                       preserveStars={preserveStars}
                       videoProgressRef={isGenerating ? videoProgressRef : undefined}
                       frameRenderTrigger={frameRenderTrigger}
+                      externalProgress={animationProgress}
                       onProgressUpdate={handleProgressUpdate}
                       onCanvasReady={(canvas) => { 
                         leftCanvasRef.current = canvas;
@@ -2135,6 +2136,7 @@ const ParallelVideoGenerator: React.FC = () => {
                       preserveStars={preserveStars}
                       videoProgressRef={isGenerating ? videoProgressRef : undefined}
                       frameRenderTrigger={frameRenderTrigger}
+                      externalProgress={animationProgress}
                       onProgressUpdate={handleProgressUpdate}
                       onCanvasReady={(canvas) => { 
                         rightCanvasRef.current = canvas;
