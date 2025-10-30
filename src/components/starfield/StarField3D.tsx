@@ -343,9 +343,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
         size: number;
       }[] = [];
       
-      // Use lower thresholds when preserving stars to capture more detail
-      const coreThreshold = preserveStars ? 50 : 100; // Lower threshold preserves fainter stars
-      const expansionThreshold = preserveStars ? 15 : (coreThreshold * 0.3); // Captures more halos and diffraction spikes
+      // Use much lower thresholds when preserving stars to capture maximum detail
+      const coreThreshold = preserveStars ? 30 : 100; // Very low threshold preserves fainter stars
+      const expansionThreshold = preserveStars ? 10 : (coreThreshold * 0.3); // Captures extensive halos and diffraction spikes
       
       // Reusable queue with pre-allocated capacity
       const maxQueueSize = 8000; // Larger to capture full star halos
