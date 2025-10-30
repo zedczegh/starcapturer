@@ -1422,7 +1422,7 @@ const ParallelVideoGenerator: React.FC = () => {
                           • <span className="text-green-300">Moon: 0.0026 AU</span> • <span className="text-green-300">Mars: 0.5-2.5 AU</span> • <span className="text-green-300">Jupiter: 4-6 AU</span> • <span className="text-green-300">Saturn: 8-11 AU</span> • <span className="text-green-300">Uranus: 18-20 AU</span> • <span className="text-green-300">Neptune: 29-31 AU</span>
                         </p>
                         <p className="text-[10px] text-cosmic-400 mt-1 italic">
-                          {t('Note: Planets show little parallax due to extreme proximity. Use max 50px for artistic effect.', '注：行星因距离极近几乎无视差，艺术效果建议使用最大50px。')}
+                          {t('Note: Please process planetary/solar/lunar images on default settings.', '注：请使用默认设置处理行星/太阳/月球图像。')}
                         </p>
                       </div>
                       
