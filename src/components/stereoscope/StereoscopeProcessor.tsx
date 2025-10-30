@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Upload, Eye, Download, Loader2, Layers, Settings2, Sparkles, ChevronDown, Package } from 'lucide-react';
+import { Upload, Eye, Download, Loader2, Layers, Settings2, Sparkles, ChevronDown, Package, RotateCcw, Info } from 'lucide-react';
 import { UploadProgress } from '@/components/ui/upload-progress';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { generateSimpleDepthMap, detectStars, type SimpleDepthParams } from '@/lib/simpleDepthMap';
@@ -906,9 +906,23 @@ const StereoscopeProcessor: React.FC = () => {
               </div>
 
               <div className="space-y-4 p-4 rounded-lg bg-cosmic-900/40 border border-cosmic-700/30">
-                <div className="flex items-center gap-2 text-amber-400">
-                  <Settings2 className="w-4 h-4" />
-                  <span className="text-sm font-semibold">{t('Starless Displacement Control', '无星图位移控制')}</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-amber-400">
+                    <Settings2 className="w-4 h-4" />
+                    <span className="text-sm font-semibold">{t('Starless Displacement Control', '无星图位移控制')}</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setDisplacementAmount(25);
+                      setDisplacementDirection('right');
+                    }}
+                    className="h-8 gap-2 text-xs bg-cosmic-800/50 hover:bg-cosmic-700/50 border-cosmic-600"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    {t('Reset', '重置')}
+                  </Button>
                 </div>
                 
                 <div>
@@ -952,6 +966,21 @@ const StereoscopeProcessor: React.FC = () => {
                   <p className="text-xs text-cosmic-400 mt-1">
                     {t('Direction to displace the starless image for 3D effect', '无星图像的位移方向以产生3D效果')}
                   </p>
+                </div>
+
+                {/* Distance-based displacement suggestions */}
+                <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                  <div className="flex items-start gap-2">
+                    <Info className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                    <div className="text-xs text-cosmic-300 space-y-1">
+                      <p className="font-semibold text-blue-400">
+                        {t('Displacement Suggestions by Distance:', '根据距离的位移建议：')}
+                      </p>
+                      <p>• <span className="text-amber-300">10-15px</span>: {t('Nearby objects (100-500 ly)', '近距离天体（100-500光年）')}</p>
+                      <p>• <span className="text-amber-300">20-30px</span>: {t('Mid-range objects (500-2000 ly)', '中距离天体（500-2000光年）')}</p>
+                      <p>• <span className="text-amber-300">35-50px</span>: {t('Distant objects (2000+ ly)', '远距离天体（2000+光年）')}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
