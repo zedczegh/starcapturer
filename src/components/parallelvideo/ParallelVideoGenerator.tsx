@@ -1465,11 +1465,31 @@ const ParallelVideoGenerator: React.FC = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px]">
-                        {getSensorsByCategory('Deep Sky').slice(0, 15).map(sensor => (
+                        <div className="px-2 py-1.5 text-xs font-semibold text-cosmic-400">Deep Sky Sensors</div>
+                        {getSensorsByCategory('Deep Sky').map(sensor => (
                           <SelectItem key={sensor.name} value={sensor.name}>
                             {sensor.name} ({sensor.pixelSize}μm) - {sensor.manufacturer}
                           </SelectItem>
                         ))}
+                        <div className="px-2 py-1.5 text-xs font-semibold text-cosmic-400 mt-2">Planetary Sensors</div>
+                        {getSensorsByCategory('Planetary').map(sensor => (
+                          <SelectItem key={sensor.name} value={sensor.name}>
+                            {sensor.name} ({sensor.pixelSize}μm) - {sensor.manufacturer}
+                          </SelectItem>
+                        ))}
+                        <div className="px-2 py-1.5 text-xs font-semibold text-cosmic-400 mt-2">All-round Sensors</div>
+                        {getSensorsByCategory('All-round').map(sensor => (
+                          <SelectItem key={sensor.name} value={sensor.name}>
+                            {sensor.name} ({sensor.pixelSize}μm) - {sensor.manufacturer}
+                          </SelectItem>
+                        ))}
+                        <div className="px-2 py-1.5 text-xs font-semibold text-cosmic-400 mt-2">Guiding Sensors</div>
+                        {getSensorsByCategory('Guiding').map(sensor => (
+                          <SelectItem key={sensor.name} value={sensor.name}>
+                            {sensor.name} ({sensor.pixelSize}μm) - {sensor.manufacturer}
+                          </SelectItem>
+                        ))}
+                        <div className="border-t border-cosmic-700 my-2"></div>
                         <SelectItem value="custom">{t('Custom Pixel Size', '自定义像素尺寸')}</SelectItem>
                       </SelectContent>
                     </Select>
