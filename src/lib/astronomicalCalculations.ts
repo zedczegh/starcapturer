@@ -51,47 +51,71 @@ export const calculatePlateScale = (
 };
 
 /**
- * Calculate pixel displacement from parallax angle and plate scale
+ * Calculate suggested stereoscopic displacement for artistic 3D effect
+ * based on astronomical distance. This is NOT real parallax calculation,
+ * but an artistic tool to help choose appropriate displacement values.
  * 
- * @param parallaxAngleArcsec - Parallax angle in arcseconds
- * @param plateScaleArcsecPerPixel - Plate scale in arcseconds per pixel
- * @param constrainForViewing - Whether to constrain the result to comfortable viewing maximum (50px)
- * @returns Pixel displacement amount
+ * Formula: Uses inverse relationship with distance to suggest relative depths,
+ * scaled to produce comfortable viewing range (typically 5-45 pixels)
+ * 
+ * @param distanceLightYears - Distance to astronomical object in light years
+ * @returns Suggested pixel displacement for stereoscopic effect
  */
-export const calculateDisplacementFromParallax = (
-  parallaxAngleArcsec: number,
-  plateScaleArcsecPerPixel: number,
-  constrainForViewing: boolean = true
-): number => {
-  const rawDisplacement = parallaxAngleArcsec / plateScaleArcsecPerPixel;
-
-  if (constrainForViewing) {
-    // Only constrain maximum for comfortable stereoscopic viewing
-    // No minimum - let users see even subtle effects
-    return Math.min(50, rawDisplacement);
+export const calculateArtisticDisplacement = (
+  distanceLightYears: number
+): {
+  suggestedDisplacement: number;
+  category: string;
+  description: string;
+} => {
+  // Simple inverse relationship: closer objects get more displacement
+  // Reference: Orion Nebula at 1350 ly → 25px (foreground)
+  const referenceDistance = 1350;
+  const referenceDisplacement = 25;
+  
+  // Calculate displacement with inverse relationship
+  let displacement = (referenceDistance / distanceLightYears) * referenceDisplacement;
+  
+  // Constrain to comfortable viewing range
+  displacement = Math.max(3, Math.min(50, displacement));
+  
+  // Categorize the result
+  let category = '';
+  let description = '';
+  
+  if (displacement >= 35) {
+    category = 'Extreme Foreground';
+    description = 'Very close nebular structures - dramatic 3D pop';
+  } else if (displacement >= 25) {
+    category = 'Foreground';
+    description = 'Close nebulae like Orion - strong depth';
+  } else if (displacement >= 15) {
+    category = 'Mid-range';
+    description = 'Middle distance objects - moderate depth';
+  } else if (displacement >= 8) {
+    category = 'Background';
+    description = 'Distant structures - subtle depth';
+  } else {
+    category = 'Far Background';
+    description = 'Very distant objects - minimal depth';
   }
-
-  return rawDisplacement;
+  
+  return {
+    suggestedDisplacement: Math.round(displacement),
+    category,
+    description
+  };
 };
 
 /**
- * Complete parallax-to-pixel displacement calculation
- * 
- * This function combines all the steps to convert astronomical distance
- * and imaging equipment parameters into a pixel displacement value suitable
- * for stereoscopic 3D imaging.
- * 
- * @param distanceLightYears - Distance to astronomical object in light years
- * @param baselineAU - Baseline distance in AU (default: 1 AU for Earth's orbit)
- * @param focalLengthMm - Telescope focal length in millimeters
- * @param pixelSizeUm - Camera pixel size in micrometers
- * @returns Object containing all intermediate and final values
+ * Legacy function maintained for backwards compatibility
+ * Now redirects to artistic displacement calculation
  */
 export const calculateStereoscopicDisplacement = (
   distanceLightYears: number,
-  baselineAU: number = 1.0,
-  focalLengthMm: number,
-  pixelSizeUm: number
+  _baselineAU: number = 1.0,
+  _focalLengthMm: number = 1000,
+  _pixelSizeUm: number = 4.63
 ): {
   distanceParsecs: number;
   parallaxAngle: number;
@@ -100,38 +124,16 @@ export const calculateStereoscopicDisplacement = (
   constrainedDisplacement: number;
   isConstrained: boolean;
 } => {
-  // Step 1: Convert distance to parsecs
-  const distanceParsecs = lightYearsToParsecs(distanceLightYears);
-
-  // Step 2: Calculate parallax angle
-  const parallaxAngle = calculateParallaxAngle(baselineAU, distanceParsecs);
-
-  // Step 3: Calculate plate scale from equipment
-  const plateScale = calculatePlateScale(focalLengthMm, pixelSizeUm);
-
-  // Step 4: Calculate real pixel displacement
-  const realDisplacement = calculateDisplacementFromParallax(
-    parallaxAngle,
-    plateScale,
-    false // Don't constrain for scientific accuracy
-  );
-
-  // Step 5: Calculate constrained displacement for viewing
-  const constrainedDisplacement = calculateDisplacementFromParallax(
-    parallaxAngle,
-    plateScale,
-    true // Constrain to 3-50px for comfortable viewing
-  );
-
-  const isConstrained = Math.abs(realDisplacement - constrainedDisplacement) > 0.01;
-
+  const artistic = calculateArtisticDisplacement(distanceLightYears);
+  
+  // Return dummy scientific values since they're not meaningful
   return {
-    distanceParsecs,
-    parallaxAngle,
-    plateScale,
-    realDisplacement,
-    constrainedDisplacement,
-    isConstrained
+    distanceParsecs: distanceLightYears * 0.306601,
+    parallaxAngle: 0,
+    plateScale: 0,
+    realDisplacement: artistic.suggestedDisplacement,
+    constrainedDisplacement: artistic.suggestedDisplacement,
+    isConstrained: false
   };
 };
 

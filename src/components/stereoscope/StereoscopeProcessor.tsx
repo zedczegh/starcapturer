@@ -101,11 +101,9 @@ const StereoscopeProcessor: React.FC = () => {
     contrastBoost: 1.2
   });
 
-  // Equipment parameters for scientific parallax calculation
-  const [focalLength, setFocalLength] = useState<number>(1000); // mm
+  // Equipment parameters - simplified to just defaults now
   const [selectedSensor, setSelectedSensor] = useState<string>('ASI294MC');
   const [customPixelSize, setCustomPixelSize] = useState<number>(4.63); // μm
-  const [enhancementFactor, setEnhancementFactor] = useState<number>(15000); // Multiplier for visible stereoscopic effect
   
   // Get current pixel size from sensor or custom input
   const getCurrentPixelSize = (): number => {
@@ -985,44 +983,14 @@ const StereoscopeProcessor: React.FC = () => {
                   </p>
                 </div>
 
-                {/* Equipment Parameters for Scientific Calculation */}
+                {/* Camera Sensor Info (Optional) */}
                 <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/30 space-y-3">
                   <p className="font-semibold text-purple-400 text-xs flex items-center gap-2">
-                    <Settings2 className="w-4 h-4" />
-                    {t('Imaging Equipment (for Scientific Calibration)', '成像设备（科学校准）')}
+                    <Info className="w-4 h-4" />
+                    {t('Your Camera (Optional Reference)', '您的相机（可选参考）')}
                   </p>
-                  
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="text-xs text-cosmic-300 mb-1 block">
-                        {t('Focal Length (mm)', '焦距（毫米）')}
-                      </Label>
-                      <input
-                        type="number"
-                        min="200"
-                        max="5000"
-                        value={focalLength}
-                        onChange={(e) => setFocalLength(parseFloat(e.target.value) || 1000)}
-                        className="w-full px-2 py-1 bg-cosmic-800/50 border border-cosmic-700/50 rounded text-xs text-cosmic-200 focus:outline-none focus:border-purple-500/50"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-cosmic-300 mb-1 block">
-                        {t('3D Enhancement', '3D增强')} ×
-                      </Label>
-                      <input
-                        type="number"
-                        min="1000"
-                        max="50000"
-                        step="1000"
-                        value={enhancementFactor}
-                        onChange={(e) => setEnhancementFactor(parseFloat(e.target.value) || 15000)}
-                        className="w-full px-2 py-1 bg-cosmic-800/50 border border-cosmic-700/50 rounded text-xs text-cosmic-200 focus:outline-none focus:border-purple-500/50"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-cosmic-400 italic">
-                    {t('Enhancement factor: larger values = stronger 3D effect', '增强因子：数值越大，3D效果越强')}
+                  <p className="text-[10px] text-cosmic-400">
+                    {t('This helps you understand your setup, but doesnt affect displacement calculations', '这有助于了解您的设置，但不影响位移计算')}
                   </p>
 
                   <div>

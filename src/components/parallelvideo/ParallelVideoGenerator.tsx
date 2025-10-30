@@ -101,11 +101,9 @@ const ParallelVideoGenerator: React.FC = () => {
   const horizontalDisplace = displacementAmount; // Use displacement amount from UI
   const starShiftAmount = 6; // Fixed star shift amount
 
-  // Equipment parameters for scientific parallax calculation
-  const [focalLength, setFocalLength] = useState<number>(1000); // mm
+  // Equipment parameters - simplified to just sensor selection
   const [selectedSensor, setSelectedSensor] = useState<string>('ASI294MC');
   const [customPixelSize, setCustomPixelSize] = useState<number>(4.63); // μm
-  const [enhancementFactor, setEnhancementFactor] = useState<number>(15000); // Multiplier for visible stereoscopic effect
   
   // Get current pixel size from sensor or custom input
   const getCurrentPixelSize = (): number => {
