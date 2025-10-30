@@ -36,6 +36,9 @@ interface StarField3DProps {
   // Stereoscopic displacement parameters to respect depth from Traditional Morph
   horizontalDisplace?: number; // Displacement amount from stereoscope processor (typically 25)
   starShiftAmount?: number; // Star shift amount from stereoscope processor (typically 6)
+  // Override canvas dimensions (if not provided, uses image dimensions)
+  canvasWidth?: number;
+  canvasHeight?: number;
 }
 
 const StarField3D: React.FC<StarField3DProps> = ({ 
@@ -54,7 +57,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
   externalProgress,
   depthIntensity = 100,
   horizontalDisplace = 25,
-  starShiftAmount = 6
+  starShiftAmount = 6,
+  canvasWidth,
+  canvasHeight
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -149,29 +154,35 @@ const StarField3D: React.FC<StarField3DProps> = ({
 
     const img = new Image();
     img.onload = () => {
-      setImageDimensions({ width: img.width, height: img.height });
+      // Use provided dimensions or fall back to image dimensions
+      const targetWidth = canvasWidth || img.width;
+      const targetHeight = canvasHeight || img.height;
+      setImageDimensions({ width: targetWidth, height: targetHeight });
       
       console.log('Detecting complete stars with cores and spikes...');
       const startTime = performance.now();
       
-      // Draw image to canvas
+      // Draw image at target canvas dimensions
       const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = img.width;
-      tempCanvas.height = img.height;
+      tempCanvas.width = targetWidth;
+      tempCanvas.height = targetHeight;
       const tempCtx = tempCanvas.getContext('2d', { 
         willReadFrequently: true,
         alpha: false 
       })!;
-      tempCtx.drawImage(img, 0, 0);
+      // Scale image to target dimensions with high quality
+      tempCtx.imageSmoothingEnabled = true;
+      tempCtx.imageSmoothingQuality = 'high';
+      tempCtx.drawImage(img, 0, 0, targetWidth, targetHeight);
       
-      const sourceData = tempCtx.getImageData(0, 0, img.width, img.height);
+      const sourceData = tempCtx.getImageData(0, 0, targetWidth, targetHeight);
       const data = sourceData.data;
       
       // === EXTRACT ONLY BRIGHT CORES WITH SMOOTH GRADIENTS ===
       console.log('Extracting clean star cores without halos...');
       
-      const width = img.width;
-      const height = img.height;
+      const width = targetWidth;
+      const height = targetHeight;
       
       // Find all bright star centers
       interface StarCore {

@@ -110,6 +110,13 @@ const ParallelVideoGenerator: React.FC = () => {
   const [animationProgress, setAnimationProgress] = useState(0);
   const [debugImagesOpen, setDebugImagesOpen] = useState(false);
   
+  // Resolution control: 720p for preview, 1080p for download
+  const PREVIEW_WIDTH = 1280;
+  const PREVIEW_HEIGHT = 720;
+  const RENDER_WIDTH = 1920;
+  const RENDER_HEIGHT = 1080;
+  const [useHighRes, setUseHighRes] = useState(false); // Switch for video generation
+  
   // Video generation control refs
   const videoProgressRef = useRef<number>(0);
   const [frameRenderTrigger, setFrameRenderTrigger] = useState(0);
@@ -746,6 +753,17 @@ const ParallelVideoGenerator: React.FC = () => {
     const canvasPool = CanvasPool.getInstance();
     
     try {
+      // Enable high-res rendering for video generation
+      setUseHighRes(true);
+      setVideoProgress({ stage: t('Switching to high resolution...', '切换到高分辨率...'), percent: 0 });
+      
+      // Wait for re-render with high-res canvases
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Re-initialize canvas refs with high-res dimensions
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      
       const stitchedCanvas = stitchedCanvasRef.current;
       
       // Use the EXACT dimensions from the stitched canvas to match preview
@@ -975,6 +993,9 @@ const ParallelVideoGenerator: React.FC = () => {
       toast.error(t('Failed to generate video', '视频生成失败'));
     } finally {
       setIsGenerating(false);
+      setUseHighRes(false); // Return to preview resolution
+      // Wait for preview to re-render at lower resolution
+      await new Promise(resolve => setTimeout(resolve, 300));
       setTimeout(() => {
         setVideoProgress({ stage: '', percent: 0 });
       }, 2000);
@@ -1612,6 +1633,8 @@ const ParallelVideoGenerator: React.FC = () => {
                         leftCanvasRef.current = canvas;
                         console.log('✅ Left canvas ready for stitching');
                       }}
+                      canvasWidth={useHighRes ? RENDER_WIDTH : PREVIEW_WIDTH}
+                      canvasHeight={useHighRes ? RENDER_HEIGHT : PREVIEW_HEIGHT}
                     />
                   ) : (
                     <div>Left view waiting: stars={leftStars.length}, bg={leftBackground ? 'yes' : 'no'}, starsOnly={leftStarsOnly ? 'yes' : 'no'}</div>
@@ -1638,6 +1661,8 @@ const ParallelVideoGenerator: React.FC = () => {
                         rightCanvasRef.current = canvas;
                         console.log('✅ Right canvas ready for stitching');
                       }}
+                      canvasWidth={useHighRes ? RENDER_WIDTH : PREVIEW_WIDTH}
+                      canvasHeight={useHighRes ? RENDER_HEIGHT : PREVIEW_HEIGHT}
                     />
                   ) : (
                     <div>Right view waiting: stars={rightStars.length}, bg={rightBackground ? 'yes' : 'no'}, starsOnly={rightStarsOnly ? 'yes' : 'no'}</div>
