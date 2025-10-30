@@ -1648,18 +1648,40 @@ const ParallelVideoGenerator: React.FC = () => {
 
             <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
             <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center border border-blue-500/30">
-                  <Settings2 className="w-5 h-5 text-blue-400" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center border border-blue-500/30">
+                    <Settings2 className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-2xl text-white">
+                      {t('Step 2: Configure 3D Motion Settings', '步骤2：配置3D运动设置')}
+                    </CardTitle>
+                    <CardDescription className="text-cosmic-300">
+                      {t('Adjust animation parameters for your 3D star field', '调整3D星场的动画参数')}
+                    </CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="text-2xl text-white">
-                    {t('Step 2: Configure 3D Motion Settings', '步骤2：配置3D运动设置')}
-                  </CardTitle>
-                  <CardDescription className="text-cosmic-300">
-                    {t('Adjust animation parameters for your 3D star field', '调整3D星场的动画参数')}
-                  </CardDescription>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setMotionSettings({
+                      motionType: 'zoom_in',
+                      speed: 1.5,
+                      duration: 10,
+                      fieldOfView: 75,
+                      amplification: 150,
+                      spin: 0,
+                      spinDirection: 'clockwise'
+                    });
+                    setDepthIntensity(200);
+                  }}
+                  className="h-8 gap-2 text-xs bg-cosmic-800/50 hover:bg-cosmic-700/50 border-cosmic-600"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  {t('Reset', '重置')}
+                </Button>
               </div>
             </CardHeader>
 
@@ -1699,8 +1721,8 @@ const ParallelVideoGenerator: React.FC = () => {
                       setMotionSettings({ ...motionSettings, duration: value })
                     }
                     min={5}
-                    max={30}
-                    step={1}
+                    max={60}
+                    step={5}
                   />
                 </div>
 

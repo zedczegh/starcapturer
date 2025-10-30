@@ -1064,15 +1064,39 @@ const StarFieldGenerator: React.FC = () => {
             {currentStep === 'ready' && (
               <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
                 <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center border border-amber-500/30">
-                      <Play className="w-5 h-5 text-amber-400" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center border border-amber-500/30">
+                        <Play className="w-5 h-5 text-amber-400" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-white">
+                          {t('Motion Settings', '动作设置')}
+                        </CardTitle>
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle className="text-white">
-                        {t('Motion Settings', '动作设置')}
-                      </CardTitle>
-                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setAnimationSettings({
+                          motionType: 'zoom_in',
+                          speed: 1.5,
+                          duration: 10,
+                          fieldOfView: 75,
+                          depthMultiplier: 1.0,
+                          amplification: 150,
+                          spin: 0,
+                          spinDirection: 'clockwise',
+                          enableDownscale: false
+                        });
+                        setDepthIntensity(200);
+                      }}
+                      className="h-8 gap-2 text-xs bg-cosmic-800/50 hover:bg-cosmic-700/50 border-cosmic-600"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      {t('Reset', '重置')}
+                    </Button>
                   </div>
                 </CardHeader>
               <CardContent className="space-y-4">
