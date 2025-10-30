@@ -70,7 +70,7 @@ const StarFieldGenerator: React.FC = () => {
   
   // 3D depth intensity control (0-500 scale)
   const [depthIntensity, setDepthIntensity] = useState<number>(200);
-  const [preserveStars, setPreserveStars] = useState<boolean>(true);
+  const [preserveStars, setPreserveStars] = useState<boolean>(false);
   
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
@@ -1090,7 +1090,7 @@ const StarFieldGenerator: React.FC = () => {
                           spinDirection: 'clockwise'
                         });
                         setDepthIntensity(200);
-                        setPreserveStars(true);
+                        setPreserveStars(false);
                       }}
                       className="h-8 gap-2 text-xs bg-cosmic-800/50 hover:bg-cosmic-700/50 border-cosmic-600"
                     >
