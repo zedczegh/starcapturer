@@ -7,12 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { Upload, Eye, Download, Loader2, Layers, Settings2, Sparkles } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { Upload, Eye, Download, Loader2, Layers, Settings2, Sparkles, ChevronDown, Package } from 'lucide-react';
 import { UploadProgress } from '@/components/ui/upload-progress';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { generateSimpleDepthMap, detectStars, type SimpleDepthParams } from '@/lib/simpleDepthMap';
 import { TraditionalMorphProcessor, type TraditionalInputs, type TraditionalMorphParams } from '@/lib/traditionalMorphMode';
 import { NobelPrizeStereoscopeEngine } from '@/lib/advanced/NobelPrizeStereoscopeEngine';
+import JSZip from 'jszip';
 // @ts-ignore
 import * as UTIF from 'utif';
 
@@ -638,6 +640,55 @@ const StereoscopeProcessor: React.FC = () => {
     link.click();
   };
 
+  const downloadAllFiles = async () => {
+    const zip = new JSZip();
+    
+    // Helper function to convert data URL to blob
+    const dataURLtoBlob = (dataurl: string): Blob => {
+      const arr = dataurl.split(',');
+      const mime = arr[0].match(/:(.*?);/)![1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new Blob([u8arr], { type: mime });
+    };
+    
+    // Add stereo pair
+    if (resultUrl) {
+      zip.file('stereoscope-pair.png', dataURLtoBlob(resultUrl));
+    }
+    
+    // Add left image
+    if (leftImageUrl) {
+      zip.file('stereoscope-left.png', dataURLtoBlob(leftImageUrl));
+    }
+    
+    // Add right image
+    if (rightImageUrl) {
+      zip.file('stereoscope-right.png', dataURLtoBlob(rightImageUrl));
+    }
+    
+    // Add depth maps
+    if (starlessDepthMapUrl) {
+      zip.file('depth-map.png', dataURLtoBlob(starlessDepthMapUrl));
+    }
+    
+    if (starsDepthMapUrl) {
+      zip.file('depth-map-stars.png', dataURLtoBlob(starsDepthMapUrl));
+    }
+    
+    // Generate and download zip
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `stereoscope-results.zip`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -891,55 +942,64 @@ const StereoscopeProcessor: React.FC = () => {
                 alt="Stereo Result"
                 className="w-full rounded-lg border border-cosmic-700"
               />
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Button
-                  onClick={downloadResult}
-                  className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  {t('Download Stereo Pair', '下载立体对')}
-                </Button>
-                <Button
-                  onClick={downloadLeftImage}
-                  variant="outline"
-                  className="w-full border-blue-500/50 hover:border-blue-500 text-blue-400 hover:bg-blue-500/10"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  {t('Download Left', '下载左图')}
-                </Button>
-                <Button
-                  onClick={downloadRightImage}
-                  variant="outline"
-                  className="w-full border-purple-500/50 hover:border-purple-500 text-purple-400 hover:bg-purple-500/10"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  {t('Download Right', '下载右图')}
-                </Button>
-              </div>
-              {(starlessDepthMapUrl || starsDepthMapUrl) && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-cosmic-700">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600">
+                    <Download className="h-4 w-4 mr-2" />
+                    {t('Download', '下载')}
+                    <ChevronDown className="h-4 w-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="w-56 bg-cosmic-900/95 border-cosmic-700 backdrop-blur-xl z-50">
+                  <DropdownMenuItem 
+                    onClick={downloadResult}
+                    className="cursor-pointer hover:bg-cosmic-800 focus:bg-cosmic-800 text-cosmic-100"
+                  >
+                    <Layers className="h-4 w-4 mr-2" />
+                    {t('Stereo Pair', '立体对')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={downloadLeftImage}
+                    className="cursor-pointer hover:bg-cosmic-800 focus:bg-cosmic-800 text-cosmic-100"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    {t('Left Image', '左图')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={downloadRightImage}
+                    className="cursor-pointer hover:bg-cosmic-800 focus:bg-cosmic-800 text-cosmic-100"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    {t('Right Image', '右图')}
+                  </DropdownMenuItem>
                   {starlessDepthMapUrl && (
-                    <Button
+                    <DropdownMenuItem 
                       onClick={downloadStarlessDepthMap}
-                      variant="outline"
-                      className="w-full border-cosmic-600 hover:border-cosmic-500"
+                      className="cursor-pointer hover:bg-cosmic-800 focus:bg-cosmic-800 text-cosmic-100"
                     >
-                      <Download className="h-4 w-4 mr-2" />
+                      <Eye className="h-4 w-4 mr-2" />
                       {t('Depth Map', '深度图')}
-                    </Button>
+                    </DropdownMenuItem>
                   )}
                   {starsDepthMapUrl && (
-                    <Button
+                    <DropdownMenuItem 
                       onClick={downloadStarsDepthMap}
-                      variant="outline"
-                      className="w-full border-cosmic-600 hover:border-cosmic-500"
+                      className="cursor-pointer hover:bg-cosmic-800 focus:bg-cosmic-800 text-cosmic-100"
                     >
-                      <Download className="h-4 w-4 mr-2" />
-                      {t('Stars Depth', '恒星深度图')}
-                    </Button>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      {t('Stars Depth Map', '恒星深度图')}
+                    </DropdownMenuItem>
                   )}
-                </div>
-              )}
+                  <DropdownMenuSeparator className="bg-cosmic-700" />
+                  <DropdownMenuItem 
+                    onClick={downloadAllFiles}
+                    className="cursor-pointer hover:bg-cosmic-800 focus:bg-cosmic-800 text-emerald-400 font-semibold"
+                  >
+                    <Package className="h-4 w-4 mr-2" />
+                    {t('All Files (ZIP)', '所有文件 (ZIP)')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </CardContent>
         </Card>
