@@ -519,11 +519,6 @@ const StarFieldGenerator: React.FC = () => {
     }, 50);
   }, []);
 
-  const initiateDownload = useCallback(() => {
-    // Directly download WebM
-    downloadVideoWebM();
-  }, []);
-
   const stopRecording = useCallback(() => {
     if (recordingStopCallbackRef.current) {
       recordingStopCallbackRef.current();
@@ -802,6 +797,10 @@ const StarFieldGenerator: React.FC = () => {
     }
   }, [animationSettings.duration, currentStep]);
 
+  const initiateDownload = useCallback(() => {
+    // Directly download WebM
+    downloadVideoWebM();
+  }, [downloadVideoWebM]);
 
   const resetAll = useCallback(() => {
     // Stop any recording first
