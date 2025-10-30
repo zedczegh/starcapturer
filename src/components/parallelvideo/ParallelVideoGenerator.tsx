@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Upload, Video, Sparkles, Eye, Settings2, Download, ChevronDown } from 'lucide-react';
+import { Upload, Video, Sparkles, Eye, Settings2, Download, ChevronDown, RotateCcw, Info } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { VideoGenerationService, MotionSettings } from '@/services/VideoGenerationService';
 import { validateImageFile } from '@/utils/imageProcessingUtils';
@@ -90,8 +90,12 @@ const ParallelVideoGenerator: React.FC = () => {
   const [stereoSpacing, setStereoSpacing] = useState<number>(600);
   const [borderSize, setBorderSize] = useState<number>(300);
   
-  // Internal processing parameters (not exposed in UI)
-  const horizontalDisplace = 25; // Fixed depth displacement
+  // Displacement controls for starless image
+  const [displacementAmount, setDisplacementAmount] = useState<number>(25); // 0-50 pixels
+  const [displacementDirection, setDisplacementDirection] = useState<'left' | 'right'>('right');
+  
+  // Internal processing parameters
+  const horizontalDisplace = displacementAmount; // Use displacement amount from UI
   const starShiftAmount = 6; // Fixed star shift amount
 
   // 3D Star Field Motion Settings - complete settings
@@ -460,18 +464,21 @@ const ParallelVideoGenerator: React.FC = () => {
     width: number,
     height: number,
     maxShift: number,
-    starMask: Uint8ClampedArray
+    starMask: Uint8ClampedArray,
+    invertDirection?: boolean
   ): { left: ImageData; right: ImageData } => {
     const originalData = ctx.getImageData(0, 0, width, height);
     const leftData = new ImageData(width, height);
     const rightData = new ImageData(width, height);
+
+    const directionMultiplier = invertDirection ? -1 : 1;
 
     // Simple inverse mapping - pull pixels from source
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const destIdx = (y * width + x) * 4;
         const depthValue = depthMap.data[destIdx] / 255.0;
-        const shift = depthValue * maxShift;
+        const shift = depthValue * maxShift * directionMultiplier;
         
         // LEFT VIEW: Pull from right
         const leftSourceX = Math.round(x + shift);
@@ -573,6 +580,8 @@ const ParallelVideoGenerator: React.FC = () => {
       setProgress(50);
 
       const starMask = detectStars(starlessImageData.data, width, height, 200);
+      const invertDisplacement = displacementDirection === 'left';
+      
       const { left: starlessLeft, right: starlessRight } = createStereoViews(
         starlessCanvas,
         starlessCtx,
@@ -580,7 +589,8 @@ const ParallelVideoGenerator: React.FC = () => {
         width,
         height,
         horizontalDisplace,
-        starMask
+        starMask,
+        invertDisplacement
       );
 
       // STEP 4: Process stars with starless depth map (Traditional Mode displacement)
@@ -1222,6 +1232,86 @@ const ParallelVideoGenerator: React.FC = () => {
                   <p className="text-xs text-cosmic-400">
                     {t('Size of black borders around stereo pair (0 = no borders)', '立体对周围的黑色边框大小（0 = 无边框）')}
                   </p>
+                </div>
+              </div>
+
+              {/* Starless Displacement Control */}
+              <div className="space-y-4 p-4 rounded-lg bg-cosmic-900/40 border border-cosmic-700/30 mt-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-amber-400">
+                    <Settings2 className="w-4 h-4" />
+                    <span className="text-sm font-semibold">{t('Starless Displacement Control', '无星图位移控制')}</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setDisplacementAmount(25);
+                      setDisplacementDirection('right');
+                    }}
+                    className="h-8 gap-2 text-xs bg-cosmic-800/50 hover:bg-cosmic-700/50 border-cosmic-600"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    {t('Reset', '重置')}
+                  </Button>
+                </div>
+                
+                <div>
+                  <Label className="flex items-center justify-between">
+                    <span>{t('Displacement Amount', '位移量')}</span>
+                    <span className="text-amber-400 font-mono text-lg">({displacementAmount}px)</span>
+                  </Label>
+                  <Slider
+                    value={[displacementAmount]}
+                    onValueChange={([value]) => setDisplacementAmount(value)}
+                    min={0}
+                    max={50}
+                    step={1}
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-cosmic-400 mt-1">
+                    {t('Amount of horizontal displacement for starless/nebula image', '无星/星云图像的水平位移量')}
+                  </p>
+                </div>
+
+                <div>
+                  <Label className="text-cosmic-200 mb-2 block">
+                    {t('Displacement Direction', '位移方向')}
+                  </Label>
+                  <Select
+                    value={displacementDirection}
+                    onValueChange={(value: 'left' | 'right') => setDisplacementDirection(value)}
+                  >
+                    <SelectTrigger className="bg-cosmic-800/50 border-cosmic-700">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="right">
+                        {t('Right (Standard)', '右（标准）')}
+                      </SelectItem>
+                      <SelectItem value="left">
+                        {t('Left (Inverted)', '左（反转）')}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-cosmic-400 mt-1">
+                    {t('Direction to displace the starless image for 3D effect', '无星图像的位移方向以产生3D效果')}
+                  </p>
+                </div>
+
+                {/* Distance-based displacement suggestions */}
+                <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                  <div className="flex items-start gap-2">
+                    <Info className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                    <div className="text-xs text-cosmic-300 space-y-1">
+                      <p className="font-semibold text-blue-400">
+                        {t('Displacement Suggestions by Distance:', '根据距离的位移建议：')}
+                      </p>
+                      <p>• <span className="text-amber-300">10-15px</span>: {t('Nearby objects (100-500 ly)', '近距离天体（100-500光年）')}</p>
+                      <p>• <span className="text-amber-300">20-30px</span>: {t('Mid-range objects (500-2000 ly)', '中距离天体（500-2000光年）')}</p>
+                      <p>• <span className="text-amber-300">35-50px</span>: {t('Distant objects (2000+ ly)', '远距离天体（2000+光年）')}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
