@@ -1284,7 +1284,7 @@ const StarFieldGenerator: React.FC = () => {
                 className="flex-1 border-cosmic-700/50 hover:bg-cosmic-800/50"
               >
                 <RotateCcw className="h-4 w-4 mr-2" />
-                {t('Reset', '重置')}
+                {t('Back to Step 1', '返回步骤1')}
               </Button>
               
               {currentStep === 'ready' && !isRecording && (
