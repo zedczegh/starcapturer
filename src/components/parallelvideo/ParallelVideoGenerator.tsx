@@ -741,20 +741,35 @@ const ParallelVideoGenerator: React.FC = () => {
       });
       
       
-      // Step 2: Detect stars from ORIGINAL stars-only image for 3D rendering
+      // Step 2: Detect stars from stereo-processed star images for 3D rendering
       setProcessingStep(t('Detecting stars for 3D...', '检测3D星点...'));
       setProgress(90);
 
-      // Extract stars from original stars-only image using starless depth map
-      // This matches StarFieldGenerator's approach of detecting from the original image
-      const starsData = extractStarPositions(starsElement, starlessDepthCanvas);
+      // Create temporary image elements from the stereo-processed star canvases
+      const leftStarsImg = new Image();
+      const rightStarsImg = new Image();
       
-      // Use the same star data for both left and right views since stars are positioned
-      // based on the original image before stereo processing
-      setLeftStars(starsData);
-      setRightStars(starsData);
+      await Promise.all([
+        new Promise<void>((resolve) => {
+          leftStarsImg.onload = () => resolve();
+          leftStarsImg.src = leftStarsCanvas.toDataURL();
+        }),
+        new Promise<void>((resolve) => {
+          rightStarsImg.onload = () => resolve();
+          rightStarsImg.src = rightStarsCanvas.toDataURL();
+        })
+      ]);
 
-      console.log(`✓ Detected ${starsData.length} stars for 3D rendering`);
+      // Extract stars from left stereo view
+      const leftStarsData = extractStarPositions(leftStarsImg, starlessDepthCanvas);
+      setLeftStars(leftStarsData);
+      
+      // Extract stars from right stereo view
+      const rightStarsData = extractStarPositions(rightStarsImg, starlessDepthCanvas);
+      setRightStars(rightStarsData);
+
+      console.log(`✓ Detected ${leftStarsData.length} left stars and ${rightStarsData.length} right stars`);
+      
       
       console.log('✓ Prepared separated layers for 3D rendering');
       console.log('Left background:', leftBackground ? 'SET' : 'NULL');
