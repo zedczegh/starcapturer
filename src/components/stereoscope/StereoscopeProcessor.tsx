@@ -979,6 +979,40 @@ const StereoscopeProcessor: React.FC = () => {
                       <p>• <span className="text-amber-300">10-15px</span>: {t('Nearby objects (100-500 ly)', '近距离天体（100-500光年）')}</p>
                       <p>• <span className="text-amber-300">20-30px</span>: {t('Mid-range objects (500-2000 ly)', '中距离天体（500-2000光年）')}</p>
                       <p>• <span className="text-amber-300">35-50px</span>: {t('Distant objects (2000+ ly)', '远距离天体（2000+光年）')}</p>
+                      
+                      {/* Light Years to Pixels Converter */}
+                      <div className="mt-3 pt-3 border-t border-blue-500/20">
+                        <p className="font-semibold text-blue-400 mb-2">
+                          {t('Distance Converter:', '距离转换器：')}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            max="10000"
+                            placeholder={t('Enter light years', '输入光年')}
+                            className="flex-1 px-2 py-1 bg-cosmic-800/50 border border-cosmic-700/50 rounded text-xs text-cosmic-200 focus:outline-none focus:border-blue-500/50"
+                            onChange={(e) => {
+                              const ly = parseFloat(e.target.value);
+                              if (!isNaN(ly) && ly > 0) {
+                                let suggestedPx: number;
+                                if (ly <= 500) {
+                                  suggestedPx = 10 + (ly / 500) * 5; // 10-15px for 0-500 ly
+                                } else if (ly <= 2000) {
+                                  suggestedPx = 15 + ((ly - 500) / 1500) * 15; // 15-30px for 500-2000 ly
+                                } else {
+                                  suggestedPx = 30 + Math.min(((ly - 2000) / 2000) * 20, 20); // 30-50px for 2000+ ly
+                                }
+                                const resultElement = e.target.nextElementSibling;
+                                if (resultElement) {
+                                  resultElement.textContent = `≈ ${Math.round(suggestedPx)}px`;
+                                }
+                              }
+                            }}
+                          />
+                          <span className="text-amber-300 font-mono min-w-[60px]">≈ 0px</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
