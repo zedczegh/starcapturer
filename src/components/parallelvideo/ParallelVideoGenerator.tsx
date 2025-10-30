@@ -1405,13 +1405,26 @@ const ParallelVideoGenerator: React.FC = () => {
                     <Info className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
                     <div className="text-xs text-cosmic-300 space-y-1">
                       <p className="font-semibold text-blue-400">
-                        {t('Displacement by Distance (Parallax-Based):', '基于视差的位移建议：')}
+                        {t('Deep Sky Objects:', '深空天体：')}
                       </p>
-                      <p>• <span className="text-amber-300">40-50px</span>: {t('Very close nebulae (100-500 ly)', '极近星云（100-500光年）')}</p>
-                      <p>• <span className="text-amber-300">25-40px</span>: {t('Close nebulae (500-1500 ly)', '近距星云（500-1500光年）')}</p>
-                      <p>• <span className="text-amber-300">15-25px</span>: {t('Mid-range objects (1500-3000 ly)', '中距天体（1500-3000光年）')}</p>
-                      <p>• <span className="text-amber-300">10-15px</span>: {t('Distant objects (3000-5000 ly)', '远距天体（3000-5000光年）')}</p>
-                      <p>• <span className="text-amber-300">5-10px</span>: {t('Very distant backgrounds (5000+ ly)', '极远背景（5000+光年）')}</p>
+                      <p>• <span className="text-amber-300">40-50px</span>: {t('Very close nebulae (100-500 ly) - Pleiades, Hyades', '极近星云（100-500光年）- 昴星团、毕星团')}</p>
+                      <p>• <span className="text-amber-300">25-40px</span>: {t('Close nebulae (500-1500 ly) - Orion Nebula, Rosette', '近距星云（500-1500光年）- 猎户座星云、玫瑰星云')}</p>
+                      <p>• <span className="text-amber-300">15-25px</span>: {t('Mid-range (1500-3000 ly) - Eagle Nebula, Lagoon', '中距（1500-3000光年）- 鹰状星云、礁湖星云')}</p>
+                      <p>• <span className="text-amber-300">10-15px</span>: {t('Distant (3000-5000 ly) - Carina Nebula, North America', '远距（3000-5000光年）- 船底座星云、北美洲星云')}</p>
+                      <p>• <span className="text-amber-300">5-10px</span>: {t('Very distant (5000+ ly) - Most galaxies, distant clusters', '极远（5000+光年）- 大多数星系、遥远星团')}</p>
+                      
+                      {/* Planetary distances */}
+                      <div className="mt-3 pt-3 border-t border-blue-500/20">
+                        <p className="font-semibold text-green-400 mb-1">
+                          {t('Solar System (AU):', '太阳系（天文单位）：')}
+                        </p>
+                        <p className="text-[10px] leading-relaxed">
+                          • <span className="text-green-300">Moon: 0.0026 AU</span> • <span className="text-green-300">Mars: 0.5-2.5 AU</span> • <span className="text-green-300">Jupiter: 4-6 AU</span> • <span className="text-green-300">Saturn: 8-11 AU</span> • <span className="text-green-300">Uranus: 18-20 AU</span> • <span className="text-green-300">Neptune: 29-31 AU</span>
+                        </p>
+                        <p className="text-[10px] text-cosmic-400 mt-1 italic">
+                          {t('Note: Planets show little parallax due to extreme proximity. Use max 50px for artistic effect.', '注：行星因距离极近几乎无视差，艺术效果建议使用最大50px。')}
+                        </p>
+                      </div>
                       
                       {/* Light Years to Pixels Converter */}
                       <div className="mt-3 pt-3 border-t border-blue-500/20">
