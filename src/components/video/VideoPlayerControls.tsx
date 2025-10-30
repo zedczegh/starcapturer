@@ -58,7 +58,7 @@ const VideoPlayerControls: React.FC<VideoPlayerControlsProps> = ({
         
         <Button
           onClick={onReplay}
-          disabled={disabled || (isPlaying && progress < 10)}
+          disabled={disabled}
           variant="outline"
           size="sm"
           className="bg-cosmic-800/50 border-cosmic-700/50 hover:bg-cosmic-700/50 disabled:opacity-50 transition-colors"
