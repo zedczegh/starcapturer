@@ -396,9 +396,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
         size: number;
       }[] = [];
       
-      // Use high threshold to find only bright star cores
-      const coreThreshold = 80; // Only detect bright cores
-      const expansionThreshold = 10; // Include dim surrounding pixels for smooth falloff
+      // Use same thresholds as ParallelVideoGenerator for consistent star detection
+      const coreThreshold = 100; // Match the extractStarPositions threshold
+      const expansionThreshold = coreThreshold * 0.3; // 30 - captures halos and diffraction spikes
       
       // Reusable queue with pre-allocated capacity
       const maxQueueSize = 8000; // Larger to capture full star halos
