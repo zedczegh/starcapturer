@@ -14,6 +14,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { generateSimpleDepthMap, detectStars, type SimpleDepthParams } from '@/lib/simpleDepthMap';
 import { TraditionalMorphProcessor, type TraditionalInputs, type TraditionalMorphParams } from '@/lib/traditionalMorphMode';
 import { NobelPrizeStereoscopeEngine } from '@/lib/advanced/NobelPrizeStereoscopeEngine';
+import { calculateStereoscopicDisplacement } from '@/lib/astronomicalCalculations';
+import { cmosSensors } from '@/data/cmosSensors';
 import JSZip from 'jszip';
 // @ts-ignore
 import * as UTIF from 'utif';
@@ -98,6 +100,20 @@ const StereoscopeProcessor: React.FC = () => {
     luminanceBlur: 1.5,
     contrastBoost: 1.2
   });
+
+  // Equipment parameters for scientific parallax calculation
+  const [focalLength, setFocalLength] = useState<number>(1000); // mm
+  const [selectedSensor, setSelectedSensor] = useState<string>('IMX294');
+  const [customPixelSize, setCustomPixelSize] = useState<number>(4.63); // μm
+  
+  // Get current pixel size from sensor or custom input
+  const getCurrentPixelSize = (): number => {
+    if (selectedSensor === 'custom') {
+      return customPixelSize;
+    }
+    const sensor = cmosSensors.find(s => s.name === selectedSensor);
+    return sensor?.pixelSize || 4.63;
+  };
 
   const validateImageFile = (file: File): boolean => {
     const supportedFormats = [
@@ -968,19 +984,79 @@ const StereoscopeProcessor: React.FC = () => {
                   </p>
                 </div>
 
+                {/* Equipment Parameters for Scientific Calculation */}
+                <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/30 space-y-3">
+                  <p className="font-semibold text-purple-400 text-xs flex items-center gap-2">
+                    <Settings2 className="w-4 h-4" />
+                    {t('Imaging Equipment (for Scientific Calibration)', '成像设备（科学校准）')}
+                  </p>
+                  
+                  <div>
+                    <Label className="text-xs text-cosmic-300 mb-1 block">
+                      {t('Telescope Focal Length (mm)', '望远镜焦距（毫米）')}
+                    </Label>
+                    <input
+                      type="number"
+                      min="200"
+                      max="5000"
+                      value={focalLength}
+                      onChange={(e) => setFocalLength(parseFloat(e.target.value) || 1000)}
+                      className="w-full px-2 py-1 bg-cosmic-800/50 border border-cosmic-700/50 rounded text-xs text-cosmic-200 focus:outline-none focus:border-purple-500/50"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs text-cosmic-300 mb-1 block">
+                      {t('Camera Sensor', '相机传感器')}
+                    </Label>
+                    <Select value={selectedSensor} onValueChange={setSelectedSensor}>
+                      <SelectTrigger className="bg-cosmic-800/50 border-cosmic-700 h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        <SelectItem value="IMX294">IMX294 (4.63μm) - Deep Sky</SelectItem>
+                        <SelectItem value="IMX533">IMX533 (3.76μm) - Deep Sky</SelectItem>
+                        <SelectItem value="IMX571">IMX571 (3.76μm) - Deep Sky</SelectItem>
+                        <SelectItem value="IMX183">IMX183 (2.4μm) - Deep Sky</SelectItem>
+                        <SelectItem value="ASI294MC">ASI294MC (4.63μm) - Deep Sky</SelectItem>
+                        <SelectItem value="ASI533MC">ASI533MC (3.76μm) - Deep Sky</SelectItem>
+                        <SelectItem value="ASI2600MC">ASI2600MC (3.76μm) - Deep Sky</SelectItem>
+                        <SelectItem value="QHY600M">QHY600M (3.76μm) - Deep Sky</SelectItem>
+                        <SelectItem value="QHY268C">QHY268C (3.76μm) - Deep Sky</SelectItem>
+                        <SelectItem value="custom">{t('Custom Pixel Size', '自定义像素尺寸')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {selectedSensor === 'custom' && (
+                    <div>
+                      <Label className="text-xs text-cosmic-300 mb-1 block">
+                        {t('Custom Pixel Size (μm)', '自定义像素尺寸（微米）')}
+                      </Label>
+                      <input
+                        type="number"
+                        min="2"
+                        max="10"
+                        step="0.01"
+                        value={customPixelSize}
+                        onChange={(e) => setCustomPixelSize(parseFloat(e.target.value) || 4.63)}
+                        className="w-full px-2 py-1 bg-cosmic-800/50 border border-cosmic-700/50 rounded text-xs text-cosmic-200 focus:outline-none focus:border-purple-500/50"
+                      />
+                    </div>
+                  )}
+                </div>
+
                 {/* Distance-based displacement suggestions */}
                 <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
                   <div className="flex items-start gap-2">
                     <Info className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
                     <div className="text-xs text-cosmic-300 space-y-1">
                       <p className="font-semibold text-blue-400">
-                        {t('Displacement by Distance (Parallax-Based):', '基于视差的位移建议：')}
+                        {t('Displacement by Distance (Calibrated to Your Equipment):', '位移建议（根据您的设备校准）：')}
                       </p>
-                      <p>• <span className="text-amber-300">40-50px</span>: {t('Very close nebulae (100-500 ly)', '极近星云（100-500光年）')}</p>
-                      <p>• <span className="text-amber-300">25-40px</span>: {t('Close nebulae (500-1500 ly)', '近距星云（500-1500光年）')}</p>
-                      <p>• <span className="text-amber-300">15-25px</span>: {t('Mid-range objects (1500-3000 ly)', '中距天体（1500-3000光年）')}</p>
-                      <p>• <span className="text-amber-300">10-15px</span>: {t('Distant objects (3000-5000 ly)', '远距天体（3000-5000光年）')}</p>
-                      <p>• <span className="text-amber-300">5-10px</span>: {t('Very distant backgrounds (5000+ ly)', '极远背景（5000+光年）')}</p>
+                      <p className="text-[10px] text-cosmic-400 italic mb-2">
+                        {t('Examples calculated for your focal length and sensor', '示例根据您的焦距和传感器计算')}
+                      </p>
                       
                       {/* Light Years to Pixels Converter */}
                       <div className="mt-3 pt-3 border-t border-blue-500/20">
@@ -997,37 +1073,39 @@ const StereoscopeProcessor: React.FC = () => {
                             onChange={(e) => {
                               const ly = parseFloat(e.target.value);
                               if (!isNaN(ly) && ly > 0) {
-                                // Scientifically accurate inverse relationship: closer = more parallax
-                                // Using logarithmic scale for better depth distribution
-                                let suggestedPx: number;
-                                if (ly <= 500) {
-                                  // Very close: 40-50px (max foreground displacement)
-                                  suggestedPx = 50 - ((ly - 100) / 400) * 10;
-                                } else if (ly <= 1500) {
-                                  // Close: 25-40px (foreground to mid)
-                                  suggestedPx = 40 - ((ly - 500) / 1000) * 15;
-                                } else if (ly <= 3000) {
-                                  // Mid-range: 15-25px (middle ground)
-                                  suggestedPx = 25 - ((ly - 1500) / 1500) * 10;
-                                } else if (ly <= 5000) {
-                                  // Distant: 10-15px (background)
-                                  suggestedPx = 15 - ((ly - 3000) / 2000) * 5;
-                                } else {
-                                  // Very distant: 5-10px (far background, logarithmic falloff)
-                                  const logFactor = Math.log10(ly / 5000);
-                                  suggestedPx = Math.max(5, 10 - logFactor * 5);
-                                }
+                                // Use scientific calculation
+                                const pixelSize = getCurrentPixelSize();
+                                const result = calculateStereoscopicDisplacement(
+                                  ly,
+                                  1.0, // 1 AU baseline
+                                  focalLength,
+                                  pixelSize
+                                );
                                 const resultElement = e.target.nextElementSibling;
                                 if (resultElement) {
-                                  resultElement.textContent = `≈ ${Math.round(suggestedPx)}px`;
+                                  resultElement.textContent = `≈ ${Math.round(result.constrainedDisplacement)}px`;
+                                  
+                                  // Show detailed results below
+                                  const detailsElement = resultElement.nextElementSibling;
+                                  if (detailsElement) {
+                                    detailsElement.innerHTML = `
+                                      <div class="text-[10px] space-y-0.5 text-cosmic-400">
+                                        <p>• Parallax Angle: <span class="text-blue-300">${result.parallaxAngle.toFixed(4)}"</span></p>
+                                        <p>• Plate Scale: <span class="text-blue-300">${result.plateScale.toFixed(3)}"/px</span></p>
+                                        ${result.isConstrained ? `<p>• Real Displacement: <span class="text-orange-300">${result.realDisplacement.toFixed(2)}px</span> (too ${result.realDisplacement < 3 ? 'small' : 'large'})</p>` : ''}
+                                        <p class="text-green-400 font-semibold">✓ Suggested: <span class="text-amber-300">${Math.round(result.constrainedDisplacement)}px</span> for viewing</p>
+                                      </div>
+                                    `;
+                                  }
                                 }
                               }
                             }}
                           />
                           <span className="text-amber-300 font-mono min-w-[60px]">≈ 0px</span>
                         </div>
+                        <div id="converter-details" className="mt-2"></div>
                         <p className="text-[10px] text-cosmic-400 mt-1 italic">
-                          {t('Based on inverse distance-parallax relationship', '基于距离-视差反比关系')}
+                          {t('Scientifically calculated based on your equipment', '基于您的设备进行科学计算')}
                         </p>
                       </div>
                     </div>
