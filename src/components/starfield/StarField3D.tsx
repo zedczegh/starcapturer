@@ -184,20 +184,18 @@ const StarField3D: React.FC<StarField3DProps> = ({
       const width = targetWidth;
       const height = targetHeight;
       
-      // Calculate smooth factor for preservation intensity (used throughout star processing)
-      // Use gentle quadratic ease-in-out for smooth, predictable transitions
-      const intensityFactor = preserveStarsIntensity / 100;
-      const smoothFactor = intensityFactor < 0.5
-        ? 2 * intensityFactor * intensityFactor
-        : 1 - Math.pow(-2 * intensityFactor + 2, 2) / 2;
-      
       // === CONDITIONAL STAR CLEANING ===
-      // Gradually reduce cleaning intensity based on preservation (0% = full clean, 100% = no clean)
-      const cleaningIntensity = 1 - smoothFactor; // Inverse of preservation
+      // Use LINEAR intensity for predictable slider behavior
+      // 0-50: Gradually increase cleaned star brightness
+      // 50-100: Keep cleaned stars, gradually blend in original image
       
-      // Only run cleaning if preservation is below 95% (allow stars to be drawn at higher values)
-      if (preserveStarsIntensity < 95) {
-        console.log(`Extracting clean star cores (cleaning intensity: ${(cleaningIntensity * 100).toFixed(1)}%)...`);
+      const intensityPercent = preserveStarsIntensity;
+      const shouldClean = intensityPercent <= 50;
+      
+      if (shouldClean) {
+        // 0-50%: Clean stars and gradually increase their brightness
+        const cleanedStarBrightness = intensityPercent / 50; // 0% = 0.0, 50% = 1.0
+        console.log(`Extracting clean star cores (brightness: ${(cleanedStarBrightness * 100).toFixed(1)}%)...`);
         
         // Find all bright star centers
         interface StarCore {
@@ -222,8 +220,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
             const b = data[idx + 2];
             const lum = 0.299 * r + 0.587 * g + 0.114 * b;
             
-            // Only process bright pixels (star cores) - threshold decreases linearly with more preservation
-            const brightnessThreshold = 100 + (130 * (1 - cleaningIntensity)); // 100-230 range (more gradual)
+            // Detect bright pixels as star cores
+            const brightnessThreshold = 120;
             if (lum > brightnessThreshold) {
               // Find local maximum (brightest point in neighborhood)
               let maxLum = lum;
@@ -257,7 +255,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
                   x,
                   y,
                   maxBrightness: maxLum,
-                  radius: radius * (1.5 * (1 + (1 - cleaningIntensity) * 0.5)), // Scale radius based on intensity
+                  radius: radius * 1.5,
                   color: { r, g, b }
                 });
                 
@@ -300,13 +298,12 @@ const StarField3D: React.FC<StarField3DProps> = ({
               const normalizedDist = dist / star.radius;
               if (normalizedDist > 1.5) continue; // Don't draw beyond falloff
               
-              // Gaussian intensity falloff - tighter with more cleaning
-              const falloffRate = 2 + (3 * cleaningIntensity); // 2.0-5.0 range
+              // Gaussian intensity falloff
+              const falloffRate = 2.5;
               const baseIntensity = Math.exp(-normalizedDist * normalizedDist * falloffRate);
               
-              // Star brightness based on PRESERVATION (not cleaning) - higher preservation = brighter stars
-              // 0% preservation = 0% brightness, 100% preservation = 100% brightness
-              const intensity = baseIntensity * smoothFactor;
+              // Scale intensity by cleaned star brightness (0-50% range)
+              const intensity = baseIntensity * cleanedStarBrightness;
               
               const idx = (y * width + x) * 4;
               
@@ -324,9 +321,25 @@ const StarField3D: React.FC<StarField3DProps> = ({
         }
         
         tempCtx.putImageData(sourceData, 0, 0);
-        console.log(`Clean star cores extracted (found ${starCores.length} cores)`);
+        console.log(`Clean star cores extracted (found ${starCores.length} cores, brightness: ${(cleanedStarBrightness * 100).toFixed(0)}%)`);
       } else {
-        console.log(`🌟 Preserving stars from image (preservation: ${preserveStarsIntensity}%, cleaning disabled)`);
+        // 50-100%: Blend cleaned stars with original image
+        // First draw cleaned stars at full brightness, then blend original
+        const originalBlendFactor = (intensityPercent - 50) / 50; // 50% = 0.0, 100% = 1.0
+        console.log(`🌟 Blending cleaned stars with original (original blend: ${(originalBlendFactor * 100).toFixed(0)}%)`);
+        
+        // Create a copy to blend
+        const originalData = tempCtx.getImageData(0, 0, width, height);
+        const originalPixels = originalData.data;
+        
+        // Blend: (1 - factor) * cleaned + factor * original
+        for (let i = 0; i < data.length; i += 4) {
+          data[i] = data[i] * (1 - originalBlendFactor) + originalPixels[i] * originalBlendFactor;
+          data[i + 1] = data[i + 1] * (1 - originalBlendFactor) + originalPixels[i + 1] * originalBlendFactor;
+          data[i + 2] = data[i + 2] * (1 - originalBlendFactor) + originalPixels[i + 2] * originalBlendFactor;
+        }
+        
+        tempCtx.putImageData(sourceData, 0, 0);
       }
       // === END CONDITIONAL STAR CLEANING ===
       
@@ -359,12 +372,13 @@ const StarField3D: React.FC<StarField3DProps> = ({
         size: number;
       }[] = [];
       
-      // Apply smooth curve to thresholds with wider ranges for more gradual transitions
-      const coreThreshold = 100 - (92 * smoothFactor); // 100 -> 8 (ultra-smoothly)
-      const expansionThreshold = 30 - (28 * smoothFactor); // 30 -> 2 (ultra-smoothly)
+      // Apply linear thresholds based on preservation intensity
+      const preservationFactor = intensityPercent / 100; // 0 to 1
+      const coreThreshold = 100 - (92 * preservationFactor); // 100 -> 8
+      const expansionThreshold = 30 - (28 * preservationFactor); // 30 -> 2
       
       // Reusable queue with pre-allocated capacity - larger when preserving stars
-      const maxQueueSize = 8000 + Math.floor(42000 * smoothFactor); // 8000 -> 50000 (ultra-smoothly)
+      const maxQueueSize = 8000 + Math.floor(42000 * preservationFactor); // 8000 -> 50000
       const queueX = new Uint16Array(maxQueueSize);
       const queueY = new Uint16Array(maxQueueSize);
       const pixelBuffer = new Uint32Array(maxQueueSize);
@@ -526,9 +540,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
       console.log(`Detected ${starRegions.length} complete stars in ${(performance.now() - startTime).toFixed(0)}ms`);
       
       // === AUTO-SHRINK ALGORITHM: Reduce oversized stars to prevent artifacts ===
-      // Scale max size and shrink ratio based on preservation intensity with smooth curve
-      const MAX_STAR_SIZE = 40 + Math.floor(160 * smoothFactor); // 40 -> 200 (smoothly)
-      const TARGET_SIZE_RATIO = 0.6 + (0.35 * smoothFactor); // 0.6 -> 0.95 (smoothly)
+      // Scale max size and shrink ratio based on preservation intensity (linear)
+      const MAX_STAR_SIZE = 40 + Math.floor(160 * preservationFactor); // 40 -> 200
+      const TARGET_SIZE_RATIO = 0.6 + (0.35 * preservationFactor); // 0.6 -> 0.95
       let shrunkCount = 0;
       
       for (let i = 0; i < starRegions.length; i++) {
