@@ -1405,34 +1405,48 @@ const ParallelVideoGenerator: React.FC = () => {
                     <Info className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
                     <div className="text-xs text-cosmic-300 space-y-1">
                       <p className="font-semibold text-blue-400">
-                        {t('Displacement Suggestions by Distance:', '根据距离的位移建议：')}
+                        {t('Displacement by Distance (Parallax-Based):', '基于视差的位移建议：')}
                       </p>
-                      <p>• <span className="text-amber-300">10-15px</span>: {t('Nearby objects (100-500 ly)', '近距离天体（100-500光年）')}</p>
-                      <p>• <span className="text-amber-300">20-30px</span>: {t('Mid-range objects (500-2000 ly)', '中距离天体（500-2000光年）')}</p>
-                      <p>• <span className="text-amber-300">35-50px</span>: {t('Distant objects (2000+ ly)', '远距离天体（2000+光年）')}</p>
+                      <p>• <span className="text-amber-300">40-50px</span>: {t('Very close nebulae (100-500 ly)', '极近星云（100-500光年）')}</p>
+                      <p>• <span className="text-amber-300">25-40px</span>: {t('Close nebulae (500-1500 ly)', '近距星云（500-1500光年）')}</p>
+                      <p>• <span className="text-amber-300">15-25px</span>: {t('Mid-range objects (1500-3000 ly)', '中距天体（1500-3000光年）')}</p>
+                      <p>• <span className="text-amber-300">10-15px</span>: {t('Distant objects (3000-5000 ly)', '远距天体（3000-5000光年）')}</p>
+                      <p>• <span className="text-amber-300">5-10px</span>: {t('Very distant backgrounds (5000+ ly)', '极远背景（5000+光年）')}</p>
                       
                       {/* Light Years to Pixels Converter */}
                       <div className="mt-3 pt-3 border-t border-blue-500/20">
                         <p className="font-semibold text-blue-400 mb-2">
-                          {t('Distance Converter:', '距离转换器：')}
+                          {t('Distance to Parallax Converter:', '距离视差转换器：')}
                         </p>
                         <div className="flex items-center gap-2">
                           <input
                             type="number"
-                            min="1"
+                            min="50"
                             max="10000"
-                            placeholder={t('Enter light years', '输入光年')}
+                            placeholder={t('Light years', '光年')}
                             className="flex-1 px-2 py-1 bg-cosmic-800/50 border border-cosmic-700/50 rounded text-xs text-cosmic-200 focus:outline-none focus:border-blue-500/50"
                             onChange={(e) => {
                               const ly = parseFloat(e.target.value);
                               if (!isNaN(ly) && ly > 0) {
+                                // Scientifically accurate inverse relationship: closer = more parallax
+                                // Using logarithmic scale for better depth distribution
                                 let suggestedPx: number;
                                 if (ly <= 500) {
-                                  suggestedPx = 10 + (ly / 500) * 5; // 10-15px for 0-500 ly
-                                } else if (ly <= 2000) {
-                                  suggestedPx = 15 + ((ly - 500) / 1500) * 15; // 15-30px for 500-2000 ly
+                                  // Very close: 40-50px (max foreground displacement)
+                                  suggestedPx = 50 - ((ly - 100) / 400) * 10;
+                                } else if (ly <= 1500) {
+                                  // Close: 25-40px (foreground to mid)
+                                  suggestedPx = 40 - ((ly - 500) / 1000) * 15;
+                                } else if (ly <= 3000) {
+                                  // Mid-range: 15-25px (middle ground)
+                                  suggestedPx = 25 - ((ly - 1500) / 1500) * 10;
+                                } else if (ly <= 5000) {
+                                  // Distant: 10-15px (background)
+                                  suggestedPx = 15 - ((ly - 3000) / 2000) * 5;
                                 } else {
-                                  suggestedPx = 30 + Math.min(((ly - 2000) / 2000) * 20, 20); // 30-50px for 2000+ ly
+                                  // Very distant: 5-10px (far background, logarithmic falloff)
+                                  const logFactor = Math.log10(ly / 5000);
+                                  suggestedPx = Math.max(5, 10 - logFactor * 5);
                                 }
                                 const resultElement = e.target.nextElementSibling;
                                 if (resultElement) {
@@ -1443,6 +1457,9 @@ const ParallelVideoGenerator: React.FC = () => {
                           />
                           <span className="text-amber-300 font-mono min-w-[60px]">≈ 0px</span>
                         </div>
+                        <p className="text-[10px] text-cosmic-400 mt-1 italic">
+                          {t('Based on inverse distance-parallax relationship', '基于距离-视差反比关系')}
+                        </p>
                       </div>
                     </div>
                   </div>
