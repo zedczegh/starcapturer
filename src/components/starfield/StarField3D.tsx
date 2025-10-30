@@ -184,10 +184,18 @@ const StarField3D: React.FC<StarField3DProps> = ({
       const width = targetWidth;
       const height = targetHeight;
       
+      // Calculate smooth factor for preservation intensity (used throughout star processing)
+      // Use cubic ease-in-out for ultra-smooth transitions: f(x) = x < 0.5 ? 4x^3 : 1 - (-2x + 2)^3 / 2
+      const intensityFactor = preserveStarsIntensity / 100;
+      const smoothFactor = intensityFactor < 0.5 
+        ? 4 * Math.pow(intensityFactor, 3)
+        : 1 - Math.pow(-2 * intensityFactor + 2, 3) / 2;
+      
       // === CONDITIONAL STAR CLEANING ===
-      // Skip cleaning if preserve intensity is high (for pre-displaced parallel video images)
-      if (preserveStarsIntensity < 50) {
-        console.log('Extracting clean star cores without halos...');
+      // Gradually reduce cleaning intensity based on preservation (0% = full clean, 100% = no clean)
+      const cleaningIntensity = 1 - smoothFactor; // Inverse of preservation
+      if (cleaningIntensity > 0.1) { // Only clean if preservation is less than ~90%
+        console.log(`Extracting clean star cores (cleaning intensity: ${(cleaningIntensity * 100).toFixed(1)}%)...`);
         
         // Find all bright star centers
         interface StarCore {
@@ -212,8 +220,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
             const b = data[idx + 2];
             const lum = 0.299 * r + 0.587 * g + 0.114 * b;
             
-            // Only process bright pixels (star cores)
-            if (lum > 100) {
+            // Only process bright pixels (star cores) - threshold scales with cleaning intensity
+            const brightnessThreshold = 100 + (155 * (1 - cleaningIntensity)); // 100-255 range
+            if (lum > brightnessThreshold) {
               // Find local maximum (brightest point in neighborhood)
               let maxLum = lum;
               let maxX = x;
@@ -246,7 +255,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
                   x,
                   y,
                   maxBrightness: maxLum,
-                  radius: radius * 1.5, // Extend slightly for smooth falloff
+                  radius: radius * (1.5 * (1 + (1 - cleaningIntensity) * 0.5)), // Scale radius based on intensity
                   color: { r, g, b }
                 });
                 
@@ -289,8 +298,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
               const normalizedDist = dist / star.radius;
               if (normalizedDist > 1.5) continue; // Don't draw beyond falloff
               
-              // Gaussian intensity falloff
-              const intensity = Math.exp(-normalizedDist * normalizedDist * 2);
+              // Gaussian intensity falloff - scaled by cleaning intensity
+              const falloffRate = 2 * (1 + (1 - cleaningIntensity) * 1.5); // 2.0-5.0 range
+              const intensity = Math.exp(-normalizedDist * normalizedDist * falloffRate) * cleaningIntensity;
               
               const idx = (y * width + x) * 4;
               
@@ -308,9 +318,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
         }
         
         tempCtx.putImageData(sourceData, 0, 0);
-        console.log('Clean star cores extracted with smooth gradients');
+        console.log(`Clean star cores extracted (found ${starCores.length} cores)`);
       } else {
-        console.log(`🌟 Preserving stars from image (intensity: ${preserveStarsIntensity}%, no cleaning)`);
+        console.log(`🌟 Preserving stars from image (preservation: ${preserveStarsIntensity}%, cleaning disabled)`);
       }
       // === END CONDITIONAL STAR CLEANING ===
       
@@ -343,17 +353,12 @@ const StarField3D: React.FC<StarField3DProps> = ({
         size: number;
       }[] = [];
       
-      // Calculate thresholds based on preservation intensity (0-100) with smooth ease-out curve
-      // Use quadratic ease-out for more gradual transitions: f(x) = 1 - (1-x)^2
-      const intensityFactor = preserveStarsIntensity / 100;
-      const smoothFactor = 1 - Math.pow(1 - intensityFactor, 2);
-      
-      // Apply smooth curve to thresholds
-      const coreThreshold = 100 - (92 * smoothFactor); // 100 -> 8 (smoothly)
-      const expansionThreshold = 30 - (28 * smoothFactor); // 30 -> 2 (smoothly)
+      // Apply smooth curve to thresholds with wider ranges for more gradual transitions
+      const coreThreshold = 100 - (92 * smoothFactor); // 100 -> 8 (ultra-smoothly)
+      const expansionThreshold = 30 - (28 * smoothFactor); // 30 -> 2 (ultra-smoothly)
       
       // Reusable queue with pre-allocated capacity - larger when preserving stars
-      const maxQueueSize = 8000 + Math.floor(42000 * smoothFactor); // 8000 -> 50000 (smoothly)
+      const maxQueueSize = 8000 + Math.floor(42000 * smoothFactor); // 8000 -> 50000 (ultra-smoothly)
       const queueX = new Uint16Array(maxQueueSize);
       const queueY = new Uint16Array(maxQueueSize);
       const pixelBuffer = new Uint32Array(maxQueueSize);
