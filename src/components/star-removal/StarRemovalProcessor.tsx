@@ -7,7 +7,7 @@ import { Upload, Download, Sparkles, Eye, EyeOff, AlertCircle } from 'lucide-rea
 import { useLanguage } from '@/contexts/LanguageContext';
 import { UploadProgress } from '@/components/ui/upload-progress';
 import { loadImageFromFile, validateImageFile } from '@/utils/imageProcessingUtils';
-import { detectStarsSimple, removeStarsSimple } from '@/utils/simpleStarDetection';
+import { detectStarsImproved, removeStarsImproved, ImprovedStarDetectionSettings } from '@/utils/improvedStarDetection';
 import { supabase } from '@/integrations/supabase/client';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
@@ -27,8 +27,15 @@ const StarRemovalProcessor: React.FC = () => {
   const [processingProgress, setProcessingProgress] = useState(0);
   const [processingStage, setProcessingStage] = useState('');
   
-  const [threshold, setThreshold] = useState(0.15);
-  const [sensitivity, setSensitivity] = useState(1.5);
+  const [settings, setSettings] = useState<ImprovedStarDetectionSettings>({
+    threshold: 0.8,
+    sensitivity: 1.0,
+    minStarRadius: 2,
+    maxStarRadius: 15,
+    circularityThreshold: 0.65,
+    sharpnessThreshold: 0.4,
+    psfThreshold: 0.5,
+  });
   
   const [showComparison, setShowComparison] = useState<'starless' | 'stars' | 'split'>('starless');
   
@@ -101,8 +108,8 @@ const StarRemovalProcessor: React.FC = () => {
         const formData = new FormData();
         const blob = await fetch(originalImage!).then(r => r.blob());
         formData.append('image', blob, 'image.png');
-        formData.append('threshold', threshold.toString());
-        formData.append('sensitivity', sensitivity.toString());
+        formData.append('threshold', settings.threshold.toString());
+        formData.append('sensitivity', settings.sensitivity.toString());
 
         const { data, error } = await supabase.functions.invoke('process-star-removal', {
           body: formData,
@@ -126,27 +133,22 @@ const StarRemovalProcessor: React.FC = () => {
       // Client-side processing
       toast.info(t('Detecting and removing stars...', '正在检测和移除星点...'));
 
-      // Detect stars using simple, fast algorithm
-      const detectedStars = await detectStarsSimple(
+      // Detect stars using improved algorithm with shape analysis
+      const detectedStars = await detectStarsImproved(
         originalElement,
-        {
-          threshold,
-          sensitivity,
-          minStarSize: 2,
-          maxStarSize: 50
-        },
+        settings,
         (progress, stage) => {
-          setProcessingProgress(Math.floor(progress / 2)); // First half of progress
+          setProcessingProgress(Math.floor(progress * 0.6)); // First 60% of progress
           setProcessingStage(stage);
         }
       );
 
-      console.log(`Detected ${detectedStars.length} stars`);
+      console.log(`Detected ${detectedStars.length} stars with improved algorithm`);
 
       if (detectedStars.length === 0) {
         toast.warning(t(
-          'No stars detected. Try lowering the threshold or increasing sensitivity.',
-          '未检测到星点。请尝试降低阈值或提高灵敏度。'
+          'No stars detected. Try adjusting the detection parameters.',
+          '未检测到星点。请尝试调整检测参数。'
         ));
         setIsProcessing(false);
         setProcessingProgress(0);
@@ -155,11 +157,11 @@ const StarRemovalProcessor: React.FC = () => {
       }
 
       // Remove stars and create separated images
-      const { starImage, starlessImage: nebulaImage } = await removeStarsSimple(
+      const { starImage, starlessImage: nebulaImage } = await removeStarsImproved(
         originalElement,
         detectedStars,
         (progress, stage) => {
-          setProcessingProgress(50 + Math.floor(progress / 2)); // Second half of progress
+          setProcessingProgress(60 + Math.floor(progress * 0.4)); // Last 40% of progress
           setProcessingStage(stage);
         }
       );
@@ -184,7 +186,7 @@ const StarRemovalProcessor: React.FC = () => {
         setProcessingStage('');
       }, 1000);
     }
-  }, [originalElement, threshold, sensitivity, language]);
+  }, [originalElement, settings, language, useBackend, originalImage]);
 
   const downloadImage = useCallback((imageUrl: string, filename: string) => {
     const link = document.createElement('a');
@@ -305,41 +307,117 @@ const StarRemovalProcessor: React.FC = () => {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <Label className="text-cosmic-200">
-                  {t('Threshold', '阈值')}
+                  {t('Brightness Threshold', '亮度阈值')}
                 </Label>
-                <span className="text-sm text-cosmic-400">{threshold.toFixed(2)}</span>
+                <span className="text-sm text-cosmic-400">{settings.threshold.toFixed(1)}</span>
               </div>
               <Slider
-                value={[threshold]}
-                onValueChange={([value]) => setThreshold(value)}
-                min={0.05}
-                max={0.5}
-                step={0.01}
+                value={[settings.threshold]}
+                onValueChange={([value]) => setSettings({ ...settings, threshold: value })}
+                min={0.5}
+                max={1.5}
+                step={0.1}
                 className="w-full"
               />
               <p className="text-xs text-cosmic-400">
-                {t('Lower values detect dimmer stars', '较低值检测较暗星点')}
+                {t('Controls detection sensitivity to bright objects', '控制对明亮物体的检测灵敏度')}
               </p>
             </div>
 
             <div className="space-y-2">
               <div className="flex justify-between">
                 <Label className="text-cosmic-200">
-                  {t('Sensitivity', '灵敏度')}
+                  {t('Circularity', '圆形度')}
                 </Label>
-                <span className="text-sm text-cosmic-400">{sensitivity.toFixed(1)}</span>
+                <span className="text-sm text-cosmic-400">{settings.circularityThreshold.toFixed(2)}</span>
               </div>
               <Slider
-                value={[sensitivity]}
-                onValueChange={([value]) => setSensitivity(value)}
-                min={0.5}
-                max={3.0}
-                step={0.1}
+                value={[settings.circularityThreshold]}
+                onValueChange={([value]) => setSettings({ ...settings, circularityThreshold: value })}
+                min={0.4}
+                max={0.9}
+                step={0.05}
                 className="w-full"
               />
               <p className="text-xs text-cosmic-400">
-                {t('Higher sensitivity detects more subtle stars', '更高灵敏度检测更细微星点')}
+                {t('Higher values require rounder shapes (preserve nebulae)', '更高值要求更圆的形状（保留星云）')}
               </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <Label className="text-cosmic-200">
+                  {t('Edge Sharpness', '边缘锐度')}
+                </Label>
+                <span className="text-sm text-cosmic-400">{settings.sharpnessThreshold.toFixed(2)}</span>
+              </div>
+              <Slider
+                value={[settings.sharpnessThreshold]}
+                onValueChange={([value]) => setSettings({ ...settings, sharpnessThreshold: value })}
+                min={0.2}
+                max={0.8}
+                step={0.05}
+                className="w-full"
+              />
+              <p className="text-xs text-cosmic-400">
+                {t('Stars have sharp edges, nebulae are diffuse', '星点边缘锐利，星云边缘模糊')}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <Label className="text-cosmic-200">
+                  {t('PSF Match Score', 'PSF匹配分数')}
+                </Label>
+                <span className="text-sm text-cosmic-400">{settings.psfThreshold.toFixed(2)}</span>
+              </div>
+              <Slider
+                value={[settings.psfThreshold]}
+                onValueChange={([value]) => setSettings({ ...settings, psfThreshold: value })}
+                min={0.3}
+                max={0.8}
+                step={0.05}
+                className="w-full"
+              />
+              <p className="text-xs text-cosmic-400">
+                {t('How well shape matches Point Spread Function of stars', '形状与星点扩散函数的匹配度')}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label className="text-cosmic-200 text-sm">
+                    {t('Min Radius', '最小半径')}
+                  </Label>
+                  <span className="text-sm text-cosmic-400">{settings.minStarRadius}px</span>
+                </div>
+                <Slider
+                  value={[settings.minStarRadius]}
+                  onValueChange={([value]) => setSettings({ ...settings, minStarRadius: value })}
+                  min={1}
+                  max={10}
+                  step={1}
+                  className="w-full"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label className="text-cosmic-200 text-sm">
+                    {t('Max Radius', '最大半径')}
+                  </Label>
+                  <span className="text-sm text-cosmic-400">{settings.maxStarRadius}px</span>
+                </div>
+                <Slider
+                  value={[settings.maxStarRadius]}
+                  onValueChange={([value]) => setSettings({ ...settings, maxStarRadius: value })}
+                  min={10}
+                  max={40}
+                  step={5}
+                  className="w-full"
+                />
+              </div>
             </div>
 
             <div className="space-y-3">
