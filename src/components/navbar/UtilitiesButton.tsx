@@ -6,7 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Wrench, Music, Calculator, Satellite, Eye, Video, Sigma, Film } from 'lucide-react';
+import { Wrench, Music, Calculator, Satellite, Eye, Video, Sigma, Film, Sparkles } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -27,6 +27,7 @@ const UtilitiesButton: React.FC = () => {
   };
 
   const utilityItems = [
+    { icon: Sparkles, label: t('Star Removal Tool', '星点移除工具'), path: '/star-removal' },
     { icon: Eye, label: t('Stereoscope Processor', '立体镜处理器'), path: '/stereoscope' },
     { icon: Video, label: t('3D Star Field Generator', '3D星场生成器'), path: '/star-field-generator' },
     { icon: Film, label: t('3D Parallel Video Generator', '3D平行视频生成器'), path: '/parallel-video-generator' },
