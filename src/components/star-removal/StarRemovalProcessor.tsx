@@ -22,6 +22,7 @@ const StarRemovalProcessor: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ show: false, progress: 0, fileName: '' });
   const [processingProgress, setProcessingProgress] = useState(0);
+  const [processingStage, setProcessingStage] = useState('');
   
   const [threshold, setThreshold] = useState(0.15);
   const [sensitivity, setSensitivity] = useState(1.5);
@@ -87,15 +88,12 @@ const StarRemovalProcessor: React.FC = () => {
 
     setIsProcessing(true);
     setProcessingProgress(0);
+    setProcessingStage('');
 
     try {
       toast.info(t('Detecting and removing stars...', '正在检测和移除星点...'));
-      
-      const progressInterval = setInterval(() => {
-        setProcessingProgress(prev => Math.min(prev + 5, 95));
-      }, 200);
 
-      // First, detect stars in the image
+      // First, detect stars in the image with progress tracking
       const detectedStars = await detectStarsFromImage(
         originalElement,
         {
@@ -104,30 +102,55 @@ const StarRemovalProcessor: React.FC = () => {
           minStarSize: 2,
           maxStarSize: 50,
           sigma: 1.5
+        },
+        (progress, stage) => {
+          setProcessingProgress(Math.floor(progress / 2)); // First half of progress
+          setProcessingStage(stage);
         }
       );
 
       console.log(`Detected ${detectedStars.length} stars`);
 
-      // Then separate stars and nebula
+      if (detectedStars.length === 0) {
+        toast.warning(t(
+          'No stars detected. Try adjusting the threshold and sensitivity settings.',
+          '未检测到星点。请尝试调整阈值和灵敏度设置。'
+        ));
+        setIsProcessing(false);
+        setProcessingProgress(0);
+        setProcessingStage('');
+        return;
+      }
+
+      // Then separate stars and nebula with progress tracking
       const { starImage, nebulaImage } = await separateStarsAndNebula(
         originalElement,
-        detectedStars
+        detectedStars,
+        (progress, stage) => {
+          setProcessingProgress(50 + Math.floor(progress / 2)); // Second half of progress
+          setProcessingStage(stage);
+        }
       );
 
-      clearInterval(progressInterval);
       setProcessingProgress(100);
+      setProcessingStage('Complete!');
 
       setStarlessImage(nebulaImage);
       setStarsOnlyImage(starImage);
 
-      toast.success(t('Stars removed successfully!', '星点移除成功！'));
+      toast.success(t(
+        `Successfully removed ${detectedStars.length} stars!`,
+        `成功移除 ${detectedStars.length} 个星点！`
+      ));
     } catch (error) {
       console.error('Processing error:', error);
       toast.error(t('Failed to process image', '处理图像失败'));
     } finally {
-      setIsProcessing(false);
-      setProcessingProgress(0);
+      setTimeout(() => {
+        setIsProcessing(false);
+        setProcessingProgress(0);
+        setProcessingStage('');
+      }, 1000);
     }
   }, [originalElement, threshold, sensitivity, language]);
 
@@ -268,23 +291,39 @@ const StarRemovalProcessor: React.FC = () => {
               </p>
             </div>
 
-            <Button
-              onClick={processImage}
-              disabled={isProcessing}
-              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
-            >
-              {isProcessing ? (
-                <>
-                  <Sparkles className="mr-2 h-4 w-4 animate-spin" />
-                  {t('Processing...', '处理中...')} {processingProgress}%
-                </>
-              ) : (
-                <>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  {t('Remove Stars', '移除星点')}
-                </>
+            <div className="space-y-3">
+              <Button
+                onClick={processImage}
+                disabled={isProcessing}
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
+              >
+                {isProcessing ? (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4 animate-spin" />
+                    {t('Processing...', '处理中...')} {processingProgress}%
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    {t('Remove Stars', '移除星点')}
+                  </>
+                )}
+              </Button>
+
+              {isProcessing && (
+                <div className="space-y-2">
+                  <div className="w-full h-2 bg-cosmic-800/60 rounded-full overflow-hidden border border-cosmic-700/30">
+                    <div
+                      className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-300"
+                      style={{ width: `${processingProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-cosmic-400 text-center">
+                    {processingStage}
+                  </p>
+                </div>
               )}
-            </Button>
+            </div>
           </CardContent>
         </Card>
       )}
