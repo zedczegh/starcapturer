@@ -31,10 +31,10 @@ const StarRemovalProcessor: React.FC = () => {
     threshold: 0.8,
     sensitivity: 1.0,
     minStarRadius: 2,
-    maxStarRadius: 15,
-    circularityThreshold: 0.65,
-    sharpnessThreshold: 0.4,
-    psfThreshold: 0.5,
+    maxStarRadius: 20,
+    circularityThreshold: 0.5,  // More lenient
+    sharpnessThreshold: 0.25,   // More lenient
+    psfThreshold: 0.35,         // More lenient
   });
   
   const [showComparison, setShowComparison] = useState<'starless' | 'stars' | 'split'>('starless');
@@ -304,6 +304,16 @@ const StarRemovalProcessor: React.FC = () => {
           </div>
         </CardHeader>
           <CardContent className="space-y-6">
+            <Alert className="border-blue-500/30 bg-blue-500/10">
+              <AlertCircle className="h-4 w-4 text-blue-400" />
+              <AlertDescription className="text-cosmic-200 text-xs">
+                {t(
+                  '💡 Advanced algorithm with shape analysis. Check browser console (F12) for detailed detection logs.',
+                  '💡 使用形状分析的高级算法。查看浏览器控制台(F12)以获取详细检测日志。'
+                )}
+              </AlertDescription>
+            </Alert>
+            
             <div className="space-y-2">
               <div className="flex justify-between">
                 <Label className="text-cosmic-200">
@@ -334,13 +344,13 @@ const StarRemovalProcessor: React.FC = () => {
               <Slider
                 value={[settings.circularityThreshold]}
                 onValueChange={([value]) => setSettings({ ...settings, circularityThreshold: value })}
-                min={0.4}
+                min={0.3}
                 max={0.9}
                 step={0.05}
                 className="w-full"
               />
               <p className="text-xs text-cosmic-400">
-                {t('Higher values require rounder shapes (preserve nebulae)', '更高值要求更圆的形状（保留星云）')}
+                {t('Lower = detect more objects. Higher = only perfect circles (preserve nebulae)', '更低=检测更多对象。更高=仅完美圆形（保留星云）')}
               </p>
             </div>
 
@@ -354,13 +364,13 @@ const StarRemovalProcessor: React.FC = () => {
               <Slider
                 value={[settings.sharpnessThreshold]}
                 onValueChange={([value]) => setSettings({ ...settings, sharpnessThreshold: value })}
-                min={0.2}
+                min={0.1}
                 max={0.8}
                 step={0.05}
                 className="w-full"
               />
               <p className="text-xs text-cosmic-400">
-                {t('Stars have sharp edges, nebulae are diffuse', '星点边缘锐利，星云边缘模糊')}
+                {t('Lower = more lenient. Stars have sharp edges, nebulae are soft', '更低=更宽松。星点锐利，星云柔和')}
               </p>
             </div>
 
@@ -374,13 +384,13 @@ const StarRemovalProcessor: React.FC = () => {
               <Slider
                 value={[settings.psfThreshold]}
                 onValueChange={([value]) => setSettings({ ...settings, psfThreshold: value })}
-                min={0.3}
+                min={0.2}
                 max={0.8}
                 step={0.05}
                 className="w-full"
               />
               <p className="text-xs text-cosmic-400">
-                {t('How well shape matches Point Spread Function of stars', '形状与星点扩散函数的匹配度')}
+                {t('Lower = more detections. Measures radial brightness falloff', '更低=更多检测。测量径向亮度衰减')}
               </p>
             </div>
 

@@ -195,12 +195,13 @@ export async function detectStarsImproved(
   // Dynamic threshold based on image statistics
   const dynamicThreshold = median + (p99 - median) * settings.threshold;
   
-  console.log('Detection statistics:', {
+  console.log('📊 Detection statistics:', {
     median: median.toFixed(2),
     p90: p90.toFixed(2),
     p95: p95.toFixed(2),
     p99: p99.toFixed(2),
-    threshold: dynamicThreshold.toFixed(2)
+    threshold: dynamicThreshold.toFixed(2),
+    imageSize: `${width}x${height}`
   });
 
   onProgress?.(20, 'Finding bright candidates...');
@@ -221,8 +222,13 @@ export async function detectStarsImproved(
     if (y % 50 === 0) await yieldToMain();
   }
 
-  console.log(`Found ${candidates.length} bright candidates`);
+  console.log(`✨ Found ${candidates.length} bright candidates`);
   onProgress?.(40, `Analyzing ${candidates.length} candidates...`);
+  
+  if (candidates.length === 0) {
+    console.warn('⚠️ No bright candidates found - threshold may be too high');
+    return [];
+  }
 
   // Filter for local maxima
   const localMaxima: { x: number; y: number; brightness: number }[] = [];
@@ -257,8 +263,13 @@ export async function detectStarsImproved(
     }
   }
 
-  console.log(`Found ${localMaxima.length} local maxima`);
+  console.log(`🎯 Found ${localMaxima.length} local maxima`);
   onProgress?.(60, `Analyzing shape characteristics...`);
+  
+  if (localMaxima.length === 0) {
+    console.warn('⚠️ No local maxima found - stars may be too close together');
+    return [];
+  }
 
   // Analyze each local maximum for star characteristics
   const detectedStars: ImprovedStar[] = [];
@@ -324,14 +335,27 @@ export async function detectStarsImproved(
       b: data[idx + 2]
     };
 
+    // Check criteria and log failures for first few stars
+    const passesCircularity = circularity >= settings.circularityThreshold;
+    const passesSharpness = sharpness >= settings.sharpnessThreshold;
+    const passesPSF = psfScore >= settings.psfThreshold;
+    const passesRadius = radius >= settings.minStarRadius && radius <= settings.maxStarRadius;
+    
+    if (processedCount < 5) {
+      console.log(`⭐ Candidate ${processedCount + 1}:`, {
+        circularity: circularity.toFixed(2),
+        passesCircularity,
+        sharpness: sharpness.toFixed(2),
+        passesSharpness,
+        psfScore: psfScore.toFixed(2),
+        passesPSF,
+        radius: radius.toFixed(1),
+        passesRadius
+      });
+    }
+    
     // Only keep if it meets all star criteria
-    if (
-      circularity >= settings.circularityThreshold &&
-      sharpness >= settings.sharpnessThreshold &&
-      psfScore >= settings.psfThreshold &&
-      radius >= settings.minStarRadius &&
-      radius <= settings.maxStarRadius
-    ) {
+    if (passesCircularity && passesSharpness && passesPSF && passesRadius) {
       detectedStars.push({
         x: maximum.x,
         y: maximum.y,
@@ -352,13 +376,19 @@ export async function detectStarsImproved(
     }
   }
 
-  console.log(`Detected ${detectedStars.length} stars after filtering`);
-  console.log('Sample star characteristics:', detectedStars.slice(0, 5).map(s => ({
-    circularity: s.circularity.toFixed(2),
-    sharpness: s.sharpness.toFixed(2),
-    psfScore: s.psfScore.toFixed(2),
-    radius: s.radius.toFixed(1)
-  })));
+  console.log(`✅ Detected ${detectedStars.length} stars after filtering (from ${localMaxima.length} candidates)`);
+  
+  if (detectedStars.length === 0) {
+    console.error('❌ NO STARS DETECTED - Thresholds may be too strict!');
+    console.log('💡 Try lowering: Circularity, Sharpness, or PSF thresholds');
+  } else {
+    console.log('Sample star characteristics:', detectedStars.slice(0, 3).map(s => ({
+      circularity: s.circularity.toFixed(2),
+      sharpness: s.sharpness.toFixed(2),
+      psfScore: s.psfScore.toFixed(2),
+      radius: s.radius.toFixed(1)
+    })));
+  }
 
   onProgress?.(100, `Detected ${detectedStars.length} stars`);
   return detectedStars;
