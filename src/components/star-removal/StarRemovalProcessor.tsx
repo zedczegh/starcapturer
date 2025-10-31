@@ -7,7 +7,7 @@ import { Upload, Download, Sparkles, Eye, EyeOff, AlertCircle } from 'lucide-rea
 import { useLanguage } from '@/contexts/LanguageContext';
 import { UploadProgress } from '@/components/ui/upload-progress';
 import { loadImageFromFile, validateImageFile } from '@/utils/imageProcessingUtils';
-import { detectStarsFromImage, separateStarsAndNebula } from '@/utils/starDetection';
+import { detectStarsSimple, removeStarsSimple } from '@/utils/simpleStarDetection';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -93,15 +93,14 @@ const StarRemovalProcessor: React.FC = () => {
     try {
       toast.info(t('Detecting and removing stars...', '正在检测和移除星点...'));
 
-      // First, detect stars in the image with progress tracking
-      const detectedStars = await detectStarsFromImage(
+      // Detect stars using simple, fast algorithm
+      const detectedStars = await detectStarsSimple(
         originalElement,
         {
           threshold,
           sensitivity,
           minStarSize: 2,
-          maxStarSize: 50,
-          sigma: 1.5
+          maxStarSize: 50
         },
         (progress, stage) => {
           setProcessingProgress(Math.floor(progress / 2)); // First half of progress
@@ -113,8 +112,8 @@ const StarRemovalProcessor: React.FC = () => {
 
       if (detectedStars.length === 0) {
         toast.warning(t(
-          'No stars detected. Try adjusting the threshold and sensitivity settings.',
-          '未检测到星点。请尝试调整阈值和灵敏度设置。'
+          'No stars detected. Try lowering the threshold or increasing sensitivity.',
+          '未检测到星点。请尝试降低阈值或提高灵敏度。'
         ));
         setIsProcessing(false);
         setProcessingProgress(0);
@@ -122,8 +121,8 @@ const StarRemovalProcessor: React.FC = () => {
         return;
       }
 
-      // Then separate stars and nebula with progress tracking
-      const { starImage, nebulaImage } = await separateStarsAndNebula(
+      // Remove stars and create separated images
+      const { starImage, starlessImage: nebulaImage } = await removeStarsSimple(
         originalElement,
         detectedStars,
         (progress, stage) => {
