@@ -8,14 +8,12 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { UploadProgress } from '@/components/ui/upload-progress';
 import { loadImageFromFile, validateImageFile } from '@/utils/imageProcessingUtils';
 import { detectStarsImproved, removeStarsImproved, ImprovedStarDetectionSettings } from '@/utils/improvedStarDetection';
-import { supabase } from '@/integrations/supabase/client';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const StarRemovalProcessor: React.FC = () => {
   const { language } = useLanguage();
-  const [useBackend, setUseBackend] = useState(false);
   
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [originalElement, setOriginalElement] = useState<HTMLImageElement | null>(null);
@@ -101,36 +99,8 @@ const StarRemovalProcessor: React.FC = () => {
     setProcessingStage('');
 
     try {
-      if (useBackend) {
-        // Backend ML processing (placeholder for StarNet integration)
-        toast.info(t('Uploading to server for processing...', '上传到服务器进行处理...'));
-        
-        const formData = new FormData();
-        const blob = await fetch(originalImage!).then(r => r.blob());
-        formData.append('image', blob, 'image.png');
-        formData.append('threshold', settings.threshold.toString());
-        formData.append('sensitivity', settings.sensitivity.toString());
-
-        const { data, error } = await supabase.functions.invoke('process-star-removal', {
-          body: formData,
-        });
-
-        if (error) throw error;
-
-        console.log('Backend response:', data);
-        
-        toast.info(t(
-          'Backend processing not yet connected. Would require StarNet deployment.',
-          '后端处理尚未连接。需要部署StarNet。'
-        ));
-        
-        setIsProcessing(false);
-        setProcessingProgress(0);
-        setProcessingStage('');
-        return;
-      }
-
-      // Client-side processing
+      // Client-side processing with improved algorithm
+      console.log('🚀 Starting star detection...');
       toast.info(t('Detecting and removing stars...', '正在检测和移除星点...'));
 
       // Detect stars using improved algorithm with shape analysis
@@ -178,7 +148,8 @@ const StarRemovalProcessor: React.FC = () => {
       ));
     } catch (error) {
       console.error('Processing error:', error);
-      toast.error(t('Failed to process image', '处理图像失败'));
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(t(`Failed to process image: ${errorMessage}`, `处理图像失败: ${errorMessage}`));
     } finally {
       setTimeout(() => {
         setIsProcessing(false);
@@ -186,7 +157,7 @@ const StarRemovalProcessor: React.FC = () => {
         setProcessingStage('');
       }, 1000);
     }
-  }, [originalElement, settings, language, useBackend, originalImage]);
+  }, [originalElement, settings, language, originalImage]);
 
   const downloadImage = useCallback((imageUrl: string, filename: string) => {
     const link = document.createElement('a');
@@ -284,20 +255,20 @@ const StarRemovalProcessor: React.FC = () => {
             {t('Adjust star detection parameters', '调整星点检测参数')}
           </CardDescription>
           
-          <div className="flex items-center gap-3 mt-4 p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-700/50">
+          <div className="flex items-center gap-3 mt-4 p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-700/50 opacity-50 cursor-not-allowed" title="Backend processing not yet implemented">
             <Switch
-              checked={useBackend}
-              onCheckedChange={setUseBackend}
+              checked={false}
+              disabled={true}
               id="backend-processing"
             />
             <div className="flex-1">
-              <Label htmlFor="backend-processing" className="text-cosmic-200 font-medium cursor-pointer">
-                {t('Backend ML Processing (Experimental)', '后端机器学习处理（实验性）')}
+              <Label htmlFor="backend-processing" className="text-cosmic-400 font-medium">
+                {t('Backend ML Processing (Coming Soon)', '后端机器学习处理（即将推出）')}
               </Label>
-              <p className="text-xs text-cosmic-400 mt-1">
+              <p className="text-xs text-cosmic-500 mt-1">
                 {t(
-                  'Uses server-side processing (requires StarNet deployment)',
-                  '使用服务器端处理（需要部署StarNet）'
+                  'Server-side StarNet processing - requires deployment',
+                  '服务器端StarNet处理 - 需要部署'
                 )}
               </p>
             </div>
