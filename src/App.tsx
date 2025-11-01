@@ -9,10 +9,9 @@ import { useBookingNotifications } from './hooks/useBookingNotifications';
 import { Loader2 } from 'lucide-react';
 
 // Lazy load heavy components for better performance
-const LazyPhotoPointsNearby = lazy(() => import('./pages/PhotoPointsNearby'));
-const LazyCommunityAstroSpots = lazy(() => import('./pages/CommunityAstroSpots'));
-const LazyStarRemoval = lazy(() => import('./pages/StarRemoval'));
-const LazyLocationDetails = lazy(() => import('./pages/LocationDetails'));
+const LazyPhotoPointsNearby = lazy(() => import('@/pages/PhotoPointsNearby'));
+const LazyLocationDetails = lazy(() => import('@/pages/LocationDetails'));  
+const LazyCommunityAstroSpots = lazy(() => import('@/pages/CommunityAstroSpots'));
 
 // Keep light components as regular imports
 import IndexPage from './pages/Index';
@@ -124,11 +123,6 @@ function AppContent() {
       <Route path="/space-tracker" element={
         <Suspense fallback={<LoadingFallback />}>
           <LazySpaceStationTracker />
-        </Suspense>
-      } />
-      <Route path="/star-removal" element={
-        <Suspense fallback={<LoadingFallback />}>
-          <LazyStarRemoval />
         </Suspense>
       } />
       <Route path="/service-test" element={<ServiceTest />} />

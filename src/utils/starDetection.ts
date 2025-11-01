@@ -96,44 +96,27 @@ function getLuminance(r: number, g: number, b: number): number {
  */
 function detectStarsMultiScale(
   imageData: ImageData,
-  settings: StarDetectionSettings,
-  onProgress?: (progress: number, stage: string) => void
+  settings: StarDetectionSettings
 ): Array<{ x: number; y: number; value: number; color: { r: number; g: number; b: number }; confidence: number; type: 'point' | 'extended' | 'saturated' }> {
   const { data, width, height } = imageData;
   const stars: Array<{ x: number; y: number; value: number; color: { r: number; g: number; b: number }; confidence: number; type: 'point' | 'extended' | 'saturated' }> = [];
 
-  onProgress?.(10, 'Analyzing background statistics...');
-  
   // Calculate background statistics
   const backgroundStats = calculateBackgroundStatistics(imageData);
-  
-  // Use user's threshold and sensitivity settings
-  // threshold is normalized 0-1, convert to actual luminance threshold
-  const baseThreshold = settings.threshold * 255;
-  const dynamicThreshold = backgroundStats.median + (backgroundStats.mad * settings.sensitivity) + baseThreshold;
+  const dynamicThreshold = backgroundStats.median + (backgroundStats.mad * 5); // 5-sigma detection
 
-  console.log(`Background: median=${backgroundStats.median.toFixed(2)}, MAD=${backgroundStats.mad.toFixed(2)}, sensitivity=${settings.sensitivity}, threshold=${dynamicThreshold.toFixed(2)}`);
+  console.log(`Background: median=${backgroundStats.median.toFixed(2)}, MAD=${backgroundStats.mad.toFixed(2)}, threshold=${dynamicThreshold.toFixed(2)}`);
 
-  onProgress?.(25, 'Detecting stars at multiple scales...');
-  
   // Multi-scale detection with different kernel sizes
-  const scales = [1, 2, 3, 5, 7]; // Different star sizes to detect
+  const scales = [1, 2, 3, 5]; // Different star sizes to detect
   
-  for (let i = 0; i < scales.length; i++) {
-    const scale = scales[i];
+  for (const scale of scales) {
     const detectedAtScale = detectStarsAtScale(imageData, scale, dynamicThreshold, settings);
     stars.push(...detectedAtScale);
-    onProgress?.(25 + (i + 1) * 10, `Detecting scale ${scale}...`);
   }
 
-  onProgress?.(80, 'Merging detections...');
-  
   // Remove duplicates and merge nearby detections
-  const merged = mergeDuplicateDetections(stars, 3);
-  
-  onProgress?.(90, 'Finalizing results...');
-  
-  return merged;
+  return mergeDuplicateDetections(stars, 3);
 }
 
 /**
@@ -703,13 +686,11 @@ function calculateLocalNoise(
  */
 export async function detectStarsFromImage(
   imageElement: HTMLImageElement,
-  settings: StarDetectionSettings = DEFAULT_SETTINGS,
-  onProgress?: (progress: number, stage: string) => void
+  settings: StarDetectionSettings = DEFAULT_SETTINGS
 ): Promise<DetectedStar[]> {
   return new Promise((resolve, reject) => {
     try {
       console.log('Starting advanced star detection...');
-      onProgress?.(0, 'Initializing...');
       
       // Create canvas and draw image
       const canvas = document.createElement('canvas');
@@ -724,29 +705,21 @@ export async function detectStarsFromImage(
       canvas.height = imageElement.naturalHeight;
       ctx.drawImage(imageElement, 0, 0);
 
-      onProgress?.(5, 'Loading image data...');
-      
       // Get image data
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       console.log(`Processing image: ${canvas.width}x${canvas.height}`);
 
-      onProgress?.(8, 'Applying noise reduction...');
-      
       // Apply minimal Gaussian blur to reduce noise while preserving star details
       const blurredData = applyGaussianBlur(imageData, settings.sigma);
 
       // Multi-scale star detection using morphological operations
-      const rawDetections = detectStarsMultiScale(blurredData, settings, onProgress);
+      const rawDetections = detectStarsMultiScale(blurredData, settings);
       console.log(`Multi-scale detection found ${rawDetections.length} candidates`);
 
-      onProgress?.(85, 'Processing detected stars...');
-      
       // Process and filter detections
       const detectedStars = processDetectedStars(rawDetections, imageData, settings);
 
       console.log(`Final result: ${detectedStars.length} high-quality stars detected`);
-      
-      onProgress?.(100, 'Complete!');
       
       resolve(detectedStars);
     } catch (error) {
@@ -761,10 +734,8 @@ export async function detectStarsFromImage(
  */
 export async function separateStarsAndNebula(
   imageElement: HTMLImageElement,
-  detectedStars: DetectedStar[],
-  onProgress?: (progress: number, stage: string) => void
+  detectedStars: DetectedStar[]
 ): Promise<{ starImage: string; nebulaImage: string }> {
-  onProgress?.(0, 'Starting separation...');
   return new Promise((resolve, reject) => {
     try {
       console.log('Starting advanced star-nebula separation...');
@@ -780,30 +751,20 @@ export async function separateStarsAndNebula(
       canvas.width = imageElement.naturalWidth;
       canvas.height = imageElement.naturalHeight;
 
-      onProgress?.(10, 'Creating star mask...');
-      
       // Create precise star mask
       const starMask = createPreciseStarMask(canvas.width, canvas.height, detectedStars);
-      
-      onProgress?.(30, 'Rendering stars...');
       
       // Generate star-only image with realistic appearance
       ctx.fillStyle = 'black';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
       // Render stars with proper PSF (Point Spread Function)
-      for (let i = 0; i < detectedStars.length; i++) {
-        renderStarWithPSF(ctx, detectedStars[i]);
-        if (i % 100 === 0) {
-          onProgress?.(30 + (i / detectedStars.length) * 20, `Rendering stars (${i}/${detectedStars.length})...`);
-        }
+      for (const star of detectedStars) {
+        renderStarWithPSF(ctx, star);
       }
       
-      onProgress?.(50, 'Saving star image...');
       const starImage = canvas.toDataURL('image/png');
 
-      onProgress?.(60, 'Removing stars from nebula...');
-      
       // Create nebula image using sophisticated star removal
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(imageElement, 0, 0);
@@ -811,13 +772,10 @@ export async function separateStarsAndNebula(
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const nebulaData = removeStarsFromImage(imageData, detectedStars, starMask);
       
-      onProgress?.(90, 'Saving nebula image...');
-      
       ctx.putImageData(nebulaData, 0, 0);
       const nebulaImage = canvas.toDataURL('image/png');
 
       console.log('Star-nebula separation completed');
-      onProgress?.(100, 'Separation complete!');
       resolve({ starImage, nebulaImage });
     } catch (error) {
       console.error('Separation error:', error);
