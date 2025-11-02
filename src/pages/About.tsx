@@ -107,17 +107,76 @@ const About = () => {
         {/* Main Page Header */}
         <AboutHeader />
         
-        <div className="space-y-6">
-          {/* Main sections ordered by significance */}
-          <PersonalIntro />
-          <UtilitiesSection />
-          <SiqsSection />
-          <AboutIntro />
-          <PhotoPointsFeature />
-          <LocationDiscoverySection />
-          <DarkSkyKnowledge />
-          <AboutTeam />
-          <ResourcesSection />
+        <div className="space-y-12">
+          {/* About the Developer */}
+          <section id="developer" className="space-y-6">
+            <motion.h2 
+              className="text-3xl font-bold text-cosmic-50 border-b border-cosmic-700 pb-3"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              {t("About the Developer", "关于开发者")}
+            </motion.h2>
+            <PersonalIntro />
+          </section>
+
+          {/* About Utilities */}
+          <section id="utilities" className="space-y-6">
+            <motion.h2 
+              className="text-3xl font-bold text-cosmic-50 border-b border-cosmic-700 pb-3"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              {t("About Utilities", "关于工具")}
+            </motion.h2>
+            <UtilitiesSection />
+          </section>
+
+          {/* About SIQS */}
+          <section id="siqs" className="space-y-6">
+            <motion.h2 
+              className="text-3xl font-bold text-cosmic-50 border-b border-cosmic-700 pb-3"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              {t("About SIQS System", "关于SIQS系统")}
+            </motion.h2>
+            <SiqsSection />
+            <AboutIntro />
+            <PhotoPointsFeature />
+            <AboutTeam />
+          </section>
+
+          {/* About Dark Sky */}
+          <section id="darksky" className="space-y-6">
+            <motion.h2 
+              className="text-3xl font-bold text-cosmic-50 border-b border-cosmic-700 pb-3"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
+              {t("About Dark Sky Preservation", "关于暗夜保护")}
+            </motion.h2>
+            <DarkSkyKnowledge />
+            <LocationDiscoverySection />
+          </section>
+
+          {/* Resources */}
+          <section id="resources" className="space-y-6">
+            <motion.h2 
+              className="text-3xl font-bold text-cosmic-50 border-b border-cosmic-700 pb-3"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+            >
+              {t("Resources", "资源")}
+            </motion.h2>
+            <ResourcesSection />
+          </section>
+
           <AboutFooter />
         </div>
       </div>
