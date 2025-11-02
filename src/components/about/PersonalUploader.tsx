@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, FileText, Image, Trash2, Download, Loader2, FolderOpen, File } from "lucide-react";
+import { Upload, FileText, Image, Trash2, Download, Loader2, File } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface UploadedFile {
@@ -16,7 +16,10 @@ interface UploadedFile {
   file_size: number;
   description: string | null;
   created_at: string;
+  category: string;
 }
+
+type Category = 'artworks' | 'work_in_progress' | 'writings';
 
 const PersonalUploader = () => {
   const [user, setUser] = useState<any>(null);
@@ -24,6 +27,8 @@ const PersonalUploader = () => {
   const [loading, setLoading] = useState(true);
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [description, setDescription] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<Category | 'all'>('all');
+  const [postCategory, setPostCategory] = useState<Category>('writings');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -34,14 +39,20 @@ const PersonalUploader = () => {
         setLoading(false);
       }
     });
-  }, []);
+  }, [selectedCategory]);
 
   const loadFiles = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("personal_uploads")
         .select("*")
         .order("created_at", { ascending: false });
+
+      if (selectedCategory !== 'all') {
+        query = query.eq('category', selectedCategory);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setFiles(data || []);
@@ -88,6 +99,7 @@ const PersonalUploader = () => {
           file_type: file.type,
           file_size: file.size,
           description: description || null,
+          category: postCategory,
         });
 
       if (dbError) throw dbError;
@@ -144,6 +156,24 @@ const PersonalUploader = () => {
     return data.publicUrl;
   };
 
+  const getCategoryLabel = (category: string) => {
+    const labels: Record<string, string> = {
+      artworks: "🎨 Artworks",
+      work_in_progress: "🚧 Work in Progress",
+      writings: "📝 Writings"
+    };
+    return labels[category] || category;
+  };
+
+  const getCategoryColor = (category: string) => {
+    const colors: Record<string, string> = {
+      artworks: "text-pink-400",
+      work_in_progress: "text-yellow-400",
+      writings: "text-blue-400"
+    };
+    return colors[category] || "text-cosmic-400";
+  };
+
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + " B";
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
@@ -160,30 +190,6 @@ const PersonalUploader = () => {
     return <FileText className="h-5 w-5 text-cosmic-400" />;
   };
 
-  const groupFilesByType = (files: UploadedFile[]) => {
-    const groups: Record<string, UploadedFile[]> = {
-      "Papers (PDF)": [],
-      "Documents (Word/PPT)": [],
-      "Images": [],
-      "Other": []
-    };
-
-    files.forEach(file => {
-      if (file.file_type === "application/pdf") {
-        groups["Papers (PDF)"].push(file);
-      } else if (file.file_type.includes("word") || file.file_name.endsWith(".doc") || file.file_name.endsWith(".docx") ||
-                 file.file_type.includes("presentation") || file.file_name.endsWith(".ppt") || file.file_name.endsWith(".pptx")) {
-        groups["Documents (Word/PPT)"].push(file);
-      } else if (file.file_type.startsWith("image/")) {
-        groups["Images"].push(file);
-      } else {
-        groups["Other"].push(file);
-      }
-    });
-
-    return groups;
-  };
-
   if (user?.email !== "yanzeyucq@163.com") {
     return null;
   }
@@ -196,21 +202,102 @@ const PersonalUploader = () => {
       transition={{ delay: 0.3 }}
     >
       <Card className="p-6 bg-cosmic-900/50 border-cosmic-700">
-        <h3 className="text-xl font-semibold text-cosmic-50 mb-4">
-          Portfolio & Papers
-        </h3>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-semibold text-cosmic-50">
+            Portfolio & Research
+          </h3>
+        </div>
+
+        {/* Category Navigation */}
+        <div className="flex gap-2 mb-6 border-b border-cosmic-700 pb-3">
+          <button
+            onClick={() => setSelectedCategory('all')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              selectedCategory === 'all'
+                ? 'bg-cosmic-600 text-white'
+                : 'text-cosmic-300 hover:text-white hover:bg-cosmic-800/50'
+            }`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setSelectedCategory('artworks')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              selectedCategory === 'artworks'
+                ? 'bg-pink-600 text-white'
+                : 'text-cosmic-300 hover:text-white hover:bg-cosmic-800/50'
+            }`}
+          >
+            🎨 Artworks
+          </button>
+          <button
+            onClick={() => setSelectedCategory('work_in_progress')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              selectedCategory === 'work_in_progress'
+                ? 'bg-yellow-600 text-white'
+                : 'text-cosmic-300 hover:text-white hover:bg-cosmic-800/50'
+            }`}
+          >
+            🚧 WIP
+          </button>
+          <button
+            onClick={() => setSelectedCategory('writings')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              selectedCategory === 'writings'
+                ? 'bg-blue-600 text-white'
+                : 'text-cosmic-300 hover:text-white hover:bg-cosmic-800/50'
+            }`}
+          >
+            📝 Writings
+          </button>
+        </div>
         
-        {/* Upload Section */}
-        <div className="space-y-4 mb-6">
+        {/* Create Post Section */}
+        <div className="space-y-4 mb-6 p-4 bg-cosmic-800/30 rounded-lg border border-cosmic-700">
+          <h4 className="text-sm font-medium text-cosmic-200">Create New Post</h4>
+          
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPostCategory('artworks')}
+              className={`px-3 py-1 rounded text-xs font-medium transition-all ${
+                postCategory === 'artworks'
+                  ? 'bg-pink-600 text-white'
+                  : 'bg-cosmic-700 text-cosmic-300 hover:bg-cosmic-600'
+              }`}
+            >
+              🎨 Artworks
+            </button>
+            <button
+              onClick={() => setPostCategory('work_in_progress')}
+              className={`px-3 py-1 rounded text-xs font-medium transition-all ${
+                postCategory === 'work_in_progress'
+                  ? 'bg-yellow-600 text-white'
+                  : 'bg-cosmic-700 text-cosmic-300 hover:bg-cosmic-600'
+              }`}
+            >
+              🚧 WIP
+            </button>
+            <button
+              onClick={() => setPostCategory('writings')}
+              className={`px-3 py-1 rounded text-xs font-medium transition-all ${
+                postCategory === 'writings'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-cosmic-700 text-cosmic-300 hover:bg-cosmic-600'
+              }`}
+            >
+              📝 Writings
+            </button>
+          </div>
+
           <div>
-            <Label htmlFor="description" className="text-cosmic-200">
-              Description (optional)
+            <Label htmlFor="description" className="text-cosmic-200 text-xs">
+              Caption / Description
             </Label>
             <Input
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add a description for this file..."
+              placeholder="What's on your mind?"
               className="bg-cosmic-800 border-cosmic-700 text-cosmic-50"
             />
           </div>
@@ -235,58 +322,98 @@ const PersonalUploader = () => {
               accept="image/*,.pdf,.doc,.docx,.ppt,.pptx,.txt"
             />
             <p className="text-xs text-cosmic-400 mt-2">
-              Supported: Images (JPG, PNG, GIF, WEBP), PDF, Word (.doc, .docx), PowerPoint (.ppt, .pptx) - Max 20MB
+              Images, PDFs, Word, PowerPoint - Max 20MB
             </p>
           </div>
         </div>
 
-        {/* Files List - Organized by Type */}
+        {/* Posts Feed */}
         {loading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-cosmic-400" />
           </div>
         ) : files.length === 0 ? (
-          <p className="text-center text-cosmic-400 py-8">
-            No files uploaded yet
-          </p>
+          <div className="text-center py-12 text-cosmic-400">
+            <p>No posts yet in this category</p>
+            <p className="text-sm mt-2">Share your first {selectedCategory === 'all' ? 'post' : selectedCategory.replace('_', ' ')}!</p>
+          </div>
         ) : (
-          <div className="space-y-6">
-            {Object.entries(groupFilesByType(files)).map(([category, categoryFiles]) => 
-              categoryFiles.length > 0 && (
-                <div key={category} className="space-y-2">
-                  <div className="flex items-center gap-2 text-cosmic-300 font-medium text-sm">
-                    <FolderOpen className="h-4 w-4" />
-                    <span>{category}</span>
-                    <span className="text-cosmic-500">({categoryFiles.length})</span>
-                  </div>
-                  <AnimatePresence>
-                    {categoryFiles.map((file) => (
-                      <motion.div
-                        key={file.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="flex items-center justify-between p-4 bg-cosmic-800/50 rounded-lg border border-cosmic-700 ml-4"
+          <div className="space-y-4">
+            <AnimatePresence>
+              {files.map((file) => (
+                <motion.div
+                  key={file.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="bg-cosmic-800/30 rounded-lg border border-cosmic-700 overflow-hidden"
+                >
+                  {/* Post Header */}
+                  <div className="p-4 border-b border-cosmic-700">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/30 to-purple-500/30 flex items-center justify-center text-blue-300">
+                          ZC
+                        </div>
+                        <div>
+                          <p className="text-cosmic-50 font-medium text-sm">Yan Zeyu</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs text-cosmic-400">
+                              {new Date(file.created_at).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </p>
+                            <span className={`text-xs font-medium ${getCategoryColor(file.category)}`}>
+                              {getCategoryLabel(file.category)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(file.id, file.file_path)}
+                        className="text-red-400 hover:text-red-300"
                       >
-                        <div className="flex items-center gap-3 flex-1">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Post Content */}
+                  <div>
+                    {file.description && (
+                      <div className="p-4">
+                        <p className="text-cosmic-200 text-sm">{file.description}</p>
+                      </div>
+                    )}
+                    
+                    {/* Image Display */}
+                    {file.file_type.startsWith("image/") ? (
+                      <div className="relative">
+                        <img 
+                          src={getFileUrl(file.file_path)} 
+                          alt={file.file_name}
+                          className="w-full max-h-[600px] object-contain bg-cosmic-950"
+                        />
+                      </div>
+                    ) : (
+                      /* File Attachment Card */
+                      <div className="p-4">
+                        <div className="flex items-center gap-3 p-3 bg-cosmic-800 rounded border border-cosmic-700">
                           <div>
                             {getFileIcon(file.file_type, file.file_name)}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-cosmic-50 font-medium truncate">
+                            <p className="text-cosmic-50 font-medium text-sm truncate">
                               {file.file_name}
                             </p>
-                            {file.description && (
-                              <p className="text-sm text-cosmic-400 truncate">
-                                {file.description}
-                              </p>
-                            )}
                             <p className="text-xs text-cosmic-500">
-                              {formatFileSize(file.file_size)} • {new Date(file.created_at).toLocaleDateString()}
+                              {formatFileSize(file.file_size)}
                             </p>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -295,21 +422,13 @@ const PersonalUploader = () => {
                           >
                             <Download className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(file.id, file.file_path)}
-                            className="text-red-400 hover:text-red-300"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
                         </div>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </div>
-              )
-            )}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </Card>
