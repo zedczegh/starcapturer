@@ -1,52 +1,22 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const sections = [
-  { id: "developer", labelEn: "Developer", labelZh: "开发者" },
-  { id: "utilities", labelEn: "Utilities", labelZh: "工具" },
-  { id: "siqs", labelEn: "SIQS System", labelZh: "SIQS系统" },
-  { id: "darksky", labelEn: "Dark Sky", labelZh: "暗夜保护" },
-  { id: "resources", labelEn: "Resources", labelZh: "资源" },
+  { id: "developer", labelEn: "Developer", labelZh: "开发者", path: "/about/developer" },
+  { id: "utilities", labelEn: "Utilities", labelZh: "工具", path: "/about/utilities" },
+  { id: "siqs", labelEn: "SIQS System", labelZh: "SIQS系统", path: "/about/siqs" },
+  { id: "darksky", labelEn: "Dark Sky", labelZh: "暗夜保护", path: "/about/darksky" },
+  { id: "resources", labelEn: "Resources", labelZh: "资源", path: "/about/resources" },
 ];
 
 const AboutNavbar = () => {
   const { t } = useLanguage();
-  const [activeSection, setActiveSection] = useState("developer");
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollPosition = window.scrollY + 150;
-      
-      for (const section of sections) {
-        const element = document.getElementById(section.id);
-        if (element) {
-          const { offsetTop, offsetHeight } = element;
-          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
-            setActiveSection(section.id);
-            break;
-          }
-        }
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const scrollToSection = (id: string) => {
-    const element = document.getElementById(id);
-    if (element) {
-      const offset = 100;
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - offset;
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: "smooth",
-      });
-    }
-  };
+  const isActive = (path: string) => location.pathname === path;
 
   return (
     <motion.nav
@@ -60,11 +30,11 @@ const AboutNavbar = () => {
           {sections.map((section) => (
             <button
               key={section.id}
-              onClick={() => scrollToSection(section.id)}
+              onClick={() => navigate(section.path)}
               className={`
                 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap
                 ${
-                  activeSection === section.id
+                  isActive(section.path)
                     ? "bg-cosmic-600 text-white"
                     : "text-cosmic-300 hover:text-white hover:bg-cosmic-800/50"
                 }

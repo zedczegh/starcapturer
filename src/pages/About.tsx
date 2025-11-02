@@ -9,16 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import NavBar from "@/components/NavBar";
 
 import AboutHeader from "@/components/about/AboutHeader";
-import PersonalIntro from "@/components/about/PersonalIntro";
-import AboutTeam from "@/components/about/AboutTeam";
-import SiqsSection from "@/components/about/SiqsSection";
-import AboutIntro from "@/components/about/AboutIntro";
-import LocationDiscoverySection from "@/components/about/LocationDiscoverySection";
-import PhotoPointsFeature from "@/components/about/PhotoPointsFeature";
-import DarkSkyKnowledge from "@/components/about/DarkSkyKnowledge";
 import AboutFooter from "@/components/about/AboutFooter";
-import ResourcesSection from "@/components/about/ResourcesSection";
-import UtilitiesSection from "@/components/about/UtilitiesSection";
 import AboutNavbar from "@/components/about/AboutNavbar";
 
 const About = () => {
@@ -111,78 +102,100 @@ const About = () => {
         {/* Navigation Bar */}
         <AboutNavbar />
         
-        <div className="space-y-12">
-          {/* About the Developer */}
-          <section id="developer" className="space-y-6">
-            <motion.h2 
-              className="text-3xl font-bold text-cosmic-50 border-b border-cosmic-700 pb-3"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              {t("About the Developer", "关于开发者")}
-            </motion.h2>
-            <PersonalIntro />
-          </section>
+        {/* Overview Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            onClick={() => window.location.href = '/about/developer'}
+            className="cursor-pointer group"
+          >
+            <div className="p-6 bg-cosmic-900/50 border border-cosmic-700 rounded-lg hover:border-cosmic-500 transition-all">
+              <h3 className="text-xl font-bold text-cosmic-50 mb-2 group-hover:text-cosmic-200">
+                {t("About the Developer", "关于开发者")}
+              </h3>
+              <p className="text-cosmic-300 text-sm">
+                {t("Meet the researcher behind SIQS and explore academic publications", 
+                   "了解SIQS背后的研究者并探索学术出版物")}
+              </p>
+            </div>
+          </motion.div>
 
-          {/* About Utilities */}
-          <section id="utilities" className="space-y-6">
-            <motion.h2 
-              className="text-3xl font-bold text-cosmic-50 border-b border-cosmic-700 pb-3"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              {t("About Utilities", "关于工具")}
-            </motion.h2>
-            <UtilitiesSection />
-          </section>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            onClick={() => window.location.href = '/about/utilities'}
+            className="cursor-pointer group"
+          >
+            <div className="p-6 bg-cosmic-900/50 border border-cosmic-700 rounded-lg hover:border-cosmic-500 transition-all">
+              <h3 className="text-xl font-bold text-cosmic-50 mb-2 group-hover:text-cosmic-200">
+                {t("Computational Utilities", "计算工具")}
+              </h3>
+              <p className="text-cosmic-300 text-sm">
+                {t("Explore advanced astrophotography processing tools and utilities", 
+                   "探索先进的天文摄影处理工具和实用程序")}
+              </p>
+            </div>
+          </motion.div>
 
-          {/* About SIQS */}
-          <section id="siqs" className="space-y-6">
-            <motion.h2 
-              className="text-3xl font-bold text-cosmic-50 border-b border-cosmic-700 pb-3"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              {t("About SIQS System", "关于SIQS系统")}
-            </motion.h2>
-            <SiqsSection />
-            <AboutIntro />
-            <PhotoPointsFeature />
-            <AboutTeam />
-          </section>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            onClick={() => window.location.href = '/about/siqs'}
+            className="cursor-pointer group"
+          >
+            <div className="p-6 bg-cosmic-900/50 border border-cosmic-700 rounded-lg hover:border-cosmic-500 transition-all">
+              <h3 className="text-xl font-bold text-cosmic-50 mb-2 group-hover:text-cosmic-200">
+                {t("SIQS System", "SIQS系统")}
+              </h3>
+              <p className="text-cosmic-300 text-sm">
+                {t("Learn about the Stellar Imaging Quality Score system and methodology", 
+                   "了解恒星成像质量评分系统和方法论")}
+              </p>
+            </div>
+          </motion.div>
 
-          {/* About Dark Sky */}
-          <section id="darksky" className="space-y-6">
-            <motion.h2 
-              className="text-3xl font-bold text-cosmic-50 border-b border-cosmic-700 pb-3"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-            >
-              {t("About Dark Sky Preservation", "关于暗夜保护")}
-            </motion.h2>
-            <DarkSkyKnowledge />
-            <LocationDiscoverySection />
-          </section>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            onClick={() => window.location.href = '/about/darksky'}
+            className="cursor-pointer group"
+          >
+            <div className="p-6 bg-cosmic-900/50 border border-cosmic-700 rounded-lg hover:border-cosmic-500 transition-all">
+              <h3 className="text-xl font-bold text-cosmic-50 mb-2 group-hover:text-cosmic-200">
+                {t("Dark Sky Preservation", "暗夜保护")}
+              </h3>
+              <p className="text-cosmic-300 text-sm">
+                {t("Discover the importance of protecting dark skies and preserves", 
+                   "发现保护暗夜和保护区的重要性")}
+              </p>
+            </div>
+          </motion.div>
 
-          {/* Resources */}
-          <section id="resources" className="space-y-6">
-            <motion.h2 
-              className="text-3xl font-bold text-cosmic-50 border-b border-cosmic-700 pb-3"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-            >
-              {t("Resources", "资源")}
-            </motion.h2>
-            <ResourcesSection />
-          </section>
-
-          <AboutFooter />
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            onClick={() => window.location.href = '/about/resources'}
+            className="cursor-pointer group"
+          >
+            <div className="p-6 bg-cosmic-900/50 border border-cosmic-700 rounded-lg hover:border-cosmic-500 transition-all">
+              <h3 className="text-xl font-bold text-cosmic-50 mb-2 group-hover:text-cosmic-200">
+                {t("Resources", "资源")}
+              </h3>
+              <p className="text-cosmic-300 text-sm">
+                {t("Access additional resources and community links", 
+                   "访问其他资源和社区链接")}
+              </p>
+            </div>
+          </motion.div>
         </div>
+
+        <AboutFooter />
       </div>
     </div>
   );

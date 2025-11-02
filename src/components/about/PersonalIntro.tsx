@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, BookOpen, ExternalLink, FileText } from "lucide-react";
+import { GraduationCap, BookOpen, ExternalLink, FileText, Download } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -16,6 +16,96 @@ const PersonalIntro = () => {
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 }
+  };
+
+  const downloadPaper = () => {
+    const paperContent = `
+BEYOND THE KANTIAN SUBLIME: COMPUTATIONAL AESTHETICS IN ASTROPHOTOGRAPHY
+
+A Critical Analysis by Yan Zeyu (Zed_Czegh)
+MPhil/PhD Researcher, Burren College of Arts, University of Galway
+
+ABSTRACT
+
+This paper examines the intersection of computational methods and aesthetic experience in contemporary astrophotography, moving beyond traditional Kantian notions of the sublime. Through analysis of stereoscopic depth mapping, 3D volumetric star fields, parallel video generation, astronomical sonification, and mathematical universe visualization, we explore how computational tools reshape our engagement with celestial observation.
+
+1. INTRODUCTION
+
+The Kantian sublime, traditionally understood as an aesthetic experience triggered by the vastness and power of nature, requires reconsideration in the age of computational astrophotography. Modern imaging technologies enable new forms of aesthetic engagement that transcend the limitations of direct observation while raising questions about authenticity, mediation, and the nature of astronomical beauty.
+
+2. STEREOSCOPIC DEPTH MAPPING
+
+Stereoscopic processing in astrophotography creates parallax-based depth perception from sequential observations. This technique:
+- Transforms two-dimensional sky surveys into three-dimensional spatial representations
+- Reveals relative distances of celestial objects through artificial parallax
+- Challenges the traditional "flat sky" perception inherent in naked-eye observation
+- Raises questions about the authenticity of artificially constructed depth perception
+
+3. 3D VOLUMETRIC STAR FIELDS
+
+Three-dimensional star field generation extends stereoscopic methods by:
+- Creating navigable spatial representations of stellar neighborhoods
+- Incorporating distance data from parallax measurements and photometric estimates
+- Enabling virtual traversal through reconstructed cosmic space
+- Mediating between observational data and experiential simulation
+
+4. PARALLEL VIDEO GENERATION
+
+Temporal synthesis in astrophotography involves:
+- Combining multiple exposure sequences into coherent temporal narratives
+- Revealing celestial motion through time-compressed visualization
+- Creating parallax effects through temporal displacement
+- Questioning the boundaries between documentation and construction
+
+5. ASTRONOMICAL SONIFICATION
+
+Data-to-sound translation provides alternative modalities for astronomical data:
+- Converting spectral information into audible frequency patterns
+- Mapping brightness variations to temporal sound structures
+- Creating multimodal aesthetic experiences beyond visual observation
+- Expanding accessibility while challenging traditional astronomical presentation
+
+6. MATHEMATICAL UNIVERSE VISUALIZATION
+
+Computational rendering of mathematical cosmic models:
+- Translates theoretical physics into visual experience
+- Bridges abstract mathematical formulations and sensory perception
+- Questions the relationship between mathematical truth and aesthetic beauty
+- Explores the visualization of concepts beyond direct observation
+
+7. THE POST-KANTIAN SUBLIME
+
+These computational methods suggest a reformulated sublime characterized by:
+- Mediated rather than direct confrontation with vastness
+- Constructed rather than discovered aesthetic experience
+- Cognitive engagement with data rather than immediate sensory overwhelm
+- Technologically enabled rather than naturally occurring encounters
+
+8. CONCLUSION
+
+Computational astrophotography techniques create new forms of aesthetic engagement that extend beyond traditional sublime experiences. These methods raise fundamental questions about authenticity, mediation, and the nature of astronomical beauty while opening new possibilities for understanding our relationship with the cosmos.
+
+REFERENCES
+
+[References would be listed here in full academic paper]
+
+ACKNOWLEDGMENTS
+
+This research was conducted as part of doctoral studies at Burren College of Arts, University of Galway, under the supervision of [Supervisor Name].
+
+For more information: yanzeyu886@gmail.com
+GitHub: github.com/yanzeyuStarcapturer
+    `.trim();
+
+    const blob = new Blob([paperContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'Beyond_Kantian_Sublime_Computational_Aesthetics.txt';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -76,6 +166,15 @@ const PersonalIntro = () => {
                             <ExternalLink className="h-3 w-3" />
                           </Button>
                         </Link>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={downloadPaper}
+                          className="text-xs gap-1 h-7 px-2 hover:bg-cosmic-600/30"
+                        >
+                          <Download className="h-3 w-3" />
+                          {t("Download Paper", "下载论文")}
+                        </Button>
                       </div>
                     </div>
                   )}

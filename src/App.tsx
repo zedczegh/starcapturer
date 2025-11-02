@@ -38,6 +38,11 @@ import StarFieldGenerator from './pages/StarFieldGenerator';
 import AstroMath from './pages/AstroMath';
 import ParallelVideoGenerator from './pages/ParallelVideoGenerator';
 import CriticalAnalysis from './pages/CriticalAnalysis';
+import DeveloperPage from './pages/about/DeveloperPage';
+import UtilitiesPage from './pages/about/UtilitiesPage';
+import SiqsPage from './pages/about/SiqsPage';
+import DarkSkyPage from './pages/about/DarkSkyPage';
+import ResourcesPage from './pages/about/ResourcesPage';
 
 const LazySpaceStationTracker = lazy(() => import('./pages/SpaceStationTracker'));
 import ErrorBoundary from './components/ErrorBoundary';
@@ -90,7 +95,12 @@ function AppContent() {
         </Suspense>
       } />
       <Route path="/about" element={<About />} />
-      <Route path="/about-siqs" element={<Navigate to="/about" replace />} />
+      <Route path="/about/developer" element={<DeveloperPage />} />
+      <Route path="/about/utilities" element={<UtilitiesPage />} />
+      <Route path="/about/siqs" element={<SiqsPage />} />
+      <Route path="/about/darksky" element={<DarkSkyPage />} />
+      <Route path="/about/resources" element={<ResourcesPage />} />
+      <Route path="/about-siqs" element={<Navigate to="/about/siqs" replace />} />
       <Route path="/location/:id" element={
         <ErrorBoundary>
           <Suspense fallback={<LoadingFallback />}>
