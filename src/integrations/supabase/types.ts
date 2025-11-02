@@ -318,6 +318,39 @@ export type Database = {
           },
         ]
       }
+      personal_uploads: {
+        Row: {
+          created_at: string
+          description: string | null
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profile_tags: {
         Row: {
           created_at: string | null
@@ -756,21 +789,28 @@ export type Database = {
           username: string
         }[]
       }
-      get_spot_type_color: {
-        Args: { type_name: string }
-        Returns: string
-      }
-      has_role: {
-        Args: { required_role: string }
-        Returns: boolean
-      }
+      get_spot_type_color: { Args: { type_name: string }; Returns: string }
+      has_role: { Args: { required_role: string }; Returns: boolean }
       insert_astro_spot_reservation: {
         Args: { p_status?: string; p_timeslot_id: string; p_user_id: string }
         Returns: string
       }
-      insert_astro_spot_timeslot: {
-        Args:
-          | {
+      insert_astro_spot_timeslot:
+        | {
+            Args: {
+              p_creator_id: string
+              p_currency?: string
+              p_description?: string
+              p_end_time: string
+              p_max_capacity?: number
+              p_price?: number
+              p_spot_id: string
+              p_start_time: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
               p_creator_id: string
               p_currency?: string
               p_description?: string
@@ -781,29 +821,30 @@ export type Database = {
               p_spot_id: string
               p_start_time: string
             }
-          | {
-              p_creator_id: string
-              p_currency?: string
-              p_description?: string
-              p_end_time: string
-              p_max_capacity?: number
-              p_price?: number
-              p_spot_id: string
-              p_start_time: string
-            }
-        Returns: string
-      }
+            Returns: string
+          }
       is_username_available: {
         Args: { username_to_check: string }
         Returns: boolean
       }
-      ping_db: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      update_astro_spot_timeslot: {
-        Args:
-          | {
+      ping_db: { Args: never; Returns: boolean }
+      update_astro_spot_timeslot:
+        | {
+            Args: {
+              p_creator_id: string
+              p_currency?: string
+              p_description?: string
+              p_end_time: string
+              p_id: string
+              p_max_capacity?: number
+              p_price?: number
+              p_spot_id: string
+              p_start_time: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: {
               p_creator_id: string
               p_currency?: string
               p_description?: string
@@ -815,19 +856,8 @@ export type Database = {
               p_spot_id: string
               p_start_time: string
             }
-          | {
-              p_creator_id: string
-              p_currency?: string
-              p_description?: string
-              p_end_time: string
-              p_id: string
-              p_max_capacity?: number
-              p_price?: number
-              p_spot_id: string
-              p_start_time: string
-            }
-        Returns: boolean
-      }
+            Returns: boolean
+          }
       update_wallet_balance: {
         Args: {
           p_amount: number

@@ -19,6 +19,7 @@ import DarkSkyKnowledge from "@/components/about/DarkSkyKnowledge";
 import AboutFooter from "@/components/about/AboutFooter";
 import ResourcesSection from "@/components/about/ResourcesSection";
 import UtilitiesSection from "@/components/about/UtilitiesSection";
+import AboutNavbar from "@/components/about/AboutNavbar";
 
 const About = () => {
   const { t } = useLanguage();
@@ -106,6 +107,9 @@ const About = () => {
         
         {/* Main Page Header */}
         <AboutHeader />
+        
+        {/* Navigation */}
+        <AboutNavbar />
         
         <div className="space-y-12">
           {/* About the Developer */}

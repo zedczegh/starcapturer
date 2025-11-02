@@ -7,6 +7,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useUserRole } from "@/hooks/useUserRole";
+import PersonalUploader from "./PersonalUploader";
 
 const PersonalIntro = () => {
   const { t } = useLanguage();
@@ -146,6 +147,9 @@ const PersonalIntro = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Personal Uploader - Only visible to yanzeyucq@163.com */}
+      <PersonalUploader />
     </motion.div>
   );
 };
