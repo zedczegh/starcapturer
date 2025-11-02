@@ -37,6 +37,7 @@ import StereoscopeProcessor from './pages/StereoscopeProcessor';
 import StarFieldGenerator from './pages/StarFieldGenerator';
 import AstroMath from './pages/AstroMath';
 import ParallelVideoGenerator from './pages/ParallelVideoGenerator';
+import CriticalAnalysis from './pages/CriticalAnalysis';
 
 const LazySpaceStationTracker = lazy(() => import('./pages/SpaceStationTracker'));
 import ErrorBoundary from './components/ErrorBoundary';
@@ -120,6 +121,7 @@ function AppContent() {
       <Route path="/star-field-generator" element={<StarFieldGenerator />} />
       <Route path="/astro-math" element={<AstroMath />} />
       <Route path="/parallel-video-generator" element={<ParallelVideoGenerator />} />
+      <Route path="/critical-analysis" element={<CriticalAnalysis />} />
       <Route path="/space-tracker" element={
         <Suspense fallback={<LoadingFallback />}>
           <LazySpaceStationTracker />

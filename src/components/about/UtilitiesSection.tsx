@@ -1,11 +1,15 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Star, Sparkles, Video, Music, Calculator, TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Star, Sparkles, Video, Music, Calculator, TrendingUp, BookOpen, ExternalLink } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const UtilitiesSection = () => {
   const { t } = useLanguage();
+  const { isAdmin } = useUserRole();
   
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -14,17 +18,33 @@ const UtilitiesSection = () => {
 
   return (
     <motion.div variants={itemVariants}>
-      <Card className="bg-cosmic-900/80 border-cosmic-700/40 overflow-hidden backdrop-blur-sm">
-        <CardHeader className="pb-3 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-cosmic-700/30">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Sparkles className="text-cosmic-400" />
-            {t("Astrophotography Utilities", "天文摄影实用工具")}
-          </CardTitle>
+      <Card className="bg-cosmic-900/80 border-cosmic-700/40 overflow-hidden backdrop-blur-sm shadow-xl">
+        <CardHeader className="pb-4 bg-gradient-to-r from-cosmic-900 via-cosmic-800 to-cosmic-900 border-b border-cosmic-700/30">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-xl font-bold">
+              <Sparkles className="text-cosmic-400 h-6 w-6" />
+              {t("Computational Aesthetics & Astrophotography Utilities", "计算美学与天文摄影实用工具")}
+            </CardTitle>
+            {isAdmin && (
+              <Link to="/critical-analysis">
+                <Button variant="outline" size="sm" className="gap-2 border-cosmic-600 hover:border-cosmic-500 hover:bg-cosmic-800">
+                  <BookOpen className="h-4 w-4" />
+                  {t("Critical Analysis", "批判性分析")}
+                  <ExternalLink className="h-3 w-3" />
+                </Button>
+              </Link>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="p-6 bg-gradient-to-b from-cosmic-800/20 to-cosmic-900/20 space-y-6">
-          <p className="text-sm text-cosmic-300">
-            {t("Our suite of specialized tools helps you process, analyze, and enhance your astrophotography images. Each utility is designed to solve specific challenges in astronomical imaging.", "我们的专业工具套件帮助您处理、分析和增强天文摄影图像。每个工具都旨在解决天文成像中的特定挑战。")}
-          </p>
+          <div className="bg-gradient-to-r from-cosmic-800/50 to-cosmic-900/50 border border-cosmic-600/30 rounded-lg p-4 mb-6">
+            <p className="text-sm text-cosmic-200 font-medium mb-2">
+              {t("Beyond the Kantian Sublime: Computational Tools for Three-Dimensional Astrophotography", "超越康德式崇高：三维天文摄影的计算工具")}
+            </p>
+            <p className="text-xs text-cosmic-300 leading-relaxed">
+              {t("Our suite of specialized tools transforms two-dimensional astrophotography into experiential artistic outputs through stereoscopic depth mapping, three-dimensional star field generation, parallel video synthesis, astronomical sonification, and mathematical equation extraction. Each utility democratizes sublime astronomical experience through browser-based processing.", "我们的专业工具套件通过立体深度映射、三维星场生成、并行视频合成、天文声化和数学方程提取，将二维天文摄影转化为体验式艺术输出。每个工具都通过基于浏览器的处理来民主化崇高的天文体验。")}
+            </p>
+          </div>
 
           {/* Stereoscope Processor */}
           <div className="bg-gradient-to-br from-fuchsia-950/30 to-pink-950/30 border border-fuchsia-700/30 rounded-lg p-5">
