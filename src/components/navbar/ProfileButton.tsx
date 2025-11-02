@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu
 import { UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ProfileDropdownMenu from './ProfileDropdownMenu';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { fetchUserProfile, ensureUserProfile } from '@/utils/profileUtils';
 import { toast } from 'sonner';
 import AdminNotificationBadge from '@/components/admin/AdminNotificationBadge';
@@ -92,9 +92,12 @@ const ProfileButton = () => {
   };
 
   return (
-    <AnimatePresence>
+    <>
       {!user ? (
         <motion.div
+          key="login-button"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
@@ -112,7 +115,7 @@ const ProfileButton = () => {
           </Button>
         </motion.div>
       ) : (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" key="profile-menu">
           <AdminNotificationBadge />
           <DropdownMenu modal>
             <DropdownMenuTrigger asChild>
@@ -158,7 +161,7 @@ const ProfileButton = () => {
         open={showAuthDialog}
         onOpenChange={setShowAuthDialog}
       />
-    </AnimatePresence>
+    </>
   );
 };
 

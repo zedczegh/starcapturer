@@ -271,25 +271,23 @@ const Profile = () => {
   const displayUsername = profile?.username || t("Stargazer", "星空观察者");
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900 flex flex-col">
+    <div className="min-h-screen bg-cosmic-950 flex flex-col">
       <NavBar />
-      <main className="flex-grow">
-        <ProfileMain
-          displayUsername={displayUsername}
-          avatarUrl={avatarUrl}
-          onAvatarChange={handleAvatarChange}
-          onRemoveAvatar={removeAvatar}
-          uploadingAvatar={uploadingAvatar}
-          astronomyTip={randomTip}
-          register={register}
-          saving={saving}
-          handleSubmit={handleSubmit}
-          onSubmit={onSubmit}
-          tags={tags}
-          setTags={setTags}
-          bio={profile?.bio}
-        />
-      </main>
+      <ProfileMain
+        displayUsername={displayUsername}
+        avatarUrl={avatarUrl}
+        onAvatarChange={handleAvatarChange}
+        onRemoveAvatar={removeAvatar}
+        uploadingAvatar={uploadingAvatar}
+        astronomyTip={randomTip}
+        register={register}
+        saving={saving}
+        handleSubmit={handleSubmit}
+        onSubmit={onSubmit}
+        tags={tags}
+        setTags={setTags}
+        bio={profile?.bio}
+      />
       <AboutFooter />
     </div>
   );

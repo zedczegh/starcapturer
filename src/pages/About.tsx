@@ -104,95 +104,100 @@ const About = () => {
         
         {/* Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            onClick={() => window.location.href = '/about/developer'}
-            className="cursor-pointer group"
-          >
-            <div className="p-6 bg-cosmic-900/50 border border-cosmic-700 rounded-lg hover:border-cosmic-500 transition-all">
-              <h3 className="text-xl font-bold text-cosmic-50 mb-2 group-hover:text-cosmic-200">
-                {t("About the Developer", "关于开发者")}
-              </h3>
-              <p className="text-cosmic-300 text-sm">
-                {t("Meet the researcher behind SIQS and explore academic publications", 
-                   "了解SIQS背后的研究者并探索学术出版物")}
-              </p>
-            </div>
-          </motion.div>
+          <Link to="/about/developer">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="cursor-pointer group"
+            >
+              <div className="p-6 bg-cosmic-900/50 border border-cosmic-700 rounded-lg hover:border-cosmic-500 transition-all">
+                <h3 className="text-xl font-bold text-cosmic-50 mb-2 group-hover:text-cosmic-200">
+                  {t("About the Developer", "关于开发者")}
+                </h3>
+                <p className="text-cosmic-300 text-sm">
+                  {t("Meet the researcher behind SIQS and explore academic publications", 
+                     "了解SIQS背后的研究者并探索学术出版物")}
+                </p>
+              </div>
+            </motion.div>
+          </Link>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            onClick={() => window.location.href = '/about/utilities'}
-            className="cursor-pointer group"
-          >
-            <div className="p-6 bg-cosmic-900/50 border border-cosmic-700 rounded-lg hover:border-cosmic-500 transition-all">
-              <h3 className="text-xl font-bold text-cosmic-50 mb-2 group-hover:text-cosmic-200">
-                {t("Computational Utilities", "计算工具")}
-              </h3>
-              <p className="text-cosmic-300 text-sm">
-                {t("Explore advanced astrophotography processing tools and utilities", 
-                   "探索先进的天文摄影处理工具和实用程序")}
-              </p>
-            </div>
-          </motion.div>
+          <Link to="/about/utilities">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="cursor-pointer group"
+            >
+              <div className="p-6 bg-cosmic-900/50 border border-cosmic-700 rounded-lg hover:border-cosmic-500 transition-all">
+                <h3 className="text-xl font-bold text-cosmic-50 mb-2 group-hover:text-cosmic-200">
+                  {t("Computational Utilities", "计算工具")}
+                </h3>
+                <p className="text-cosmic-300 text-sm">
+                  {t("Explore advanced astrophotography processing tools and utilities", 
+                     "探索先进的天文摄影处理工具和实用程序")}
+                </p>
+              </div>
+            </motion.div>
+          </Link>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            onClick={() => window.location.href = '/about/siqs'}
-            className="cursor-pointer group"
-          >
-            <div className="p-6 bg-cosmic-900/50 border border-cosmic-700 rounded-lg hover:border-cosmic-500 transition-all">
-              <h3 className="text-xl font-bold text-cosmic-50 mb-2 group-hover:text-cosmic-200">
-                {t("SIQS System", "SIQS系统")}
-              </h3>
-              <p className="text-cosmic-300 text-sm">
-                {t("Learn about the Stellar Imaging Quality Score system and methodology", 
-                   "了解恒星成像质量评分系统和方法论")}
-              </p>
-            </div>
-          </motion.div>
+          <Link to="/about/siqs">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="cursor-pointer group"
+            >
+              <div className="p-6 bg-cosmic-900/50 border border-cosmic-700 rounded-lg hover:border-cosmic-500 transition-all">
+                <h3 className="text-xl font-bold text-cosmic-50 mb-2 group-hover:text-cosmic-200">
+                  {t("SIQS System", "SIQS系统")}
+                </h3>
+                <p className="text-cosmic-300 text-sm">
+                  {t("Learn about the Stellar Imaging Quality Score system and methodology", 
+                     "了解恒星成像质量评分系统和方法论")}
+                </p>
+              </div>
+            </motion.div>
+          </Link>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            onClick={() => window.location.href = '/about/darksky'}
-            className="cursor-pointer group"
-          >
-            <div className="p-6 bg-cosmic-900/50 border border-cosmic-700 rounded-lg hover:border-cosmic-500 transition-all">
-              <h3 className="text-xl font-bold text-cosmic-50 mb-2 group-hover:text-cosmic-200">
-                {t("Dark Sky Preservation", "暗夜保护")}
-              </h3>
-              <p className="text-cosmic-300 text-sm">
-                {t("Discover the importance of protecting dark skies and preserves", 
-                   "发现保护暗夜和保护区的重要性")}
-              </p>
-            </div>
-          </motion.div>
+          <Link to="/about/darksky">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="cursor-pointer group"
+            >
+              <div className="p-6 bg-cosmic-900/50 border border-cosmic-700 rounded-lg hover:border-cosmic-500 transition-all">
+                <h3 className="text-xl font-bold text-cosmic-50 mb-2 group-hover:text-cosmic-200">
+                  {t("Dark Sky Preservation", "暗夜保护")}
+                </h3>
+                <p className="text-cosmic-300 text-sm">
+                  {t("Discover the importance of protecting dark skies and preserves", 
+                     "发现保护暗夜和保护区的重要性")}
+                </p>
+              </div>
+            </motion.div>
+          </Link>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            onClick={() => window.location.href = '/about/resources'}
-            className="cursor-pointer group"
-          >
-            <div className="p-6 bg-cosmic-900/50 border border-cosmic-700 rounded-lg hover:border-cosmic-500 transition-all">
-              <h3 className="text-xl font-bold text-cosmic-50 mb-2 group-hover:text-cosmic-200">
-                {t("Resources", "资源")}
-              </h3>
-              <p className="text-cosmic-300 text-sm">
-                {t("Access additional resources and community links", 
-                   "访问其他资源和社区链接")}
-              </p>
-            </div>
-          </motion.div>
+          <Link to="/about/resources">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="cursor-pointer group"
+            >
+              <div className="p-6 bg-cosmic-900/50 border border-cosmic-700 rounded-lg hover:border-cosmic-500 transition-all">
+                <h3 className="text-xl font-bold text-cosmic-50 mb-2 group-hover:text-cosmic-200">
+                  {t("Resources", "资源")}
+                </h3>
+                <p className="text-cosmic-300 text-sm">
+                  {t("Access additional resources and community links", 
+                     "访问其他资源和社区链接")}
+                </p>
+              </div>
+            </motion.div>
+          </Link>
         </div>
 
         <AboutFooter />
