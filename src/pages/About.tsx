@@ -9,6 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import NavBar from "@/components/NavBar";
 
 import AboutHeader from "@/components/about/AboutHeader";
+import PersonalIntro from "@/components/about/PersonalIntro";
 import AboutTeam from "@/components/about/AboutTeam";
 import SiqsSection from "@/components/about/SiqsSection";
 import AboutIntro from "@/components/about/AboutIntro";
@@ -108,11 +109,12 @@ const About = () => {
         
         <div className="space-y-6">
           {/* Main sections ordered by significance */}
-          <AboutIntro />
+          <PersonalIntro />
+          <UtilitiesSection />
           <SiqsSection />
+          <AboutIntro />
           <PhotoPointsFeature />
           <LocationDiscoverySection />
-          <UtilitiesSection />
           <DarkSkyKnowledge />
           <AboutTeam />
           <ResourcesSection />
