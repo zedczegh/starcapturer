@@ -1,11 +1,13 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import SpotDetails from '@/components/astro-spots/profile/SpotDetails';
 import TimeSlotManager from '@/components/bookings/TimeSlotManager';
 import HostBookingsManager from '@/components/bookings/HostBookingsManager';
 import SpotImageGallery from '@/components/astro-spots/profile/SpotImageGallery';
 import SpotComments from '@/components/astro-spots/profile/SpotComments';
 import SpotAbstractDisplay from '@/components/astro-spots/profile/SpotAbstractDisplay';
+import LiveStreamManager from '@/components/astro-spots/profile/LiveStreamManager';
+import LiveStreamViewer from '@/components/astro-spots/profile/LiveStreamViewer';
 import { Comment } from '../types/comments';
 
 interface ProfileSectionsManagerProps {
@@ -40,6 +42,12 @@ const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({
   onCommentDelete
 }) => {
   console.log(`ProfileSectionsManager received ${comments.length} comments`);
+  const [streamRefreshKey, setStreamRefreshKey] = useState(0);
+  
+  const handleStreamUpdate = () => {
+    setStreamRefreshKey(prev => prev + 1);
+    onImagesUpdate(); // Refresh the entire spot data
+  };
   
   return (
     <div className="p-6 space-y-6">
@@ -56,6 +64,22 @@ const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({
         types={spot.astro_spot_types}
         advantages={spot.astro_spot_advantages}
       />
+      
+      {/* Live Camera Stream Section */}
+      {isCreator ? (
+        <LiveStreamManager
+          spotId={spotId}
+          currentStreamUrl={spot.camera_stream_url}
+          onUpdate={handleStreamUpdate}
+        />
+      ) : (
+        spot.camera_stream_url && (
+          <LiveStreamViewer
+            streamUrl={spot.camera_stream_url}
+            spotName={spot.name}
+          />
+        )
+      )}
       
       <div className="space-y-4">
         <TimeSlotManager 

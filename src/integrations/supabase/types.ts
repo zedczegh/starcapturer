@@ -539,6 +539,7 @@ export type Database = {
       user_astro_spots: {
         Row: {
           bortlescale: number | null
+          camera_stream_url: string | null
           created_at: string
           default_price: number | null
           description: string | null
@@ -553,6 +554,7 @@ export type Database = {
         }
         Insert: {
           bortlescale?: number | null
+          camera_stream_url?: string | null
           created_at?: string
           default_price?: number | null
           description?: string | null
@@ -567,6 +569,7 @@ export type Database = {
         }
         Update: {
           bortlescale?: number | null
+          camera_stream_url?: string | null
           created_at?: string
           default_price?: number | null
           description?: string | null
