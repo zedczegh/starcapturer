@@ -31,14 +31,24 @@ const PersonalUploader = () => {
   const [postCategory, setPostCategory] = useState<Category>('writings');
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const initializeUploader = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
+      
       if (session?.user?.email === "yanzeyucq@163.com") {
-        loadFiles();
+        await loadFiles();
       } else {
         setLoading(false);
       }
-    });
+    };
+
+    initializeUploader();
+  }, []);
+
+  useEffect(() => {
+    if (user?.email === "yanzeyucq@163.com") {
+      loadFiles();
+    }
   }, [selectedCategory]);
 
   const loadFiles = async () => {
