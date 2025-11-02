@@ -84,7 +84,7 @@ const About = () => {
 
       <div className="container max-w-4xl mx-auto px-5 py-8 md:py-10 relative z-10 pt-20">
         {/* Header with back button */}
-        <div className="flex items-center mb-6">
+        <div className="flex items-center mb-2">
           <Link to="/">
             <Button variant="ghost" size="sm" className="mr-2 text-cosmic-200 hover:text-cosmic-50 hover:bg-cosmic-800/50">
               <ArrowLeft className="h-4 w-4 mr-1.5" />
@@ -108,7 +108,7 @@ const About = () => {
         {/* Main Page Header */}
         <AboutHeader />
         
-        {/* Navigation */}
+        {/* Navigation Bar */}
         <AboutNavbar />
         
         <div className="space-y-12">
