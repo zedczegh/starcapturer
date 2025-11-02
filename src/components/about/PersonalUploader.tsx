@@ -327,7 +327,7 @@ const PersonalUploader = () => {
           </div>
         </div>
 
-        {/* Posts Feed */}
+        {/* Posts Feed - 3x3 Grid Layout */}
         {loading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-cosmic-400" />
@@ -338,93 +338,81 @@ const PersonalUploader = () => {
             <p className="text-sm mt-2">Share your first {selectedCategory === 'all' ? 'post' : selectedCategory.replace('_', ' ')}!</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <AnimatePresence>
               {files.map((file) => (
                 <motion.div
                   key={file.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="bg-cosmic-800/30 rounded-lg border border-cosmic-700 overflow-hidden"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="bg-cosmic-800/30 rounded-lg border border-cosmic-700 overflow-hidden hover:border-cosmic-600 transition-all group"
                 >
-                  {/* Post Header */}
-                  <div className="p-4 border-b border-cosmic-700">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/30 to-purple-500/30 flex items-center justify-center text-blue-300">
-                          ZC
-                        </div>
-                        <div>
-                          <p className="text-cosmic-50 font-medium text-sm">Yan Zeyu</p>
-                          <div className="flex items-center gap-2">
-                            <p className="text-xs text-cosmic-400">
-                              {new Date(file.created_at).toLocaleDateString('en-US', { 
-                                month: 'short', 
-                                day: 'numeric',
-                                year: 'numeric'
-                              })}
-                            </p>
-                            <span className={`text-xs font-medium ${getCategoryColor(file.category)}`}>
-                              {getCategoryLabel(file.category)}
-                            </span>
-                          </div>
+                  {/* Image or File Preview */}
+                  <div className="relative aspect-square bg-cosmic-950">
+                    {file.file_type.startsWith("image/") ? (
+                      <img 
+                        src={getFileUrl(file.file_path)} 
+                        alt={file.file_name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-3 p-4">
+                        {getFileIcon(file.file_type, file.file_name)}
+                        <div className="text-center">
+                          <p className="text-cosmic-50 font-medium text-sm line-clamp-2">
+                            {file.file_name}
+                          </p>
+                          <p className="text-xs text-cosmic-500 mt-1">
+                            {formatFileSize(file.file_size)}
+                          </p>
                         </div>
                       </div>
+                    )}
+                    
+                    {/* Overlay with actions */}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.open(getFileUrl(file.file_path), "_blank")}
+                        className="bg-cosmic-700/80 hover:bg-cosmic-600 text-white"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDelete(file.id, file.file_path)}
-                        className="text-red-400 hover:text-red-300"
+                        className="bg-red-500/80 hover:bg-red-600 text-white"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
 
-                  {/* Post Content */}
-                  <div>
-                    {file.description && (
-                      <div className="p-4">
-                        <p className="text-cosmic-200 text-sm">{file.description}</p>
+                  {/* Post Info */}
+                  <div className="p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500/30 to-purple-500/30 flex items-center justify-center text-xs text-blue-300">
+                        ZC
                       </div>
+                      <span className={`text-xs font-medium ${getCategoryColor(file.category)}`}>
+                        {getCategoryLabel(file.category)}
+                      </span>
+                    </div>
+                    
+                    {file.description && (
+                      <p className="text-cosmic-300 text-xs line-clamp-2 mb-2">{file.description}</p>
                     )}
                     
-                    {/* Image Display */}
-                    {file.file_type.startsWith("image/") ? (
-                      <div className="relative">
-                        <img 
-                          src={getFileUrl(file.file_path)} 
-                          alt={file.file_name}
-                          className="w-full max-h-[600px] object-contain bg-cosmic-950"
-                        />
-                      </div>
-                    ) : (
-                      /* File Attachment Card */
-                      <div className="p-4">
-                        <div className="flex items-center gap-3 p-3 bg-cosmic-800 rounded border border-cosmic-700">
-                          <div>
-                            {getFileIcon(file.file_type, file.file_name)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-cosmic-50 font-medium text-sm truncate">
-                              {file.file_name}
-                            </p>
-                            <p className="text-xs text-cosmic-500">
-                              {formatFileSize(file.file_size)}
-                            </p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => window.open(getFileUrl(file.file_path), "_blank")}
-                            className="text-cosmic-300 hover:text-cosmic-50"
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
+                    <p className="text-xs text-cosmic-500">
+                      {new Date(file.created_at).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </p>
                   </div>
                 </motion.div>
               ))}

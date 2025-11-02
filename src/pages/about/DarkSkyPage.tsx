@@ -4,6 +4,7 @@ import NavBar from "@/components/NavBar";
 import AboutNavbar from "@/components/about/AboutNavbar";
 import DarkSkyKnowledge from "@/components/about/DarkSkyKnowledge";
 import LocationDiscoverySection from "@/components/about/LocationDiscoverySection";
+import BortleNowHeader from "@/components/bortleNow/BortleNowHeader";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -69,6 +70,13 @@ const DarkSkyPage = () => {
         <AboutNavbar />
 
         <section id="darksky" className="mt-8 space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <BortleNowHeader />
+          </motion.div>
           <DarkSkyKnowledge />
           <LocationDiscoverySection />
         </section>
