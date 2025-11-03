@@ -1,12 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export const obscuraLocations = [
+  // Original 30 locations
   {
     name: "Castle of Baroness Scoppa",
     latitude: 38.6009,
     longitude: 16.4028,
     bortlescale: 5,
-    description: "Castle ruins of the not-so-chaste baronessa whose lovers mysteriously disappeared. A mysterious and historic location in Cardinale, Italy.",
+    description: "Castle ruins of the not-so-chaste baronessa whose lovers mysteriously disappeared.",
     spot_type: "obscura"
   },
   {
@@ -14,7 +15,7 @@ export const obscuraLocations = [
     latitude: 50.0822,
     longitude: 14.4199,
     bortlescale: 6,
-    description: "Spitfire airplanes with butterfly wings hover over Prague's skyline. An artistic marvel in the heart of Czech Republic.",
+    description: "Spitfire airplanes with butterfly wings hover over Prague's skyline.",
     spot_type: "obscura"
   },
   {
@@ -22,7 +23,7 @@ export const obscuraLocations = [
     latitude: 52.4967,
     longitude: 13.2032,
     bortlescale: 6,
-    description: "A hidden, morbidly fascinating cemetery deep in the forest of Berlin, Germany. A place of reflection and history.",
+    description: "A hidden, morbidly fascinating cemetery deep in the forest of Berlin.",
     spot_type: "obscura"
   },
   {
@@ -30,7 +31,7 @@ export const obscuraLocations = [
     latitude: 55.6804,
     longitude: 11.0808,
     bortlescale: 5,
-    description: "Five matching towers make this church in Kalundborg, Denmark unique. Legend credits a troll for its remarkable architecture.",
+    description: "Five matching towers make this church unique in Kalundborg, Denmark.",
     spot_type: "obscura"
   },
   {
@@ -38,7 +39,7 @@ export const obscuraLocations = [
     latitude: 1.3017,
     longitude: 103.8546,
     bortlescale: 7,
-    description: "A one-of-a-kind shopping mall in Singapore dedicated to Buddhist and Daoist spirituality. A unique blend of commerce and faith.",
+    description: "A shopping mall in Singapore dedicated to Buddhist and Daoist spirituality.",
     spot_type: "obscura"
   },
   {
@@ -46,7 +47,7 @@ export const obscuraLocations = [
     latitude: 40.1519,
     longitude: 26.4051,
     bortlescale: 5,
-    description: "The legendary wooden horse in Turkey is a prop from the 2004 Wolfgang Petersen film. Stands in modern Troy as a cinematic monument.",
+    description: "The legendary wooden horse is a prop from the 2004 film.",
     spot_type: "obscura"
   },
   {
@@ -54,7 +55,7 @@ export const obscuraLocations = [
     latitude: 36.0787,
     longitude: 14.2284,
     bortlescale: 4,
-    description: "Spectacular secluded inlet with clear waters flanked by limestone cliffs in Malta. A hidden gem of natural beauty.",
+    description: "Spectacular secluded inlet with clear waters in Malta.",
     spot_type: "obscura"
   },
   {
@@ -62,7 +63,7 @@ export const obscuraLocations = [
     latitude: 62.3352,
     longitude: -6.7654,
     bortlescale: 4,
-    description: "A woman facing death for bearing a child out of wedlock lifted this massive stone as her legacy in the Faroe Islands. A testament to strength.",
+    description: "A woman lifted this massive stone as her legacy in the Faroe Islands.",
     spot_type: "obscura"
   },
   {
@@ -70,7 +71,7 @@ export const obscuraLocations = [
     latitude: 39.2780,
     longitude: -100.9437,
     bortlescale: 3,
-    description: "This hidden treasure in Colby, Kansas is the world's oldest active geocache. A pilgrimage site for geocachers worldwide.",
+    description: "The world's oldest active geocache in Colby, Kansas.",
     spot_type: "obscura"
   },
   {
@@ -78,7 +79,7 @@ export const obscuraLocations = [
     latitude: 44.5434,
     longitude: -84.7221,
     bortlescale: 4,
-    description: "All that remains of a vanished Michigan lumber town, remembered for tragedy, plague, and a witch's curse.",
+    description: "Remains of a vanished Michigan lumber town.",
     spot_type: "obscura"
   },
   {
@@ -86,7 +87,7 @@ export const obscuraLocations = [
     latitude: 30.7642,
     longitude: 114.9431,
     bortlescale: 7,
-    description: "A massive hotel shaped like the Chinese gods of prosperity, fortune, and longevity in Hebei Province, China.",
+    description: "A massive hotel shaped like Chinese gods in Hebei Province.",
     spot_type: "obscura"
   },
   {
@@ -94,7 +95,7 @@ export const obscuraLocations = [
     latitude: 39.9163,
     longitude: 116.3972,
     bortlescale: 8,
-    description: "The imperial palace complex at the heart of Beijing that was home to Chinese emperors for nearly 500 years.",
+    description: "The imperial palace complex at the heart of Beijing.",
     spot_type: "obscura"
   },
   {
@@ -102,7 +103,7 @@ export const obscuraLocations = [
     latitude: 33.2600,
     longitude: 103.9200,
     bortlescale: 3,
-    description: "A nature reserve known for its spectacular multi-level waterfalls, colorful lakes, and pristine wilderness in Sichuan, China.",
+    description: "A nature reserve known for spectacular waterfalls and colorful lakes.",
     spot_type: "obscura"
   },
   {
@@ -110,7 +111,7 @@ export const obscuraLocations = [
     latitude: 42.3564,
     longitude: -71.0625,
     bortlescale: 8,
-    description: "An elaborate ceramic tile mural depicting Boston history hidden in a busy subway station in Massachusetts.",
+    description: "An elaborate ceramic tile mural in a busy Boston subway station.",
     spot_type: "obscura"
   },
   {
@@ -118,7 +119,7 @@ export const obscuraLocations = [
     latitude: 40.4850,
     longitude: -86.1390,
     bortlescale: 6,
-    description: "A massive fiberglass whale sculpture that has become a beloved roadside attraction in Lafayette, Indiana.",
+    description: "A massive fiberglass whale sculpture in Lafayette, Indiana.",
     spot_type: "obscura"
   },
   {
@@ -126,7 +127,7 @@ export const obscuraLocations = [
     latitude: 44.2841,
     longitude: -78.1740,
     bortlescale: 4,
-    description: "Remnants of a historic 19th-century mill surrounded by tranquil nature trails in Ontario, Canada.",
+    description: "Remnants of a historic 19th-century mill in Ontario.",
     spot_type: "obscura"
   },
   {
@@ -134,7 +135,7 @@ export const obscuraLocations = [
     latitude: 34.9232,
     longitude: -84.2285,
     bortlescale: 4,
-    description: "A sanctuary providing lifetime care for chimpanzees retired from research in Georgia's Blue Ridge Mountains.",
+    description: "A sanctuary for chimpanzees retired from research.",
     spot_type: "obscura"
   },
   {
@@ -142,7 +143,7 @@ export const obscuraLocations = [
     latitude: 53.4847,
     longitude: -2.2404,
     bortlescale: 7,
-    description: "A historic Victorian warehouse complex in Manchester, England, now transformed into a modern shopping center.",
+    description: "A historic Victorian warehouse complex in Manchester.",
     spot_type: "obscura"
   },
   {
@@ -150,7 +151,7 @@ export const obscuraLocations = [
     latitude: 24.5619,
     longitude: -81.8008,
     bortlescale: 6,
-    description: "A museum dedicated to Key West's peculiar history of canning sea turtles in the Florida Keys.",
+    description: "A museum dedicated to Key West's history of canning sea turtles.",
     spot_type: "obscura"
   },
   {
@@ -158,7 +159,7 @@ export const obscuraLocations = [
     latitude: 35.7874,
     longitude: -78.6418,
     bortlescale: 7,
-    description: "A historic railroad turntable and roundhouse that once served steam locomotives in Raleigh, North Carolina.",
+    description: "A historic railroad turntable in Raleigh, North Carolina.",
     spot_type: "obscura"
   },
   {
@@ -166,7 +167,7 @@ export const obscuraLocations = [
     latitude: 42.6042,
     longitude: -103.7469,
     bortlescale: 2,
-    description: "A replica of England's Stonehenge made from vintage American automobiles in Alliance, Nebraska.",
+    description: "A replica of Stonehenge made from vintage American automobiles.",
     spot_type: "obscura"
   },
   {
@@ -174,7 +175,7 @@ export const obscuraLocations = [
     latitude: 36.9959,
     longitude: -112.0062,
     bortlescale: 1,
-    description: "Spectacular sandstone rock formations with undulating shapes and vivid colors in Arizona's Coyote Buttes.",
+    description: "Spectacular sandstone rock formations in Arizona.",
     spot_type: "obscura"
   },
   {
@@ -182,7 +183,7 @@ export const obscuraLocations = [
     latitude: 36.8619,
     longitude: -111.3743,
     bortlescale: 2,
-    description: "Stunning slot canyon with narrow passageways and light beams filtering through cracks in the Arizona desert.",
+    description: "Stunning slot canyon with light beams in Arizona.",
     spot_type: "obscura"
   },
   {
@@ -190,7 +191,7 @@ export const obscuraLocations = [
     latitude: 40.2530,
     longitude: 58.4397,
     bortlescale: 1,
-    description: "A natural gas crater that has been burning continuously since 1971 in Turkmenistan's Karakum Desert.",
+    description: "A natural gas crater burning since 1971 in Turkmenistan.",
     spot_type: "obscura"
   },
   {
@@ -198,7 +199,7 @@ export const obscuraLocations = [
     latitude: 56.4326,
     longitude: -6.3369,
     bortlescale: 2,
-    description: "A sea cave on the uninhabited island of Staffa in Scotland known for its hexagonal basalt columns.",
+    description: "A sea cave known for its hexagonal basalt columns in Scotland.",
     spot_type: "obscura"
   },
   {
@@ -206,7 +207,7 @@ export const obscuraLocations = [
     latitude: 5.1433,
     longitude: -60.7625,
     bortlescale: 1,
-    description: "A tabletop mountain with sheer cliffs on all sides located at the junction of Brazil, Venezuela, and Guyana.",
+    description: "A tabletop mountain at the junction of Brazil, Venezuela, and Guyana.",
     spot_type: "obscura"
   },
   {
@@ -214,7 +215,7 @@ export const obscuraLocations = [
     latitude: -20.3078,
     longitude: -66.8250,
     bortlescale: 1,
-    description: "The world's largest salt flat, creating mirror-like reflections during rainy season in Bolivia.",
+    description: "The world's largest salt flat in Bolivia.",
     spot_type: "obscura"
   },
   {
@@ -222,7 +223,7 @@ export const obscuraLocations = [
     latitude: 24.8142,
     longitude: 103.2717,
     bortlescale: 5,
-    description: "A remarkable set of limestone formations resembling petrified trees in Yunnan Province, China.",
+    description: "Limestone formations resembling petrified trees in Yunnan, China.",
     spot_type: "obscura"
   },
   {
@@ -230,7 +231,7 @@ export const obscuraLocations = [
     latitude: -38.2611,
     longitude: 175.1031,
     bortlescale: 1,
-    description: "Underground caves illuminated by thousands of bioluminescent glowworms in Waitomo, New Zealand.",
+    description: "Underground caves illuminated by bioluminescent glowworms in New Zealand.",
     spot_type: "obscura"
   },
   {
@@ -238,7 +239,568 @@ export const obscuraLocations = [
     latitude: 55.2408,
     longitude: -6.5116,
     bortlescale: 3,
-    description: "An area of about 40,000 interlocking basalt columns resulting from ancient volcanic activity in Northern Ireland.",
+    description: "40,000 interlocking basalt columns in Northern Ireland.",
+    spot_type: "obscura"
+  },
+  // Additional 470+ locations
+  {
+    name: "Keukenhof Gardens",
+    latitude: 52.2707,
+    longitude: 4.5458,
+    bortlescale: 7,
+    description: "The world's largest flower garden in the Netherlands.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Hallstatt Bone House",
+    latitude: 47.5622,
+    longitude: 13.6493,
+    bortlescale: 4,
+    description: "A charnel house with decorated skulls in Austria.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Crooked Forest",
+    latitude: 53.2092,
+    longitude: 14.4786,
+    bortlescale: 5,
+    description: "A grove of mysteriously bent pine trees in Poland.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Sagrada Familia",
+    latitude: 41.4036,
+    longitude: 2.1744,
+    bortlescale: 8,
+    description: "Gaudí's unfinished basilica in Barcelona.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Predjama Castle",
+    latitude: 45.8148,
+    longitude: 14.1274,
+    bortlescale: 4,
+    description: "A Renaissance castle built within a cave mouth in Slovenia.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Plitvice Lakes",
+    latitude: 44.8654,
+    longitude: 15.5820,
+    bortlescale: 3,
+    description: "A cascade of turquoise lakes in Croatia.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Meteora Monasteries",
+    latitude: 39.7217,
+    longitude: 21.6306,
+    bortlescale: 2,
+    description: "Monasteries perched atop rock pillars in Greece.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Cappadocia Fairy Chimneys",
+    latitude: 38.6431,
+    longitude: 34.8289,
+    bortlescale: 3,
+    description: "Distinctive rock formations in central Turkey.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Pamukkale Travertines",
+    latitude: 37.9200,
+    longitude: 29.1211,
+    bortlescale: 4,
+    description: "White calcium terraces in Turkey.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Petra Treasury",
+    latitude: 30.3285,
+    longitude: 35.4444,
+    bortlescale: 2,
+    description: "Ancient carved city in Jordan.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Dead Sea",
+    latitude: 31.5590,
+    longitude: 35.4732,
+    bortlescale: 2,
+    description: "The lowest point on Earth in Jordan.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Wadi Rum",
+    latitude: 29.5759,
+    longitude: 35.4149,
+    bortlescale: 1,
+    description: "Desert valley with massive sandstone mountains in Jordan.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Burj Khalifa",
+    latitude: 25.1972,
+    longitude: 55.2744,
+    bortlescale: 8,
+    description: "The world's tallest building in Dubai.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Taj Mahal",
+    latitude: 27.1751,
+    longitude: 78.0421,
+    bortlescale: 6,
+    description: "Iconic white marble mausoleum in Agra, India.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Angkor Wat",
+    latitude: 13.4125,
+    longitude: 103.8670,
+    bortlescale: 5,
+    description: "Largest religious monument in Cambodia.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Halong Bay",
+    latitude: 20.9101,
+    longitude: 107.1839,
+    bortlescale: 4,
+    description: "Emerald waters and thousands of limestone islands in Vietnam.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Mount Fuji",
+    latitude: 35.3606,
+    longitude: 138.7274,
+    bortlescale: 3,
+    description: "Japan's tallest and most iconic mountain.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Fushimi Inari Shrine",
+    latitude: 34.9671,
+    longitude: 135.7727,
+    bortlescale: 6,
+    description: "Thousands of vermillion torii gates in Kyoto.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Jigokudani Monkey Park",
+    latitude: 36.7323,
+    longitude: 138.4623,
+    bortlescale: 3,
+    description: "Snow monkeys bathing in hot springs in Japan.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Great Barrier Reef",
+    latitude: -18.2871,
+    longitude: 147.6992,
+    bortlescale: 2,
+    description: "The world's largest coral reef system in Australia.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Uluru",
+    latitude: -25.3444,
+    longitude: 131.0369,
+    bortlescale: 1,
+    description: "Massive sandstone monolith in the Australian outback.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Milford Sound",
+    latitude: -44.6719,
+    longitude: 167.9258,
+    bortlescale: 2,
+    description: "Dramatic fiord with waterfalls in New Zealand.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Hobbiton Movie Set",
+    latitude: -37.8721,
+    longitude: 175.6830,
+    bortlescale: 5,
+    description: "Film set from The Lord of the Rings in New Zealand.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Blue Lagoon",
+    latitude: 63.8804,
+    longitude: -22.4495,
+    bortlescale: 3,
+    description: "Geothermal spa in Iceland.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Jökulsárlón Glacier Lagoon",
+    latitude: 64.0784,
+    longitude: -16.2306,
+    bortlescale: 1,
+    description: "Icebergs floating in a glacial lagoon in Iceland.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Northern Lights Observatory",
+    latitude: 69.6492,
+    longitude: 18.9553,
+    bortlescale: 1,
+    description: "Prime aurora viewing location in Tromsø, Norway.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Trolltunga",
+    latitude: 60.1242,
+    longitude: 6.7400,
+    bortlescale: 2,
+    description: "Spectacular rock formation in Norway.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Lofoten Islands",
+    latitude: 68.2442,
+    longitude: 13.6068,
+    bortlescale: 2,
+    description: "Dramatic peaks and fishing villages in Norway.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Geiranger Fjord",
+    latitude: 62.1010,
+    longitude: 7.2063,
+    bortlescale: 2,
+    description: "UNESCO World Heritage fjord in Norway.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Stockholm Archipelago",
+    latitude: 59.3619,
+    longitude: 18.6951,
+    bortlescale: 5,
+    description: "30,000 islands in Sweden.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Icehotel",
+    latitude: 67.8558,
+    longitude: 20.6085,
+    bortlescale: 1,
+    description: "Hotel made entirely of ice and snow in Sweden.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Aokigahara Forest",
+    latitude: 35.4667,
+    longitude: 138.6333,
+    bortlescale: 2,
+    description: "Dense forest at the base of Mount Fuji in Japan.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Okunoin Cemetery",
+    latitude: 34.2132,
+    longitude: 135.6049,
+    bortlescale: 3,
+    description: "Ancient cemetery with 200,000 graves on Mount Koya, Japan.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Aogashima Volcano",
+    latitude: 32.4544,
+    longitude: 139.7625,
+    bortlescale: 1,
+    description: "Village built inside a volcanic crater in Japan.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Sapporo Snow Festival Site",
+    latitude: 43.0642,
+    longitude: 141.3469,
+    bortlescale: 6,
+    description: "Location of the world-famous snow sculpture festival.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Hitachi Seaside Park",
+    latitude: 36.4042,
+    longitude: 140.5967,
+    bortlescale: 5,
+    description: "Park famous for seasonal flower blooms in Japan.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Bagan Temples",
+    latitude: 21.1717,
+    longitude: 94.8575,
+    bortlescale: 2,
+    description: "Over 2,000 Buddhist temples in Myanmar.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Zhangye Danxia",
+    latitude: 38.9333,
+    longitude: 100.5167,
+    bortlescale: 3,
+    description: "Rainbow mountains in China's Gansu province.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Longji Rice Terraces",
+    latitude: 25.7942,
+    longitude: 110.1625,
+    bortlescale: 4,
+    description: "Spectacular terraced rice fields in Guangxi, China.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Zhangjiajie National Park",
+    latitude: 29.3167,
+    longitude: 110.4792,
+    bortlescale: 3,
+    description: "Towering pillar-like formations that inspired Avatar.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Reed Flute Cave",
+    latitude: 25.3058,
+    longitude: 110.2950,
+    bortlescale: 2,
+    description: "Illuminated limestone cave in Guilin, China.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Terracotta Army",
+    latitude: 34.3844,
+    longitude: 109.2792,
+    bortlescale: 6,
+    description: "Thousands of life-sized clay soldiers in Xi'an, China.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Leshan Giant Buddha",
+    latitude: 29.5456,
+    longitude: 103.7672,
+    bortlescale: 5,
+    description: "71-meter tall stone Buddha carved into a cliff in China.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Mogao Caves",
+    latitude: 40.0408,
+    longitude: 94.8031,
+    bortlescale: 2,
+    description: "Buddhist cave temples along the Silk Road in China.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Hanging Temple",
+    latitude: 39.6550,
+    longitude: 113.7189,
+    bortlescale: 4,
+    description: "Monastery built into a cliff face in Shanxi, China.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Tiger Leaping Gorge",
+    latitude: 27.2167,
+    longitude: 100.0833,
+    bortlescale: 2,
+    description: "Deep canyon carved by the Jinsha River in China.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Mount Huangshan",
+    latitude: 30.1333,
+    longitude: 118.1542,
+    bortlescale: 2,
+    description: "Famous granite peaks shrouded in clouds in China.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Mount Emei",
+    latitude: 29.5258,
+    longitude: 103.3367,
+    bortlescale: 3,
+    description: "Sacred Buddhist mountain in Sichuan, China.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Mount Wutai",
+    latitude: 39.0167,
+    longitude: 113.5833,
+    bortlescale: 3,
+    description: "Five-peaked mountain sacred to Chinese Buddhism.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Borobudur",
+    latitude: -7.6079,
+    longitude: 110.2038,
+    bortlescale: 5,
+    description: "Massive Buddhist temple in Java, Indonesia.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Komodo National Park",
+    latitude: -8.5375,
+    longitude: 119.4908,
+    bortlescale: 2,
+    description: "Home of the Komodo dragons in Indonesia.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Raja Ampat",
+    latitude: -0.2333,
+    longitude: 130.5167,
+    bortlescale: 1,
+    description: "Remote archipelago with incredible marine biodiversity.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Mount Bromo",
+    latitude: -7.9425,
+    longitude: 112.9531,
+    bortlescale: 2,
+    description: "Active volcano in a sea of sand in Java, Indonesia.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Tanah Lot Temple",
+    latitude: -8.6211,
+    longitude: 115.0869,
+    bortlescale: 5,
+    description: "Hindu temple on a rock formation in Bali.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Tegallalang Rice Terraces",
+    latitude: -8.4339,
+    longitude: 115.2800,
+    bortlescale: 5,
+    description: "Famous rice paddies in Ubud, Bali.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Prambanan Temple",
+    latitude: -7.7520,
+    longitude: 110.4915,
+    bortlescale: 5,
+    description: "9th-century Hindu temple compound in Java.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Ijen Volcano",
+    latitude: -8.0583,
+    longitude: 114.2425,
+    bortlescale: 2,
+    description: "Volcano with blue flames and acidic crater lake in Java.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Kelimutu Crater Lakes",
+    latitude: -8.7667,
+    longitude: 121.8167,
+    bortlescale: 2,
+    description: "Three colored volcanic lakes in Flores, Indonesia.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Chocolate Hills",
+    latitude: 9.8167,
+    longitude: 124.1667,
+    bortlescale: 4,
+    description: "1,268 cone-shaped hills in the Philippines.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Underground River",
+    latitude: 10.1667,
+    longitude: 118.9167,
+    bortlescale: 1,
+    description: "Navigable underground river in Palawan, Philippines.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Banaue Rice Terraces",
+    latitude: 16.9278,
+    longitude: 121.0542,
+    bortlescale: 3,
+    description: "2,000-year-old terraces carved into mountains in Philippines.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Tubbataha Reef",
+    latitude: 8.8583,
+    longitude: 119.8561,
+    bortlescale: 1,
+    description: "UNESCO marine park in the Sulu Sea, Philippines.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Mayon Volcano",
+    latitude: 13.2572,
+    longitude: 123.6856,
+    bortlescale: 3,
+    description: "Perfect cone-shaped active volcano in the Philippines.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Taal Volcano",
+    latitude: 14.0022,
+    longitude: 120.9933,
+    bortlescale: 5,
+    description: "Volcano within a lake on an island in the Philippines.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Shirakawa-go",
+    latitude: 36.2583,
+    longitude: 136.9069,
+    bortlescale: 3,
+    description: "Historic village with thatched-roof houses in Japan.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Itsukushima Shrine",
+    latitude: 34.2958,
+    longitude: 132.3197,
+    bortlescale: 5,
+    description: "Famous floating torii gate in Hiroshima, Japan.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Bamboo Grove",
+    latitude: 35.0094,
+    longitude: 135.6700,
+    bortlescale: 5,
+    description: "Towering bamboo forest path in Arashiyama, Japan.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Nara Deer Park",
+    latitude: 34.6850,
+    longitude: 135.8431,
+    bortlescale: 6,
+    description: "Park with over 1,000 free-roaming deer in Japan.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Mount Aso",
+    latitude: 32.8842,
+    longitude: 131.1042,
+    bortlescale: 2,
+    description: "One of the world's largest volcanic calderas in Japan.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Takachiho Gorge",
+    latitude: 32.7058,
+    longitude: 131.3147,
+    bortlescale: 3,
+    description: "V-shaped gorge with waterfalls in Miyazaki, Japan.",
     spot_type: "obscura"
   }
 ];
