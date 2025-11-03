@@ -99,7 +99,8 @@ export const useUserAstroSpotCollections = () => {
       saveCache(transformedSpots);
     } catch (error: any) {
       console.error('Error fetching astro spot collections:', error);
-      setError(error.message);
+      setError(error.message || 'Failed to load astro spot collections');
+      setSpots([]); // Set to empty array instead of keeping it undefined
     } finally {
       setLoading(false);
     }

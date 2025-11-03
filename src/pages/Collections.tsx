@@ -1,6 +1,7 @@
 
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ import { useAstroSpotCollectionActions } from "@/hooks/collections/useAstroSpotC
 
 const Collections = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [editMode, setEditMode] = useState(false);
   const [activeTab, setActiveTab] = useState('locations');
@@ -84,7 +86,7 @@ const Collections = () => {
 
   if (!authChecked) return <PageLoader />;
 
-  if (locations === null && spots === null) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-cosmic-900">
         <NavBar />
@@ -98,16 +100,20 @@ const Collections = () => {
     );
   }
 
-  const sortedLocations = sortLocationsBySiqs(locations || []);
-  const totalItems = (locations?.length || 0) + (spots?.length || 0);
+  // Ensure we have valid arrays, even if empty
+  const safeLocations = Array.isArray(locations) ? locations : [];
+  const safeSpots = Array.isArray(spots) ? spots : [];
   
-  // Filter spots by type
-  const nightscapeSpots = spots?.filter(spot => spot.spot_type === 'nightscape') || [];
-  const naturalSpots = spots?.filter(spot => spot.spot_type === 'natural') || [];
-  const obscuraSpots = spots?.filter(spot => spot.spot_type === 'obscura') || [];
+  const sortedLocations = sortLocationsBySiqs(safeLocations);
+  const totalItems = safeLocations.length + safeSpots.length;
+  
+  // Filter spots by type - with safety checks
+  const nightscapeSpots = safeSpots.filter(spot => spot?.spot_type === 'nightscape');
+  const naturalSpots = safeSpots.filter(spot => spot?.spot_type === 'natural');
+  const obscuraSpots = safeSpots.filter(spot => spot?.spot_type === 'obscura');
 
   const collectionTabs = [
-    { value: 'locations', label: t('Photo Locations', '拍摄地点'), icon: Camera, count: locations?.length || 0 },
+    { value: 'locations', label: t('Photo Locations', '拍摄地点'), icon: Camera, count: safeLocations.length },
     { value: 'nightscape', label: t('Nightscape', '夜景地点'), icon: Moon, count: nightscapeSpots.length },
     { value: 'natural', label: t('Natural', '自然风光'), icon: Mountain, count: naturalSpots.length },
     { value: 'obscura', label: t('Obscura', '探索奇观'), icon: Eye, count: obscuraSpots.length },
@@ -143,10 +149,12 @@ const Collections = () => {
           </div>
 
           {hasError && (
-            <LocationStatusMessage 
-              message={locationsError || spotsError || ""} 
-              type="error" 
-            />
+            <div className="mb-6">
+              <LocationStatusMessage 
+                message={t("Some collections could not be loaded. Please try refreshing the page.", "部分收藏无法加载，请尝试刷新页面。")}
+                type="error" 
+              />
+            </div>
           )}
 
           {/* Circular Tabs Navigation */}
@@ -159,15 +167,15 @@ const Collections = () => {
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsContent value="locations" className="space-y-4 mt-0">
-              {loading && !locations?.length ? (
+              {loading && !safeLocations.length ? (
                 <CollectionsLoadingSkeleton />
-              ) : locations?.length === 0 ? (
+              ) : safeLocations.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-cosmic-400 mb-4">
                     {t("No photo locations saved yet", "还没有收藏任何拍摄地点")}
                   </div>
                   <Button 
-                    onClick={() => navigate('/explore')}
+                    onClick={() => navigate('/photo-points')}
                     variant="outline"
                     className="bg-cosmic-800/30 border-cosmic-700/50 hover:bg-cosmic-700/50"
                   >

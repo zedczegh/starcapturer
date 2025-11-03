@@ -88,7 +88,7 @@ const ProfileForm = ({ register, loading, onSubmit, tags, setTags }: ProfileForm
         <div className="space-y-6">
           <h3 className="text-xl font-semibold text-white flex items-center gap-2">
             <div className="w-1 h-6 bg-gradient-to-b from-primary to-[#8A6FD6] rounded-full"></div>
-            {t("Astronomy Interests", "天文兴趣")}
+            {t("Outdoor Interests", "户外兴趣")}
           </h3>
           <ProfileTagsSelector selectedTags={tags} onChange={handleTagChange} disabled={loading} />
         </div>

@@ -55,9 +55,16 @@ const AstroSpotCollectionGrid: React.FC<AstroSpotCollectionGridProps> = ({
     }
   };
 
+  // Ensure spots is always an array
+  const safeSpots = Array.isArray(spots) ? spots : [];
+
+  if (safeSpots.length === 0) {
+    return null;
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {spots.map((spot) => {
+      {safeSpots.map((spot) => {
         const isEditing = editMode && editingNames[spot.id] !== undefined;
         const customName = isEditing ? editingNames[spot.id] : spot.name;
         

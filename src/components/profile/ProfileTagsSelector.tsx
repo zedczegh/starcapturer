@@ -89,7 +89,7 @@ const ProfileTagsSelector: React.FC<ProfileTagsSelectorProps> = ({
           <div className="flex items-center gap-2 mb-4">
             <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
             <p className="text-sm font-medium text-primary">
-              {t("Your selected astronomy interests:", "您选择的天文兴趣:")}
+              {t("Your selected outdoor interests:", "您选择的户外兴趣:")}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

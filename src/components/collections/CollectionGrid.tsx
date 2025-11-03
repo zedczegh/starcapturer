@@ -30,9 +30,16 @@ const CollectionGrid: React.FC<CollectionGridProps> = ({
 }) => {
   const { t } = useLanguage();
 
+  // Ensure locations is always an array
+  const safeLocations = Array.isArray(locations) ? locations : [];
+
+  if (safeLocations.length === 0) {
+    return null;
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {locations.map((location, index) => {
+      {safeLocations.map((location, index) => {
         const isEditing = editMode && editingNames[location.id] !== undefined;
         const customName = isEditing ? editingNames[location.id] : location.name;
         

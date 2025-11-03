@@ -75,7 +75,9 @@ export function useUserCollections() {
       setLocations(transformed);
       saveCache(transformed);
     } catch (e: any) {
+      console.error("Collection fetch error:", e);
       setError("Failed to load your collections");
+      setLocations([]); // Set to empty array instead of keeping it undefined
       toast.error("Failed to load your collections");
     } finally {
       setLoading(false);
