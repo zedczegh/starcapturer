@@ -13,6 +13,7 @@ interface PhotoPointsHeaderProps {
   showMapToggle?: boolean;
   showMap?: boolean;
   toggleMapView?: () => void;
+  viewToggle?: React.ReactNode;
 }
 
 const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
@@ -21,7 +22,8 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
   getPosition,
   showMapToggle = false,
   showMap = true,
-  toggleMapView
+  toggleMapView,
+  viewToggle
 }) => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
@@ -58,17 +60,26 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
       animate="visible"
       variants={headerVariants}
     >
-      {/* Map Toggle and Location Status */}
-      <div className="flex justify-end items-center mb-6">
-        {/* Show loading indicator when getting location */}
-        {locationLoading && (
-          <div className="flex items-center text-sm text-muted-foreground">
-            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-            {t("Getting location...", "正在获取位置...")}
-          </div>
-        )}
+      {/* View Toggle and Map Toggle - Symmetrical Layout */}
+      <div className="flex justify-between items-center mb-6">
+        {/* Left side - View Toggle */}
+        <div className="flex items-center">
+          {viewToggle}
+        </div>
         
-        {showMapToggle && toggleMapView && (
+        {/* Center - Loading indicator */}
+        <div className="flex items-center">
+          {locationLoading && (
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+              {t("Getting location...", "正在获取位置...")}
+            </div>
+          )}
+        </div>
+        
+        {/* Right side - Map Toggle */}
+        <div className="flex items-center">
+          {showMapToggle && toggleMapView && (
           <motion.button
             onClick={toggleMapView}
             className="relative flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 hover:from-primary/30 hover:to-accent/30 backdrop-blur-sm border border-primary/30 shadow-lg transition-all duration-300 hover:scale-105"
@@ -102,7 +113,8 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
               )}
             </motion.div>
           </motion.button>
-        )}
+          )}
+        </div>
       </div>
       
       <div className="flex flex-col items-center text-center mb-8">

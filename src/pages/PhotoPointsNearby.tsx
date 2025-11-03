@@ -142,12 +142,13 @@ const PhotoPointsNearby: React.FC = () => {
         showMapToggle={true}
         showMap={showMap}
         toggleMapView={toggleMapView}
-      />
-      
-      <ViewToggle
-        activeView={activeView}
-        onViewChange={handleViewChange}
-        loading={false} // Remove loading dependency for instant switching
+        viewToggle={
+          <ViewToggle
+            activeView={activeView}
+            onViewChange={handleViewChange}
+            loading={false}
+          />
+        }
       />
       
       {activeView === 'calculated' && (
