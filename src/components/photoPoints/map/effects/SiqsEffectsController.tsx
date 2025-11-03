@@ -4,7 +4,7 @@ import { useMap } from 'react-leaflet';
 
 interface SiqsEffectsControllerProps {
   userLocation: { latitude: number; longitude: number } | null;
-  activeView: 'certified' | 'calculated' | 'obscura';
+  activeView: 'certified' | 'calculated' | 'obscura' | 'mountains';
   searchRadius: number;
   onSiqsCalculated?: (siqs: number) => void;
   disabled?: boolean;

@@ -6,7 +6,7 @@ import * as L from 'leaflet';
 interface MapEffectsComposerProps {
   effects?: ('leaflet-fullscreen' | 'zoom-controls')[];  // Removed 'scale' from this array
   userLocation?: { latitude: number; longitude: number } | null;
-  activeView?: 'certified' | 'calculated' | 'obscura';
+  activeView?: 'certified' | 'calculated' | 'obscura' | 'mountains';
   searchRadius?: number;
 }
 

@@ -10,7 +10,7 @@ export const usePhotoPointsState = () => {
   const { t, language } = useLanguage();
   const location = useLocation();
   
-  const [activeView, setActiveView] = useState<'certified' | 'calculated' | 'obscura'>('calculated');
+  const [activeView, setActiveView] = useState<'certified' | 'calculated' | 'obscura' | 'mountains'>('calculated');
   const [showMap, setShowMap] = useState(true);
   const [initialLoad, setInitialLoad] = useState(true);
   const [autoLocationRequested, setAutoLocationRequested] = useState(false);
@@ -127,7 +127,7 @@ export const usePhotoPointsState = () => {
   }, [t, language]);
   
   // Simplified view change handler with no delays
-  const handleViewChange = useCallback((view: 'certified' | 'calculated' | 'obscura') => {
+  const handleViewChange = useCallback((view: 'certified' | 'calculated' | 'obscura' | 'mountains') => {
     if (view !== activeView) {
       console.log(`Switching to ${view} view mode`);
       setActiveView(view);

@@ -18,7 +18,7 @@ interface LocationMarkerProps {
   onHover: (id: string | null) => void;
   locationId: string;
   isCertified: boolean;
-  activeView: 'certified' | 'calculated' | 'obscura';
+  activeView: 'certified' | 'calculated' | 'obscura' | 'mountains';
   handleTouchStart?: (e: React.TouchEvent, id: string) => void;
   handleTouchEnd?: (e: React.TouchEvent, id: string | null) => void;
   handleTouchMove?: (e: React.TouchEvent) => void;

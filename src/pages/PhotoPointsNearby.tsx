@@ -14,6 +14,7 @@ import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
 import { prepareLocationForNavigation } from '@/utils/locationNavigation';
 import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
 import { getAllObscuraLocations } from '@/services/obscuraLocationsService';
+import { getAllMountainLocations } from '@/services/mountainLocationsService';
 
 const PhotoPointsNearby: React.FC = () => {
   const navigate = useNavigate();
@@ -63,6 +64,10 @@ const PhotoPointsNearby: React.FC = () => {
   const [obscuraLocations, setObscuraLocations] = useState<SharedAstroSpot[]>([]);
   const [obscuraLoading, setObscuraLoading] = useState(true);
 
+  // Load mountain locations
+  const [mountainsLocations, setMountainsLocations] = useState<SharedAstroSpot[]>([]);
+  const [mountainsLoading, setMountainsLoading] = useState(true);
+
   useEffect(() => {
     const loadObscuraLocations = async () => {
       try {
@@ -77,6 +82,22 @@ const PhotoPointsNearby: React.FC = () => {
     };
 
     loadObscuraLocations();
+  }, []);
+
+  useEffect(() => {
+    const loadMountainLocations = async () => {
+      try {
+        setMountainsLoading(true);
+        const locations = await getAllMountainLocations();
+        setMountainsLocations(locations);
+      } catch (error) {
+        console.error("Error loading mountain locations:", error);
+      } finally {
+        setMountainsLoading(false);
+      }
+    };
+
+    loadMountainLocations();
   }, []);
 
   // Update search radius when view changes, but avoid unnecessary refreshes
@@ -160,9 +181,14 @@ const PhotoPointsNearby: React.FC = () => {
         certifiedLocations={certifiedLocations}
         calculatedLocations={calculatedLocations}
         obscuraLocations={obscuraLocations}
+        mountainsLocations={mountainsLocations}
         searchRadius={currentSearchRadius}
         calculatedSearchRadius={calculatedSearchRadius}
-        loading={activeView === 'obscura' ? obscuraLoading : (loading && !locationLoading)}
+        loading={
+          activeView === 'obscura' ? obscuraLoading : 
+          activeView === 'mountains' ? mountainsLoading :
+          (loading && !locationLoading)
+        }
         hasMore={hasMore}
         loadMore={loadMore}
         refreshSiqs={refreshSiqsData}

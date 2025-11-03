@@ -79,20 +79,24 @@ export const getCertificationColor = (location: SharedAstroSpot): string => {
 export const shouldShowLocationMarker = (
   location: SharedAstroSpot, 
   isCertified: boolean,
-  activeView: 'certified' | 'calculated' | 'obscura'
+  activeView: 'certified' | 'calculated' | 'obscura' | 'mountains'
 ): boolean => {
   const isObscura = location.certification?.toLowerCase().includes('atlas obscura');
+  const isMountain = location.certification?.toLowerCase().includes('natural mountain');
   
   // Filter based on active view
   if (activeView === 'certified') {
-    // Only show certified dark sky locations (not obscura or calculated)
-    return isCertified && !isObscura;
+    // Only show certified dark sky locations (not obscura, mountains, or calculated)
+    return isCertified && !isObscura && !isMountain;
   } else if (activeView === 'obscura') {
     // Only show Atlas Obscura locations
     return isObscura;
+  } else if (activeView === 'mountains') {
+    // Only show mountain locations
+    return isMountain;
   } else if (activeView === 'calculated') {
-    // Only show calculated locations (not certified or obscura)
-    return !isCertified && !isObscura;
+    // Only show calculated locations (not certified, obscura, or mountains)
+    return !isCertified && !isObscura && !isMountain;
   }
   
   // Skip water locations for calculated spots (never skip certified)
@@ -146,6 +150,9 @@ export const getLocationMarker = (
   // Check if this is an Atlas Obscura location
   const isObscura = location.certification?.toLowerCase().includes('atlas obscura');
   
+  // Check if this is a mountain location
+  const isMountain = location.certification?.toLowerCase().includes('natural mountain');
+  
   // Determine size based on device and hover state
   const size = isMobile ? 
     (isHovered ? 22 : 16) : // Mobile sizes
@@ -153,7 +160,12 @@ export const getLocationMarker = (
   
   // Choose the appropriate icon
   let iconSvg = '';
-  if (isObscura) {
+  if (isMountain) {
+    // Mountain icon for natural mountain locations
+    iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size * 0.6}" height="${size * 0.6}" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2">
+      <path d="m8 3 4 8 5-5 5 15H2L8 3z"/>
+    </svg>`;
+  } else if (isObscura) {
     // Eye icon for Atlas Obscura locations
     iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size * 0.6}" height="${size * 0.6}" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>

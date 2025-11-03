@@ -50,7 +50,7 @@ export const useMapLocations = ({
   userLocation: { latitude: number; longitude: number } | null;
   locations: SharedAstroSpot[];
   searchRadius: number;
-  activeView: 'certified' | 'calculated' | 'obscura';
+  activeView: 'certified' | 'calculated' | 'obscura' | 'mountains';
   mapReady: boolean;
 }) => {
   // Ensure locations is always an array even if it's undefined or null

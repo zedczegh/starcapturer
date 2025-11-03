@@ -8,18 +8,37 @@ import ProfileTag from "./ProfileTag";
 
 // Complete list of all available tags
 const TAGS: { value: string; label: string }[] = [
+  // Astronomy tags
   { value: "Professional Astronomer", label: "Professional Astronomer" },
   { value: "Amateur Astronomer", label: "Amateur Astronomer" },
   { value: "Star Gazer", label: "Star Gazer" },
-  { value: "Meteorology Enthusiast", label: "Meteorology Enthusiast" },
-  { value: "Cosmos Lover", label: "Cosmos Lover" },
-  { value: "Traveler", label: "Traveler" },
-  { value: "Dark Sky Volunteer", label: "Dark Sky Volunteer" },
-  { value: "Nebulae Observer", label: "Nebulae Observer" },
-  { value: "Astronomy Student", label: "Astronomy Student" },
-  { value: "Planet Watcher", label: "Planet Watcher" },
-  { value: "Telescope Maker", label: "Telescope Maker" },
   { value: "Astrophotographer", label: "Astrophotographer" },
+  { value: "Cosmos Lover", label: "Cosmos Lover" },
+  { value: "Planet Watcher", label: "Planet Watcher" },
+  { value: "Nebulae Observer", label: "Nebulae Observer" },
+  { value: "Telescope Maker", label: "Telescope Maker" },
+  { value: "Astronomy Student", label: "Astronomy Student" },
+  { value: "Dark Sky Volunteer", label: "Dark Sky Volunteer" },
+  
+  // Outdoor & Nature tags
+  { value: "Mountaineer", label: "Mountaineer" },
+  { value: "Hiker", label: "Hiker" },
+  { value: "Rock Climber", label: "Rock Climber" },
+  { value: "Camper", label: "Camper" },
+  { value: "Nature Photographer", label: "Nature Photographer" },
+  { value: "Wildlife Observer", label: "Wildlife Observer" },
+  { value: "Trail Runner", label: "Trail Runner" },
+  { value: "Backpacker", label: "Backpacker" },
+  { value: "Adventure Seeker", label: "Adventure Seeker" },
+  { value: "Outdoor Enthusiast", label: "Outdoor Enthusiast" },
+  { value: "Desert Explorer", label: "Desert Explorer" },
+  { value: "Alpine Climber", label: "Alpine Climber" },
+  
+  // Weather & Exploration
+  { value: "Meteorology Enthusiast", label: "Meteorology Enthusiast" },
+  { value: "Storm Chaser", label: "Storm Chaser" },
+  { value: "Aurora Hunter", label: "Aurora Hunter" },
+  { value: "Traveler", label: "Traveler" },
 ];
 
 interface ProfileTagsSelectorProps {
@@ -40,7 +59,7 @@ const ProfileTagsSelector: React.FC<ProfileTagsSelectorProps> = ({
       <div className="flex items-center justify-between">
         <Label className="text-white text-lg font-semibold">{t("Profile Tags", "个人标签")}</Label>
         <div className="text-sm text-cosmic-400">
-          {selectedTags.length}/12 {t("selected", "已选择")}
+          {selectedTags.length}/28 {t("selected", "已选择")}
         </div>
       </div>
       

@@ -9,7 +9,7 @@ export const filterLocations = (
   locations: SharedAstroSpot[],
   userLocation: { latitude: number; longitude: number } | null,
   searchRadius: number,
-  activeView: 'certified' | 'calculated' | 'obscura'
+  activeView: 'certified' | 'calculated' | 'obscura' | 'mountains'
 ): SharedAstroSpot[] => {
   // Basic validation
   if (!locations || locations.length === 0) {
@@ -64,7 +64,7 @@ export const filterLocations = (
 export const optimizeLocationsForMobile = (
   locations: SharedAstroSpot[],
   isMobile: boolean,
-  activeView: 'certified' | 'calculated' | 'obscura'
+  activeView: 'certified' | 'calculated' | 'obscura' | 'mountains'
 ): SharedAstroSpot[] => {
   if (!isMobile || locations.length <= 30) {
     return locations;

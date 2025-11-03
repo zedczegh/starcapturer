@@ -10,7 +10,7 @@ interface MapContainerProps {
   userLocation: { latitude: number; longitude: number } | null;
   locations: SharedAstroSpot[];
   searchRadius: number;
-  activeView: 'certified' | 'calculated' | 'obscura';
+  activeView: 'certified' | 'calculated' | 'obscura' | 'mountains';
   mapReady: boolean;
   handleMapReady: () => void;
   handleLocationClicked: (location: SharedAstroSpot) => void;

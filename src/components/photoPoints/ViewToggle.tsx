@@ -2,9 +2,9 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { BadgeCheck, MapPin, Eye } from 'lucide-react';
+import { BadgeCheck, MapPin, Eye, Mountain } from 'lucide-react';
 
-export type PhotoPointsViewMode = 'certified' | 'calculated' | 'obscura';
+export type PhotoPointsViewMode = 'certified' | 'calculated' | 'obscura' | 'mountains';
 
 interface ViewToggleProps {
   activeView: PhotoPointsViewMode;
@@ -29,7 +29,7 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
   
   return (
     <div className="flex justify-center mb-6 px-4">
-      <div className="flex flex-col sm:flex-row gap-3 p-3 rounded-lg bg-card/50 backdrop-blur-sm border border-border/50 shadow-sm w-full max-w-4xl">
+      <div className="flex flex-col sm:flex-row gap-3 p-3 rounded-lg bg-card/50 backdrop-blur-sm border border-border/50 shadow-sm w-full max-w-5xl">
         {/* Dark Sky Locations Button */}
         <Button
           variant={activeView === 'certified' ? "default" : "ghost"}
@@ -90,6 +90,27 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
           <Eye className={`h-5 w-5 mr-2 ${activeView === 'obscura' ? 'text-cyan-100' : 'text-cyan-500'}`} />
           <span className={`font-medium ${activeView === 'obscura' ? 'text-white' : 'text-cyan-600 dark:text-cyan-400'}`}>
             {t("Obscura Locations", "奇观位置")}
+          </span>
+        </Button>
+        
+        {/* Mountains Button */}
+        <Button
+          variant={activeView === 'mountains' ? "default" : "ghost"}
+          size="lg"
+          onClick={() => handleViewChange('mountains')}
+          disabled={activeView === 'mountains'}
+          className={`relative w-full min-w-[160px] group ${
+            activeView === 'mountains'
+              ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700'
+              : 'hover:bg-amber-500/10'
+          }`}
+        >
+          {activeView === 'mountains' && (
+            <div className="absolute inset-0 rounded-md opacity-20 bg-gradient-to-r from-orange-200 to-amber-300 animate-pulse" />
+          )}
+          <Mountain className={`h-5 w-5 mr-2 ${activeView === 'mountains' ? 'text-amber-100' : 'text-amber-500'}`} />
+          <span className={`font-medium ${activeView === 'mountains' ? 'text-white' : 'text-amber-600 dark:text-amber-400'}`}>
+            {t("Natural Locations", "自然位置")}
           </span>
         </Button>
       </div>

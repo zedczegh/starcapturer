@@ -14,7 +14,7 @@ interface MapContentProps {
   zoom: number;
   displayLocations: SharedAstroSpot[];
   isMobile: boolean;
-  activeView: 'certified' | 'calculated' | 'obscura';
+  activeView: 'certified' | 'calculated' | 'obscura' | 'mountains';
   searchRadius: number;
   showRadiusCircles: boolean;
   onMapClick?: (lat: number, lng: number) => void;

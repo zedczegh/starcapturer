@@ -5,16 +5,18 @@ import PhotoPointsMap from './map/PhotoPointsMap';
 import CalculatedLocations from './CalculatedLocations';
 import CertifiedLocations from './CertifiedLocations';
 import ObscuraLocations from './ObscuraLocations';
+import MountainsLocations from './MountainsLocations';
 import { sortLocationsBySiqs } from '@/utils/siqsHelpers';
 
 interface PhotoPointsViewProps {
   showMap: boolean;
-  activeView: 'certified' | 'calculated' | 'obscura';
+  activeView: 'certified' | 'calculated' | 'obscura' | 'mountains';
   initialLoad: boolean;
   effectiveLocation: { latitude: number; longitude: number } | null;
   certifiedLocations: SharedAstroSpot[];
   calculatedLocations: SharedAstroSpot[];
   obscuraLocations?: SharedAstroSpot[];
+  mountainsLocations?: SharedAstroSpot[];
   searchRadius: number;
   calculatedSearchRadius: number;
   loading: boolean;
@@ -37,6 +39,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   certifiedLocations,
   calculatedLocations,
   obscuraLocations = [],
+  mountainsLocations = [],
   searchRadius,
   calculatedSearchRadius,
   loading,
@@ -58,6 +61,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   const sortedCertifiedLocations = sortLocationsBySiqs(certifiedLocations);
   const sortedCalculatedLocations = sortLocationsBySiqs(calculatedLocations);
   const sortedObscuraLocations = sortLocationsBySiqs(obscuraLocations);
+  const sortedMountainsLocations = sortLocationsBySiqs(mountainsLocations);
 
   // Determine which locations to show on map based on active view
   const getMapLocations = () => {
@@ -66,6 +70,8 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
         return sortedCertifiedLocations;
       case 'obscura':
         return sortedObscuraLocations;
+      case 'mountains':
+        return sortedMountainsLocations;
       case 'calculated':
       default:
         return sortedCalculatedLocations;
@@ -120,6 +126,17 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
       {!showMap && activeView === 'obscura' && (
         <ObscuraLocations
           locations={sortedObscuraLocations}
+          loading={loading}
+          onViewDetails={onLocationClick}
+          onRefresh={refreshSiqs}
+          initialLoad={initialLoad}
+          userLocation={effectiveLocation}
+        />
+      )}
+
+      {!showMap && activeView === 'mountains' && (
+        <MountainsLocations
+          locations={sortedMountainsLocations}
           loading={loading}
           onViewDetails={onLocationClick}
           onRefresh={refreshSiqs}
