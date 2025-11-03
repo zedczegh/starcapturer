@@ -54,11 +54,15 @@ const PhotoPointsNearby: React.FC = () => {
     currentSearchRadius
   );
   
-  // Get certified and calculated locations from the hook
   const { 
     certifiedLocations, 
     calculatedLocations 
   } = useCertifiedLocations(locations);
+  
+  // Log location counts for debugging
+  React.useEffect(() => {
+    console.log(`PhotoPointsNearby: Raw locations: ${locations.length}, Certified: ${certifiedLocations.length}, Calculated: ${calculatedLocations.length}`);
+  }, [locations, certifiedLocations, calculatedLocations]);
 
   // Load obscura locations
   const [obscuraLocations, setObscuraLocations] = useState<SharedAstroSpot[]>([]);
