@@ -137,88 +137,6 @@ GitHub: github.com/yanzeyuStarcapturer
                 </p>
               </div>
 
-              {/* Research & Publications */}
-              <div className="bg-cosmic-800/40 rounded-lg p-4 border border-cosmic-600/30">
-                <div className="flex items-center gap-2 mb-3">
-                  <BookOpen className="h-5 w-5 text-cosmic-400" />
-                  <h3 className="font-semibold text-cosmic-100">
-                    {t("Research & Publications", "研究与出版物")}
-                  </h3>
-                </div>
-                <div className="space-y-3">
-                  {isAdmin && (
-                    <div className="flex items-start gap-3 p-3 bg-cosmic-700/30 rounded border border-cosmic-600/20 hover:bg-cosmic-700/40 transition-colors">
-                      <FileText className="h-5 w-5 text-fuchsia-400 mt-0.5 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <Link to="/critical-analysis">
-                          <h4 className="font-medium text-cosmic-100 hover:text-cosmic-50 transition-colors text-sm mb-1">
-                            {t("Beyond the Kantian Sublime: Computational Aesthetics in Astrophotography", 
-                               "超越康德式崇高：天文摄影中的计算美学")}
-                          </h4>
-                        </Link>
-                        <p className="text-xs text-cosmic-300 mb-2">
-                          {t("A critical examination of stereoscopic depth mapping, 3D volumetric star fields, parallel video generation, astronomical sonification, and mathematical universe visualization.", 
-                             "对立体深度映射、3D体积星场、并行视频生成、天文声化和数学宇宙可视化的批判性研究。")}
-                        </p>
-                        <Link to="/critical-analysis">
-                          <Button variant="ghost" size="sm" className="text-xs gap-1 h-7 px-2 hover:bg-cosmic-600/30">
-                            {t("Read Paper", "阅读论文")}
-                            <ExternalLink className="h-3 w-3" />
-                          </Button>
-                        </Link>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={downloadPaper}
-                          className="text-xs gap-1 h-7 px-2 hover:bg-cosmic-600/30"
-                        >
-                          <Download className="h-3 w-3" />
-                          {t("Download Paper", "下载论文")}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="flex items-start gap-3 p-3 bg-cosmic-700/30 rounded border border-cosmic-600/20 hover:bg-cosmic-700/40 transition-colors">
-                    <FileText className="h-5 w-5 text-cyan-400 mt-0.5 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-cosmic-100 text-sm mb-1">
-                        {t("SIQS: Stellar Imaging Quality Score System", 
-                           "SIQS：恒星成像质量评分系统")}
-                      </h4>
-                      <p className="text-xs text-cosmic-300 mb-2">
-                        {t("A comprehensive algorithm for evaluating astrophotography locations based on cloud cover, light pollution, seeing conditions, and astronomical factors.", 
-                           "基于云层覆盖、光污染、视宁度和天文因素评估天文摄影位置的综合算法。")}
-                      </p>
-                      <a 
-                        href="https://github.com/yanzeyuStarcapturer" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                      >
-                        <Button variant="ghost" size="sm" className="text-xs gap-1 h-7 px-2 hover:bg-cosmic-600/30">
-                          {t("View on GitHub", "在GitHub上查看")}
-                          <ExternalLink className="h-3 w-3" />
-                        </Button>
-                      </a>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 bg-cosmic-700/30 rounded border border-cosmic-600/20">
-                    <FileText className="h-5 w-5 text-purple-400 mt-0.5 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-cosmic-100 text-sm mb-1">
-                        {t("Computational Tools for Astrophotography Processing", 
-                           "天文摄影处理的计算工具")}
-                      </h4>
-                      <p className="text-xs text-cosmic-300">
-                        {t("Suite of browser-based utilities including stereoscope processing, 3D star field generation, sonification, and mathematical analysis.", 
-                           "基于浏览器的实用程序套件，包括立体镜处理、3D星场生成、声化和数学分析。")}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               {/* Contact & Links */}
               <div className="flex flex-wrap gap-2">
                 <a 
@@ -249,6 +167,92 @@ GitHub: github.com/yanzeyuStarcapturer
 
       {/* Personal Uploader - Only visible to yanzeyucq@163.com */}
       <PersonalUploader />
+
+      {/* Research & Publications Card */}
+      <Card className="bg-gradient-to-br from-cosmic-900/90 to-cosmic-800/90 border-cosmic-600/50 overflow-hidden backdrop-blur-sm shadow-2xl mt-6">
+        <CardContent className="p-8">
+          <div className="bg-cosmic-800/40 rounded-lg p-4 border border-cosmic-600/30">
+            <div className="flex items-center gap-2 mb-3">
+              <BookOpen className="h-5 w-5 text-cosmic-400" />
+              <h3 className="font-semibold text-cosmic-100">
+                {t("Research & Publications", "研究与出版物")}
+              </h3>
+            </div>
+            <div className="space-y-3">
+              {isAdmin && (
+                <div className="flex items-start gap-3 p-3 bg-cosmic-700/30 rounded border border-cosmic-600/20 hover:bg-cosmic-700/40 transition-colors">
+                  <FileText className="h-5 w-5 text-fuchsia-400 mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <Link to="/critical-analysis">
+                      <h4 className="font-medium text-cosmic-100 hover:text-cosmic-50 transition-colors text-sm mb-1">
+                        {t("Beyond the Kantian Sublime: Computational Aesthetics in Astrophotography", 
+                           "超越康德式崇高：天文摄影中的计算美学")}
+                      </h4>
+                    </Link>
+                    <p className="text-xs text-cosmic-300 mb-2">
+                      {t("A critical examination of stereoscopic depth mapping, 3D volumetric star fields, parallel video generation, astronomical sonification, and mathematical universe visualization.", 
+                         "对立体深度映射、3D体积星场、并行视频生成、天文声化和数学宇宙可视化的批判性研究。")}
+                    </p>
+                    <Link to="/critical-analysis">
+                      <Button variant="ghost" size="sm" className="text-xs gap-1 h-7 px-2 hover:bg-cosmic-600/30">
+                        {t("Read Paper", "阅读论文")}
+                        <ExternalLink className="h-3 w-3" />
+                      </Button>
+                    </Link>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={downloadPaper}
+                      className="text-xs gap-1 h-7 px-2 hover:bg-cosmic-600/30"
+                    >
+                      <Download className="h-3 w-3" />
+                      {t("Download Paper", "下载论文")}
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex items-start gap-3 p-3 bg-cosmic-700/30 rounded border border-cosmic-600/20 hover:bg-cosmic-700/40 transition-colors">
+                <FileText className="h-5 w-5 text-cyan-400 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-cosmic-100 text-sm mb-1">
+                    {t("SIQS: Stellar Imaging Quality Score System", 
+                       "SIQS：恒星成像质量评分系统")}
+                  </h4>
+                  <p className="text-xs text-cosmic-300 mb-2">
+                    {t("A comprehensive algorithm for evaluating astrophotography locations based on cloud cover, light pollution, seeing conditions, and astronomical factors.", 
+                       "基于云层覆盖、光污染、视宁度和天文因素评估天文摄影位置的综合算法。")}
+                  </p>
+                  <a 
+                    href="https://github.com/yanzeyuStarcapturer" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                  >
+                    <Button variant="ghost" size="sm" className="text-xs gap-1 h-7 px-2 hover:bg-cosmic-600/30">
+                      {t("View on GitHub", "在GitHub上查看")}
+                      <ExternalLink className="h-3 w-3" />
+                    </Button>
+                  </a>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3 bg-cosmic-700/30 rounded border border-cosmic-600/20">
+                <FileText className="h-5 w-5 text-purple-400 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-cosmic-100 text-sm mb-1">
+                    {t("Computational Tools for Astrophotography Processing", 
+                       "天文摄影处理的计算工具")}
+                  </h4>
+                  <p className="text-xs text-cosmic-300">
+                    {t("Suite of browser-based utilities including stereoscope processing, 3D star field generation, sonification, and mathematical analysis.", 
+                       "基于浏览器的实用程序套件，包括立体镜处理、3D星场生成、声化和数学分析。")}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </motion.div>
   );
 };
