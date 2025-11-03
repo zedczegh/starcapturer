@@ -51,10 +51,14 @@ export function useCountryFlag(latitude?: number, longitude?: number) {
         if (isMounted) {
           setCountryInfo(info);
           
-          // Cache the result in localStorage for persistence
+          // Cache the result in localStorage for persistence (30 days)
           if (info) {
             try {
-              localStorage.setItem(cacheKey, JSON.stringify(info));
+              const cacheData = {
+                ...info,
+                timestamp: Date.now()
+              };
+              localStorage.setItem(cacheKey, JSON.stringify(cacheData));
             } catch (e) {
               // Storage full, try sessionStorage
               try {
@@ -77,8 +81,9 @@ export function useCountryFlag(latitude?: number, longitude?: number) {
       }
     };
 
-    // Small delay to batch requests
-    const timer = setTimeout(fetchCountryInfo, 50);
+    // Randomized delay to spread out requests
+    const delay = Math.random() * 300 + 100; // 100-400ms random delay
+    const timer = setTimeout(fetchCountryInfo, delay);
 
     return () => {
       isMounted = false;
