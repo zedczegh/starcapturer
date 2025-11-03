@@ -57,7 +57,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
     onLocationUpdate(lat, lng);
   }, [onLocationUpdate]);
 
-  // Sort and memoize locations to prevent unnecessary re-renders
+  // Memoize sorted locations to prevent unnecessary re-renders
   const sortedCertifiedLocations = React.useMemo(() => 
     sortLocationsBySiqs(certifiedLocations), [certifiedLocations]);
   const sortedCalculatedLocations = React.useMemo(() => 
@@ -67,19 +67,15 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   const sortedMountainsLocations = React.useMemo(() => 
     sortLocationsBySiqs(mountainsLocations), [mountainsLocations]);
 
-  // Determine which locations to show on map based on active view
+  // Determine which locations to show on map - memoized per view for instant switching
   const mapLocations = React.useMemo(() => {
-    switch (activeView) {
-      case 'certified':
-        return sortedCertifiedLocations;
-      case 'obscura':
-        return sortedObscuraLocations;
-      case 'mountains':
-        return sortedMountainsLocations;
-      case 'calculated':
-      default:
-        return sortedCalculatedLocations;
-    }
+    const locations = {
+      certified: sortedCertifiedLocations,
+      obscura: sortedObscuraLocations,
+      mountains: sortedMountainsLocations,
+      calculated: sortedCalculatedLocations
+    };
+    return locations[activeView] || sortedCalculatedLocations;
   }, [activeView, sortedCertifiedLocations, sortedObscuraLocations, sortedMountainsLocations, sortedCalculatedLocations]);
 
   return (
