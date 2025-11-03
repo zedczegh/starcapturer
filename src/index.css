@@ -5,43 +5,43 @@
 
 @layer base {
   :root {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 263 53% 75%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    --background: 200 35% 8%;
+    --foreground: 40 95% 95%;
+    --card: 200 30% 10%;
+    --card-foreground: 40 95% 95%;
+    --popover: 200 30% 10%;
+    --popover-foreground: 40 95% 95%;
+    --primary: 30 90% 55%;
+    --primary-foreground: 200 35% 8%;
+    --secondary: 120 30% 25%;
+    --secondary-foreground: 40 95% 95%;
+    --muted: 150 20% 20%;
+    --muted-foreground: 40 30% 65%;
+    --accent: 160 45% 35%;
+    --accent-foreground: 40 95% 95%;
+    --destructive: 0 65% 45%;
+    --destructive-foreground: 40 95% 95%;
+    --border: 150 20% 20%;
+    --input: 150 20% 20%;
+    --ring: 30 80% 60%;
     --radius: 0.5rem;
     
     /* Color palette for SIQS score ranges */
-    --red-500: rgb(239, 68, 68);
-    --orange-400: rgb(251, 146, 60);
-    --yellow-400: rgb(250, 204, 21);
-    --olive-500: rgb(128, 128, 0);
-    --green-500: rgb(34, 197, 94);
-    --cosmic-100: rgb(226, 232, 240);
-    --cosmic-200: rgb(203, 213, 225);
-    --cosmic-300: rgb(148, 163, 184);
-    --cosmic-400: rgb(100, 116, 139);
-    --cosmic-500: rgb(71, 85, 105);
-    --cosmic-600: rgb(51, 65, 85);
-    --cosmic-700: rgb(30, 41, 59);
-    --cosmic-800: rgb(15, 23, 42);
-    --cosmic-900: rgb(10, 17, 34);
-    --cosmic-950: rgb(2, 6, 23);
+    --red-500: 0 65 55;
+    --orange-400: 30 90 60;
+    --yellow-400: 45 95 65;
+    --olive-500: 60 45 35;
+    --green-500: 140 65 45;
+    --cosmic-100: 40 50 90;
+    --cosmic-200: 35 40 75;
+    --cosmic-300: 150 15 55;
+    --cosmic-400: 155 20 45;
+    --cosmic-500: 160 25 35;
+    --cosmic-600: 165 30 28;
+    --cosmic-700: 170 35 22;
+    --cosmic-800: 180 40 15;
+    --cosmic-900: 190 40 12;
+    --cosmic-950: 200 40 8;
   }
 }
 
@@ -55,22 +55,22 @@
   
   /* Add necessary styles for score classes */
   .score-excellent {
-    background-color: var(--green-500);
+    background-color: hsl(var(--green-500));
   }
   .score-good {
-    background: linear-gradient(to right, #8A9A5B, #606C38);
+    background: linear-gradient(to right, hsl(60 45% 50%), hsl(75 30% 35%));
   }
   .score-above-average {
-    background-color: var(--olive-500); 
+    background-color: hsl(var(--olive-500)); 
   }
   .score-average {
-    background-color: var(--yellow-400);
+    background-color: hsl(var(--yellow-400));
   }
   .score-poor {
-    background-color: var(--orange-400);
+    background-color: hsl(var(--orange-400));
   }
   .score-bad {
-    background-color: var(--red-500);
+    background-color: hsl(var(--red-500));
   }
   
   /* Glass card styling with enhanced transparency */
@@ -104,15 +104,15 @@
     @apply hover:text-primary/90 transition-colors duration-300;
   }
   
-  /* Cosmic glow styles for better visual effects */
+  /* Adventure glow styles for better visual effects */
   .bg-cosmic-glow {
-    background: radial-gradient(circle, rgba(138, 43, 226, 0.3), rgba(25, 25, 112, 0.1));
+    background: radial-gradient(circle, hsla(30, 90%, 55%, 0.2), hsla(160, 45%, 35%, 0.1));
   }
   
   /* Enhanced Facts Tooltip Styling */
   .facts-tooltip {
     @apply bg-gradient-to-br from-cosmic-800/95 to-cosmic-900/95 border-cosmic-700/50 backdrop-blur-lg shadow-xl;
-    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.15), 0 1px 3px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 15px hsla(30, 90%, 55%, 0.2), 0 1px 3px rgba(0, 0, 0, 0.3);
     animation: tooltip-appear 0.2s ease-out;
   }
   
@@ -141,12 +141,12 @@
   }
   
   .styled-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(104, 117, 255, 0.4);
+    background: hsla(30, 90%, 55%, 0.4);
     border-radius: 10px;
   }
   
   .styled-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(104, 117, 255, 0.6);
+    background: hsla(30, 90%, 55%, 0.6);
   }
   
   @keyframes tooltip-appear {
@@ -192,7 +192,7 @@
   
   /* Enhanced shadow utilities */
   .shadow-glow {
-    box-shadow: 0 8px 32px rgba(124, 58, 237, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 8px 32px hsla(30, 90%, 55%, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
   }
   
   /* Enhanced message styling */

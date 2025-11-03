@@ -23,17 +23,17 @@ const config: Config = {
     extend: {
       colors: {
         cosmic: {
-          '50': '#f6f6ff',
-          '100': '#ececff',
-          '200': '#d9d9ff',
-          '300': '#b9b9ff',
-          '400': '#9494ff',
-          '500': '#6b6bff',
-          '600': '#4a4af1',
-          '700': '#3f39d7',
-          '800': '#2c2ca4',
-          '900': '#2c2c83',
-          '950': '#1a1a4a',
+          '50': 'hsl(40, 50%, 90%)',
+          '100': 'hsl(35, 40%, 75%)',
+          '200': 'hsl(150, 15%, 55%)',
+          '300': 'hsl(155, 20%, 45%)',
+          '400': 'hsl(160, 25%, 35%)',
+          '500': 'hsl(165, 30%, 28%)',
+          '600': 'hsl(170, 35%, 22%)',
+          '700': 'hsl(180, 40%, 15%)',
+          '800': 'hsl(190, 40%, 12%)',
+          '900': 'hsl(200, 40%, 8%)',
+          '950': 'hsl(200, 35%, 8%)',
         },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -123,8 +123,8 @@ const config: Config = {
           "50%": { transform: "translateY(-10px)" }
         },
         "glow": {
-          "0%, 100%": { boxShadow: "0 0 20px rgba(107, 107, 255, 0.3)" },
-          "50%": { boxShadow: "0 0 40px rgba(107, 107, 255, 0.6)" }
+          "0%, 100%": { boxShadow: "0 0 20px hsla(30, 90%, 55%, 0.3)" },
+          "50%": { boxShadow: "0 0 40px hsla(30, 90%, 55%, 0.6)" }
         }
       },
       animation: {
@@ -150,7 +150,7 @@ const config: Config = {
     plugin(function({ addUtilities, addComponents }) {
       addUtilities({
         '.glassmorphism': {
-          'background': 'rgba(15, 23, 42, 0.6)',
+          'background': 'hsla(180, 40%, 15%, 0.6)',
           'backdrop-filter': 'blur(12px)',
           '-webkit-backdrop-filter': 'blur(12px)',
         },
