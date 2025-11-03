@@ -82,19 +82,19 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
           {showMapToggle && toggleMapView && (
           <motion.button
             onClick={toggleMapView}
-            className="relative flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 hover:from-primary/30 hover:to-accent/30 backdrop-blur-sm border border-primary/30 shadow-lg transition-all duration-300 hover:scale-105"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
+            className="relative flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary/15 to-accent/15 hover:from-primary/25 hover:to-accent/25 backdrop-blur-md border border-primary/40 shadow-md transition-all duration-300"
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.92 }}
           >
             {/* Pulsing animation ring */}
             <motion.div
-              className="absolute inset-0 rounded-full bg-primary/20"
+              className="absolute inset-0 rounded-full bg-primary/15"
               animate={{
-                scale: [1, 1.2, 1],
-                opacity: [0.5, 0, 0.5],
+                scale: [1, 1.15, 1],
+                opacity: [0.4, 0, 0.4],
               }}
               transition={{
-                duration: 2,
+                duration: 2.5,
                 repeat: Infinity,
                 ease: "easeInOut"
               }}
@@ -107,9 +107,9 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
               transition={{ duration: 0.3 }}
             >
               {showMap ? (
-                <List className="h-6 w-6 text-primary" />
+                <List className="h-5 w-5 text-primary" />
               ) : (
-                <Map className="h-6 w-6 text-primary" />
+                <Map className="h-5 w-5 text-primary" />
               )}
             </motion.div>
           </motion.button>
