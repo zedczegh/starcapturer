@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Edit2, MapPin, Star, Eye } from "lucide-react";
-import CountryFlag from "@/components/location/CountryFlag";
 
 interface SavedAstroSpot {
   id: string;
@@ -145,10 +144,6 @@ const AstroSpotCollectionGrid: React.FC<AstroSpotCollectionGridProps> = ({
                 <Eye className="h-4 w-4 mr-2" />
                 {t("View Details", "查看详情")}
               </Button>
-              
-              <div className="flex items-center gap-2 mt-2">
-                <CountryFlag latitude={spot.latitude} longitude={spot.longitude} />
-              </div>
             </CardContent>
           </Card>
         );

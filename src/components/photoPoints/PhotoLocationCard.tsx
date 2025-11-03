@@ -13,7 +13,6 @@ import SiqsDisplay from './cards/components/SiqsDisplay';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import { useIsMobile } from "@/hooks/use-mobile";
 import LocationHeaderMainDisplay from './cards/LocationHeaderMainDisplay';
-import CountryFlag from '@/components/location/CountryFlag';
 
 interface PhotoLocationCardProps {
   location: SharedAstroSpot;
@@ -195,8 +194,7 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           language={language}
           showBortleScale={showBortleScale}
         />
-        <div className="flex items-center justify-between mt-3">
-          <CountryFlag latitude={location.latitude} longitude={location.longitude} />
+        <div className="flex items-center justify-end mt-3">
           <CardActions onViewDetails={handleViewDetails} />
         </div>
         {showRealTimeSiqs && (

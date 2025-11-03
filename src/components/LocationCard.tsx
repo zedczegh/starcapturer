@@ -8,7 +8,6 @@ import { motion } from "framer-motion";
 import UserAvatarDisplay from "@/components/photoPoints/cards/UserAvatarDisplay";
 import BookingAvailableBanner from "@/components/community/BookingAvailableBanner";
 import VerificationBadge from "@/components/astro-spots/verification/VerificationBadge";
-import CountryFlag from "@/components/location/CountryFlag";
 
 interface LocationCardProps {
   id: string;
@@ -89,11 +88,8 @@ const LocationCard = React.memo(({
       </div>
       
       <div className="mt-2 flex justify-between items-end">
-        <div className="flex items-center gap-2">
-          <CountryFlag latitude={latitude} longitude={longitude} />
-          <div className="text-xs text-cosmic-500">
-            {timestamp && formatTime(timestamp)}
-          </div>
+        <div className="text-xs text-cosmic-500">
+          {timestamp && formatTime(timestamp)}
         </div>
         
         {userId && (
