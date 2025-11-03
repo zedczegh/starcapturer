@@ -65,6 +65,22 @@ export const useCommunityAstroSpots = () => {
     await refetch();
   }, [refetch]);
 
+  // Refresh markers when page becomes visible (tab change or return to page)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('🔄 Page became visible, refreshing community markers...');
+        refreshData();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [refreshData]);
+
   // Handle SIQS calculation results with rate limiting for mobile
   const handleSiqsCalculated = useCallback((spotId: string, siqs: number | null, loading: boolean, confidence?: number) => {
     setLoadingSiqs(prev => ({

@@ -4,6 +4,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useMapLocations, useMapUtils } from './useMapUtils';
 import { addLocationToStore } from '@/services/calculatedLocationsService';
 import { useCertifiedLocationsLoader } from './useCertifiedLocationsLoader';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface UsePhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -20,6 +21,8 @@ export const usePhotoPointsMap = ({
 }: UsePhotoPointsMapProps) => {
   const [mapReady, setMapReady] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<SharedAstroSpot | null>(null);
+  const queryClient = useQueryClient();
+  const visibilityListenerRef = useRef<boolean>(false);
   
   // IMPORTANT: Always load certified locations regardless of view
   const shouldLoadCertified = true; // Always load certified locations
@@ -136,6 +139,28 @@ export const usePhotoPointsMap = ({
 
   // Always use a more zoomed-out initial view
   const initialZoom = 4; // Zoomed out to see large regions
+  
+  // Refresh markers when page becomes visible (tab change or return to page)
+  useEffect(() => {
+    if (visibilityListenerRef.current) return; // Prevent duplicate listeners
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('🔄 Photo points page became visible, invalidating queries...');
+        // Invalidate queries to trigger refetch
+        queryClient.invalidateQueries({ queryKey: ['certified-locations'] });
+        queryClient.invalidateQueries({ queryKey: ['calculated-locations'] });
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    visibilityListenerRef.current = true;
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      visibilityListenerRef.current = false;
+    };
+  }, [queryClient]);
   
   console.log(`usePhotoPointsMap: processedLocations=${processedLocations.length}, activeView=${activeView}, searchRadius=${searchRadius}`);
   

@@ -12,30 +12,59 @@ import { GeocodingResult } from '../types/enhancedLocationTypes';
 export async function fetchLocationDetails(
   latitude: number,
   longitude: number,
-  language: Language = 'en'
+  language: Language = 'en',
+  retryCount: number = 0
 ): Promise<GeocodingResult> {
+  const maxRetries = 2;
+  const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 4000); // Exponential backoff, max 4s
+  
   try {
     // Build URL for Nominatim reverse geocoding
     const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&zoom=18&addressdetails=1&accept-language=${language}`;
     
-    // Fetch with appropriate headers to respect usage policy
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'StarCaptureApp/1.0',
-        'Accept': 'application/json'
+    // Fetch with appropriate headers and timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
+    
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'StarCaptureApp/1.0',
+          'Accept': 'application/json'
+        },
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`Geocoding API returned ${response.status}: ${response.statusText}`);
       }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Geocoding API returned ${response.status}: ${response.statusText}`);
+      
+      const data = await response.json();
+      
+      // Extract and normalize the address components
+      return parseNominatimResponse(data, language);
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      
+      // Retry on network errors or timeouts
+      if (retryCount < maxRetries && 
+          (fetchError.name === 'AbortError' || 
+           fetchError.name === 'TypeError' ||
+           fetchError.message?.includes('Load failed'))) {
+        console.warn(`Nominatim API failed, retrying (${retryCount + 1}/${maxRetries})...`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        return fetchLocationDetails(latitude, longitude, language, retryCount + 1);
+      }
+      
+      throw fetchError;
     }
-    
-    const data = await response.json();
-    
-    // Extract and normalize the address components
-    return parseNominatimResponse(data, language);
   } catch (error) {
-    console.error('Error fetching location details:', error);
+    // Only log if this was the final retry
+    if (retryCount >= maxRetries) {
+      console.error('Error fetching location details (all retries exhausted):', error);
+    }
     throw error;
   }
 }
