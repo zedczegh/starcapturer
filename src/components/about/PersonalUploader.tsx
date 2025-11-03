@@ -75,11 +75,21 @@ const PersonalUploader = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Validate description is not empty
+    if (!description.trim()) {
+      toast.error("Description required", {
+        description: "Please add a caption before uploading",
+      });
+      event.target.value = "";
+      return;
+    }
+
     // Validate file size (max 20MB)
     if (file.size > 20 * 1024 * 1024) {
       toast.error("File too large", {
         description: "Maximum file size is 20MB",
       });
+      event.target.value = "";
       return;
     }
 
@@ -223,7 +233,7 @@ const PersonalUploader = () => {
       );
     }
     
-    return (
+     return (
       <div className="grid grid-cols-3 gap-1">
         <AnimatePresence>
           {categoryFiles.map((file) => (
@@ -232,41 +242,48 @@ const PersonalUploader = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="relative aspect-square bg-cosmic-950 overflow-hidden group cursor-pointer"
+              className="relative bg-cosmic-950 overflow-hidden group cursor-pointer flex flex-col"
             >
-              {file.file_type.startsWith("image/") ? (
-                <img 
-                  src={getFileUrl(file.file_path)} 
-                  alt={file.file_name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-2">
-                  {getFileIcon(file.file_type, file.file_name)}
-                  <p className="text-cosmic-50 text-xs text-center line-clamp-2">
-                    {file.file_name}
-                  </p>
+              <div className="aspect-square relative">
+                {file.file_type.startsWith("image/") ? (
+                  <img 
+                    src={getFileUrl(file.file_path)} 
+                    alt={file.file_name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-2">
+                    {getFileIcon(file.file_type, file.file_name)}
+                    <p className="text-cosmic-50 text-xs text-center line-clamp-2">
+                      {file.file_name}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Hover overlay */}
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.open(getFileUrl(file.file_path), "_blank")}
+                    className="bg-cosmic-700/80 hover:bg-cosmic-600 text-white h-8 w-8 p-0"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(file.id, file.file_path)}
+                    className="bg-red-500/80 hover:bg-red-600 text-white h-8 w-8 p-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-              )}
+              </div>
               
-              {/* Hover overlay */}
-              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => window.open(getFileUrl(file.file_path), "_blank")}
-                  className="bg-cosmic-700/80 hover:bg-cosmic-600 text-white h-8 w-8 p-0"
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDelete(file.id, file.file_path)}
-                  className="bg-red-500/80 hover:bg-red-600 text-white h-8 w-8 p-0"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+              {/* Description below image */}
+              <div className="p-2 bg-cosmic-900/80">
+                <p className="text-cosmic-200 text-xs line-clamp-2">{file.description}</p>
               </div>
             </motion.div>
           ))}
@@ -373,7 +390,7 @@ const PersonalUploader = () => {
 
             <div>
               <Label htmlFor="dialog-description" className="text-cosmic-200 text-sm">
-                Caption / Description
+                Caption / Description <span className="text-red-400">*</span>
               </Label>
               <Input
                 id="dialog-description"
@@ -381,6 +398,7 @@ const PersonalUploader = () => {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="What's on your mind?"
                 className="bg-cosmic-800 border-cosmic-700 text-cosmic-50 mt-1"
+                required
               />
             </div>
 
