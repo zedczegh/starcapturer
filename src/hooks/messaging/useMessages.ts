@@ -111,18 +111,12 @@ export const useMessages = () => {
         // Don't return early - still fetch fresh messages in the background
       }
       
-      // Build query parameters for better performance
-      const conditions = [
-        `and(sender_id.eq.${user.id},receiver_id.eq.${conversationPartnerId})`,
-        `and(sender_id.eq.${conversationPartnerId},receiver_id.eq.${user.id})`
-      ];
-      
-      // Use optimized fetch utility
+      // Build query for messages between the two users
       const messagesData = await fetchFromSupabase(
         'user_messages',
         (query) => query
           .select('*')
-          .or(conditions.join(','))
+          .or(`and(sender_id.eq.${user.id},receiver_id.eq.${conversationPartnerId}),and(sender_id.eq.${conversationPartnerId},receiver_id.eq.${user.id})`)
           .order('created_at', { ascending: true }),
         { skipCache: true } // Always get fresh messages
       );
