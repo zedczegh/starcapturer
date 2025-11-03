@@ -75,7 +75,9 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
       mountains: sortedMountainsLocations,
       calculated: sortedCalculatedLocations
     };
-    return locations[activeView] || sortedCalculatedLocations;
+    const selected = locations[activeView] || sortedCalculatedLocations;
+    console.log(`PhotoPointsView: Selected ${selected.length} locations for ${activeView} view`);
+    return selected;
   }, [activeView, sortedCertifiedLocations, sortedObscuraLocations, sortedMountainsLocations, sortedCalculatedLocations]);
 
   return (
