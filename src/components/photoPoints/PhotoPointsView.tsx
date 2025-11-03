@@ -57,11 +57,15 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
     onLocationUpdate(lat, lng);
   }, [onLocationUpdate]);
 
-  // Sort locations by SIQS score before displaying
-  const sortedCertifiedLocations = sortLocationsBySiqs(certifiedLocations);
-  const sortedCalculatedLocations = sortLocationsBySiqs(calculatedLocations);
-  const sortedObscuraLocations = sortLocationsBySiqs(obscuraLocations);
-  const sortedMountainsLocations = sortLocationsBySiqs(mountainsLocations);
+  // Sort and memoize locations to prevent unnecessary re-renders
+  const sortedCertifiedLocations = React.useMemo(() => 
+    sortLocationsBySiqs(certifiedLocations), [certifiedLocations]);
+  const sortedCalculatedLocations = React.useMemo(() => 
+    sortLocationsBySiqs(calculatedLocations), [calculatedLocations]);
+  const sortedObscuraLocations = React.useMemo(() => 
+    sortLocationsBySiqs(obscuraLocations), [obscuraLocations]);
+  const sortedMountainsLocations = React.useMemo(() => 
+    sortLocationsBySiqs(mountainsLocations), [mountainsLocations]);
 
   // Determine which locations to show on map based on active view
   const mapLocations = React.useMemo(() => {

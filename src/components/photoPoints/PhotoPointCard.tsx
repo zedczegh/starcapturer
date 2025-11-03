@@ -66,8 +66,8 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     ? (displayName || t("Unnamed Location", "未命名位置"))
     : (originalName || t("Unnamed Location", "未命名位置"));
   
-  // Subtitle: geocoded address (only if different from main name)
-  const smallName = displayName && displayName !== mainName && displayName !== originalName 
+  // Subtitle: always show geocoded address if available and different from main name
+  const smallName = displayName && displayName !== mainName 
     ? displayName 
     : "";
   const showSmallName = Boolean(smallName);

@@ -44,6 +44,9 @@ const LocationInfo: React.FC<LocationInfoProps> = ({
         return (
           <div className="flex items-center gap-1.5">
             <Lightbulb className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground mr-1">
+              {t("Bortle", "波特尔")}
+            </span>
             <div 
               className={cn(
                 "rounded-full px-2 py-0.5 flex items-center justify-center border",

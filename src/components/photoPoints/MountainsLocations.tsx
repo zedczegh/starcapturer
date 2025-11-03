@@ -128,6 +128,7 @@ const MountainsLocations: React.FC<MountainsLocationsProps> = ({
               index={index}
               onViewDetails={onViewDetails}
               showRealTimeSiqs={true}
+              userLocation={userLocation}
             />
           </motion.div>
         ))}

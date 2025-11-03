@@ -128,6 +128,7 @@ const ObscuraLocations: React.FC<ObscuraLocationsProps> = ({
               index={index}
               onViewDetails={onViewDetails}
               showRealTimeSiqs={true}
+              userLocation={userLocation}
             />
           </motion.div>
         ))}
