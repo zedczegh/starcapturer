@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import UserAvatarDisplay from "@/components/photoPoints/cards/UserAvatarDisplay";
 import BookingAvailableBanner from "@/components/community/BookingAvailableBanner";
 import VerificationBadge from "@/components/astro-spots/verification/VerificationBadge";
+import CountryFlag from "@/components/location/CountryFlag";
 
 interface LocationCardProps {
   id: string;
@@ -54,8 +55,13 @@ const LocationCard = React.memo(({
 
   return (
     <div className="bg-cosmic-900/70 backdrop-blur-md shadow-md rounded-xl p-4 border border-cosmic-800/50 transition-all hover:border-cosmic-700/50 hover:shadow-lg overflow-hidden relative">
+      {/* Country Flag - Top Right Corner */}
+      <div className="absolute top-3 right-3 z-10">
+        <CountryFlag latitude={latitude} longitude={longitude} />
+      </div>
+      
       <div className="flex justify-between items-start">
-        <h3 className="text-lg font-medium text-white flex-1">{name}</h3>
+        <h3 className="text-lg font-medium text-white flex-1 pr-8">{name}</h3>
         <div className="flex flex-col items-end gap-2">
           <motion.div 
             initial={siqsLoading ? { opacity: 0.7 } : { opacity: 1 }}

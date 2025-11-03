@@ -318,6 +318,33 @@ export type Database = {
           },
         ]
       }
+      countries: {
+        Row: {
+          code: string
+          created_at: string | null
+          flag_emoji: string
+          id: string
+          name: string
+          name_zh: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          flag_emoji: string
+          id?: string
+          name: string
+          name_zh?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          flag_emoji?: string
+          id?: string
+          name?: string
+          name_zh?: string | null
+        }
+        Relationships: []
+      }
       personal_uploads: {
         Row: {
           category: string | null
