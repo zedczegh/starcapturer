@@ -47,10 +47,18 @@ export function useMarkerState({
     return null;
   }, [location, realTimeSiqs]);
   
-  // Get marker icon without considering Bortle scale
+  // Create a location object with updated SIQS for marker color calculation
+  const locationWithSiqs = useMemo(() => {
+    if (realTimeSiqs !== null) {
+      return { ...location, siqs: getSiqsScore(realTimeSiqs) };
+    }
+    return location;
+  }, [location, realTimeSiqs]);
+  
+  // Get marker icon - now updates when realTimeSiqs changes
   const icon = useMemo(() => {
-    return getLocationMarker(location, isCertified, isHovered, isMobile);
-  }, [location, isCertified, isHovered, isMobile]);
+    return getLocationMarker(locationWithSiqs, isCertified, isHovered, isMobile);
+  }, [locationWithSiqs, isCertified, isHovered, isMobile]);
 
   return {
     displayName,
