@@ -36,12 +36,16 @@ const PersonalUploader = () => {
 
   useEffect(() => {
     const initializeUploader = async () => {
+      console.log("Initializing uploader...");
       const { data: { session } } = await supabase.auth.getSession();
+      console.log("Session user:", session?.user?.email);
       setUser(session?.user ?? null);
       
       if (session?.user?.email === "yanzeyucq@163.com") {
+        console.log("User is authorized, loading files...");
         await loadFiles();
       } else {
+        console.log("User not authorized");
         setLoading(false);
       }
     };
@@ -53,20 +57,25 @@ const PersonalUploader = () => {
     if (user?.email === "yanzeyucq@163.com") {
       loadFiles();
     }
-  }, [selectedCategory]);
+  }, []); // Remove selectedCategory dependency since we load all files now
 
   const loadFiles = async () => {
+    console.log("Loading all files...");
     try {
       const { data, error } = await supabase
         .from("personal_uploads")
         .select("*")
-        .eq('category', selectedCategory)
         .order("created_at", { ascending: false });
 
+      console.log("Files loaded:", data, "Error:", error);
+      
       if (error) throw error;
       setFiles(data || []);
     } catch (error) {
       console.error("Error loading files:", error);
+      toast.error("Failed to load files", {
+        description: error.message || "Unknown error"
+      });
     } finally {
       setLoading(false);
     }
@@ -233,6 +242,8 @@ const PersonalUploader = () => {
   const renderPostsGrid = (category: Category) => {
     const categoryFiles = files.filter(f => f.category === category);
     
+    console.log(`Rendering ${category} grid with ${categoryFiles.length} files`);
+    
     if (loading) {
       return (
         <div className="flex justify-center py-8">
@@ -251,7 +262,7 @@ const PersonalUploader = () => {
     }
     
      return (
-      <div className="grid grid-cols-3 gap-1">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <AnimatePresence>
           {categoryFiles.map((file) => (
             <motion.div
@@ -259,18 +270,18 @@ const PersonalUploader = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="relative bg-cosmic-950 overflow-hidden group cursor-pointer flex flex-col"
+              className="relative bg-cosmic-950 overflow-hidden group cursor-pointer flex flex-col rounded-lg border border-cosmic-800 hover:border-cosmic-600 transition-all"
               onClick={() => setPreviewFile(file)}
             >
-              <div className="aspect-square relative">
+              <div className="aspect-square relative overflow-hidden">
                 {file.file_type.startsWith("image/") ? (
                   <img 
                     src={getFileUrl(file.file_path)} 
                     alt={file.file_name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-2">
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-2 bg-cosmic-900">
                     {getFileIcon(file.file_type, file.file_name)}
                     <p className="text-cosmic-50 text-xs text-center line-clamp-2">
                       {file.file_name}
@@ -283,7 +294,10 @@ const PersonalUploader = () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => window.open(getFileUrl(file.file_path), "_blank")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(getFileUrl(file.file_path), "_blank");
+                    }}
                     className="bg-cosmic-700/80 hover:bg-cosmic-600 text-white h-8 w-8 p-0"
                   >
                     <Download className="h-4 w-4" />
@@ -291,7 +305,10 @@ const PersonalUploader = () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDelete(file.id, file.file_path)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(file.id, file.file_path);
+                    }}
                     className="bg-red-500/80 hover:bg-red-600 text-white h-8 w-8 p-0"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -300,9 +317,11 @@ const PersonalUploader = () => {
               </div>
               
               {/* Description below image */}
-              <div className="p-2 bg-cosmic-900/80">
-                <p className="text-cosmic-200 text-xs line-clamp-2">{file.description}</p>
-              </div>
+              {file.description && (
+                <div className="p-2 bg-cosmic-900/80">
+                  <p className="text-cosmic-200 text-xs line-clamp-2">{file.description}</p>
+                </div>
+              )}
             </motion.div>
           ))}
         </AnimatePresence>
