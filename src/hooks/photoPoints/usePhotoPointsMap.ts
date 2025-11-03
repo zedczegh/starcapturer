@@ -56,39 +56,29 @@ export const usePhotoPointsMap = ({
   // Use map utilities
   const { getZoomLevel, handleLocationClick } = useMapUtils();
   
-  // Combine locations - always include all relevant locations
+  // Combine locations - filter by active view
   const combinedLocations = useCallback(() => {
     console.log(`Processing locations - activeView: ${activeView}, certified: ${allCertifiedLocations.length}, regular: ${locations?.length || 0}`);
     
     // Create a Map to store unique locations
     const locationMap = new Map<string, SharedAstroSpot>();
     
-    // First, add all certified locations (regardless of distance)
-    allCertifiedLocations.forEach(loc => {
-      if (loc.latitude && loc.longitude) {
-        const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-        locationMap.set(key, loc);
-      }
-    });
-    
-    // For calculated view, also add non-certified locations
-    if (activeView === 'calculated') {
-      // Add regular locations without overriding certified ones
-      if (Array.isArray(locations)) {
-        locations.forEach(loc => {
-          if (loc.latitude && loc.longitude) {
+    if (activeView === 'certified') {
+      // Only show dark sky certified locations (not obscura or mountains)
+      allCertifiedLocations.forEach(loc => {
+        if (loc.latitude && loc.longitude) {
+          const isDarkSky = (loc.isDarkSkyReserve || loc.certification) && 
+            !loc.certification?.toLowerCase().includes('atlas obscura') &&
+            !loc.certification?.toLowerCase().includes('natural mountain');
+          
+          if (isDarkSky) {
             const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
-            if (!locationMap.has(key)) {
-              locationMap.set(key, loc);
-            }
+            locationMap.set(key, loc);
           }
-        });
-      }
-    }
-    
-    // For obscura view, only show obscura locations (passed in locations array)
-    if (activeView === 'obscura') {
-      locationMap.clear();
+        }
+      });
+    } else if (activeView === 'obscura') {
+      // Only show obscura locations
       if (Array.isArray(locations)) {
         locations.forEach(loc => {
           if (loc.latitude && loc.longitude) {
@@ -97,11 +87,8 @@ export const usePhotoPointsMap = ({
           }
         });
       }
-    }
-    
-    // For mountains view, only show mountain locations (passed in locations array)
-    if (activeView === 'mountains') {
-      locationMap.clear();
+    } else if (activeView === 'mountains') {
+      // Only show mountain locations
       if (Array.isArray(locations)) {
         locations.forEach(loc => {
           if (loc.latitude && loc.longitude) {
@@ -111,10 +98,20 @@ export const usePhotoPointsMap = ({
         });
       }
       console.log(`Mountains view: Added ${locationMap.size} mountain locations to map`);
+    } else if (activeView === 'calculated') {
+      // Only show calculated (non-certified) locations
+      if (Array.isArray(locations)) {
+        locations.forEach(loc => {
+          if (loc.latitude && loc.longitude && !loc.isDarkSkyReserve && !loc.certification) {
+            const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+            locationMap.set(key, loc);
+          }
+        });
+      }
     }
     
     const result = Array.from(locationMap.values());
-    console.log(`Combined ${allCertifiedLocations.length} certified and ${locations?.length || 0} calculated locations for map display. Total: ${result.length}`);
+    console.log(`Combined locations for '${activeView}' view. Total: ${result.length}`);
     return result;
   }, [locations, allCertifiedLocations, activeView]);
   
