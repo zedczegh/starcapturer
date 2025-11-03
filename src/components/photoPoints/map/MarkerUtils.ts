@@ -104,19 +104,26 @@ export const shouldShowLocationMarker = (
 };
 
 /**
- * Get marker color based on location type and SIQS score
+ * Get marker color based on SIQS score with fallback to certification color
  * @param location Location to get color for
  * @returns Hex color string
  */
 export const getLocationColor = (location: SharedAstroSpot): string => {
+  // Always prioritize SIQS-based color if we have a valid SIQS score
+  const siqsScore = getSiqsScore(location);
+  
+  if (siqsScore > 0) {
+    // Use SIQS-based color for all locations with valid scores
+    return getProgressColor(siqsScore);
+  }
+  
+  // Fall back to certification color if no SIQS score available
   if (location.isDarkSkyReserve || location.certification) {
     return getCertificationColor(location);
-  } else {
-    const defaultColor = '#4ADE80'; // Bright green fallback
-    // Use our centralized getSiqsScore helper
-    const siqsScore = getSiqsScore(location);
-    return siqsScore > 0 ? getProgressColor(siqsScore) : defaultColor;
   }
+  
+  // Final fallback for locations without SIQS or certification
+  return '#4ADE80'; // Bright green fallback
 };
 
 /**
