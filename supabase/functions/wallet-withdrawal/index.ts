@@ -1,11 +1,33 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Input validation schema
+const withdrawalRequestSchema = z.object({
+  amount: z.number().min(5).max(5000),
+  currency: z.enum(['usd', 'eur', 'gbp']).default('usd'),
+  bank_account: z.string().min(4).max(100),
+});
+
+// Sanitize string to prevent XSS
+function sanitizeString(input: string): string {
+  return input.replace(/[<>\"'&]/g, (char) => {
+    const entities: Record<string, string> = {
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+      '&': '&amp;'
+    };
+    return entities[char] || char;
+  });
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -13,23 +35,14 @@ serve(async (req) => {
   }
 
   try {
-    const { amount, currency = 'usd', bank_account } = await req.json();
+    const body = await req.json();
     
-    // Validate required inputs
-    if (!amount || !bank_account) {
-      throw new Error("Missing required fields: amount and bank_account");
-    }
+    // Validate and parse input with zod
+    const validatedData = withdrawalRequestSchema.parse(body);
+    const { amount, currency, bank_account } = validatedData;
     
-    // Validate amount (min $5, max $5,000 for withdrawals)
-    if (typeof amount !== 'number' || amount < 5 || amount > 5000) {
-      throw new Error("Withdrawal amount must be between $5 and $5,000");
-    }
-    
-    // Validate currency
-    const allowedCurrencies = ['usd', 'eur', 'gbp'];
-    if (!allowedCurrencies.includes(currency.toLowerCase())) {
-      throw new Error("Unsupported currency");
-    }
+    // Sanitize bank account string
+    const sanitizedBankAccount = sanitizeString(bank_account);
 
     // Initialize Stripe
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -115,7 +128,7 @@ serve(async (req) => {
       p_amount: -amount, // Negative for withdrawal
       p_transaction_type: 'withdrawal',
       p_currency: currency.toUpperCase(),
-      p_description: `Withdrawal to bank account ending in ${bank_account.slice(-4)}`,
+      p_description: `Withdrawal to bank account ending in ${sanitizedBankAccount.slice(-4)}`,
       p_stripe_payment_intent_id: null
     });
 
@@ -141,6 +154,21 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("Error processing withdrawal:", error);
+    
+    // Handle validation errors
+    if (error instanceof z.ZodError) {
+      return new Response(
+        JSON.stringify({ 
+          error: "Validation error", 
+          details: error.errors 
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        }
+      );
+    }
+    
     return new Response(
       JSON.stringify({ error: error.message }),
       {

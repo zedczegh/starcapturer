@@ -1,10 +1,34 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Input validation schema
+const paymentRequestSchema = z.object({
+  amount: z.number().min(0.01).max(10000),
+  currency: z.enum(['USD', 'EUR', 'GBP']).default('USD'),
+  description: z.string().max(500).optional(),
+  booking_id: z.string().uuid().optional(),
+});
+
+// Sanitize string to prevent XSS
+function sanitizeString(input: string | undefined): string | undefined {
+  if (!input) return undefined;
+  return input.replace(/[<>\"'&]/g, (char) => {
+    const entities: Record<string, string> = {
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+      '&': '&amp;'
+    };
+    return entities[char] || char;
+  });
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -12,28 +36,14 @@ serve(async (req) => {
   }
 
   try {
-    const { amount, currency = 'USD', description, booking_id } = await req.json();
+    const body = await req.json();
     
-    // Validate required inputs
-    if (!amount) {
-      throw new Error("Missing required field: amount");
-    }
+    // Validate and parse input with zod
+    const validatedData = paymentRequestSchema.parse(body);
+    const { amount, currency, description, booking_id } = validatedData;
     
-    // Validate amount (min $0.01, max $10,000)
-    if (typeof amount !== 'number' || amount < 0.01 || amount > 10000) {
-      throw new Error("Amount must be between $0.01 and $10,000");
-    }
-    
-    // Validate currency
-    const allowedCurrencies = ['USD', 'EUR', 'GBP'];
-    if (!allowedCurrencies.includes(currency.toUpperCase())) {
-      throw new Error("Unsupported currency");
-    }
-    
-    // Validate booking_id if provided
-    if (booking_id && typeof booking_id !== 'string') {
-      throw new Error("Invalid booking_id format");
-    }
+    // Sanitize description
+    const sanitizedDescription = sanitizeString(description);
 
     // Initialize Supabase with service role key
     const supabaseClient = createClient(
@@ -80,8 +90,8 @@ serve(async (req) => {
       p_user_id: user.id,
       p_amount: -amount, // Negative for payment
       p_transaction_type: booking_id ? 'booking_payment' : 'payment',
-      p_currency: currency.toUpperCase(),
-      p_description: description || 'Wallet payment',
+      p_currency: currency,
+      p_description: sanitizedDescription || 'Wallet payment',
       p_related_booking_id: booking_id || null
     });
 
@@ -107,6 +117,21 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("Error processing wallet payment:", error);
+    
+    // Handle validation errors
+    if (error instanceof z.ZodError) {
+      return new Response(
+        JSON.stringify({ 
+          error: "Validation error", 
+          details: error.errors 
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        }
+      );
+    }
+    
     return new Response(
       JSON.stringify({ error: error.message }),
       {

@@ -67,18 +67,18 @@ export const useMessageUpload = () => {
         return null;
       }
       
-      // Get the public URL
-      const { data: publicUrlData } = supabase.storage
+      // Get signed URL (valid for 1 year) since bucket is now private
+      const { data: signedUrlData, error: urlError } = await supabase.storage
         .from('message_images')
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 31536000); // 1 year in seconds
       
-      if (!publicUrlData?.publicUrl) {
-        console.error("Failed to get public URL for message image");
+      if (urlError || !signedUrlData?.signedUrl) {
+        console.error("Failed to get signed URL for message image:", urlError);
         return null;
       }
       
-      console.log("Message image uploaded successfully, public URL:", publicUrlData.publicUrl);
-      return publicUrlData.publicUrl;
+      console.log("Message image uploaded successfully with signed URL");
+      return signedUrlData.signedUrl;
     } catch (err) {
       console.error("Exception during message image upload:", err);
       return null;

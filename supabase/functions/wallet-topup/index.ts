@@ -1,11 +1,19 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Input validation schema
+const topupRequestSchema = z.object({
+  amount: z.number().min(1).max(10000),
+  currency: z.enum(['usd', 'eur', 'gbp']).default('usd'),
+  payment_method_id: z.string().regex(/^pm_[a-zA-Z0-9]+$/, "Invalid Stripe payment method ID"),
+});
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -13,28 +21,11 @@ serve(async (req) => {
   }
 
   try {
-    const { amount, currency = 'usd', payment_method_id } = await req.json();
+    const body = await req.json();
     
-    // Validate required inputs
-    if (!amount || !payment_method_id) {
-      throw new Error("Missing required fields: amount and payment_method_id");
-    }
-    
-    // Validate amount (min $1, max $10,000)
-    if (typeof amount !== 'number' || amount < 1 || amount > 10000) {
-      throw new Error("Amount must be between $1 and $10,000");
-    }
-    
-    // Validate currency
-    const allowedCurrencies = ['usd', 'eur', 'gbp'];
-    if (!allowedCurrencies.includes(currency.toLowerCase())) {
-      throw new Error("Unsupported currency");
-    }
-    
-    // Validate payment method ID format (Stripe format: pm_xxx)
-    if (typeof payment_method_id !== 'string' || !payment_method_id.startsWith('pm_')) {
-      throw new Error("Invalid payment method ID format");
-    }
+    // Validate and parse input with zod
+    const validatedData = topupRequestSchema.parse(body);
+    const { amount, currency, payment_method_id } = validatedData;
     
     // Initialize Stripe
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -141,6 +132,21 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("Error processing wallet top-up:", error);
+    
+    // Handle validation errors
+    if (error instanceof z.ZodError) {
+      return new Response(
+        JSON.stringify({ 
+          error: "Validation error", 
+          details: error.errors 
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        }
+      );
+    }
+    
     return new Response(
       JSON.stringify({ error: error.message }),
       {
