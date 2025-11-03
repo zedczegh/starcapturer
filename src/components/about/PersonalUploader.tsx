@@ -32,6 +32,7 @@ const PersonalUploader = () => {
   const [selectedCategory, setSelectedCategory] = useState<Category>('artworks');
   const [postCategory, setPostCategory] = useState<Category>('artworks');
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [previewFile, setPreviewFile] = useState<UploadedFile | null>(null);
 
   useEffect(() => {
     const initializeUploader = async () => {
@@ -259,6 +260,7 @@ const PersonalUploader = () => {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               className="relative bg-cosmic-950 overflow-hidden group cursor-pointer flex flex-col"
+              onClick={() => setPreviewFile(file)}
             >
               <div className="aspect-square relative">
                 {file.file_type.startsWith("image/") ? (
@@ -359,6 +361,105 @@ const PersonalUploader = () => {
           </TabsContent>
         </Tabs>
       </Card>
+
+      {/* Preview Dialog */}
+      <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>
+        <DialogContent className="bg-cosmic-900 border-cosmic-700 max-w-4xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="text-cosmic-50">{previewFile?.file_name}</DialogTitle>
+          </DialogHeader>
+          
+          {previewFile && (
+            <div className="space-y-4">
+              {/* Image Preview */}
+              {previewFile.file_type.startsWith("image/") && (
+                <div className="relative w-full">
+                  <img 
+                    src={getFileUrl(previewFile.file_path)} 
+                    alt={previewFile.file_name}
+                    className="w-full h-auto rounded-lg"
+                  />
+                </div>
+              )}
+              
+              {/* PDF Preview */}
+              {previewFile.file_type === "application/pdf" && (
+                <iframe
+                  src={getFileUrl(previewFile.file_path)}
+                  className="w-full h-[70vh] rounded-lg"
+                  title={previewFile.file_name}
+                />
+              )}
+              
+              {/* Document Preview (Word, etc) */}
+              {(previewFile.file_type.includes("word") || 
+                previewFile.file_name.endsWith(".doc") || 
+                previewFile.file_name.endsWith(".docx")) && (
+                <div className="text-center py-12">
+                  <FileText className="h-16 w-16 text-blue-400 mx-auto mb-4" />
+                  <p className="text-cosmic-300 mb-4">Document preview not available</p>
+                  <Button
+                    onClick={() => window.open(getFileUrl(previewFile.file_path), "_blank")}
+                    className="bg-cosmic-600 hover:bg-cosmic-500"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download to View
+                  </Button>
+                </div>
+              )}
+              
+              {/* File Info */}
+              <div className="border-t border-cosmic-700 pt-4 space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className={`font-medium ${getCategoryColor(previewFile.category)}`}>
+                    {getCategoryLabel(previewFile.category)}
+                  </span>
+                </div>
+                {previewFile.description && (
+                  <p className="text-cosmic-300 text-sm">{previewFile.description}</p>
+                )}
+                <div className="flex items-center gap-4 text-xs text-cosmic-500">
+                  <span>{formatFileSize(previewFile.file_size)}</span>
+                  <span>
+                    {new Date(previewFile.created_at).toLocaleDateString('en-US', { 
+                      month: 'long', 
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </span>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(getFileUrl(previewFile.file_path), "_blank");
+                    }}
+                    className="flex-1"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(previewFile.id, previewFile.file_path);
+                      setPreviewFile(null);
+                    }}
+                    className="flex-1"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Upload Dialog */}
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
