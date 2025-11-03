@@ -6,6 +6,211 @@ let lastCacheUpdate = 0;
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 /**
+ * Add Atlas Obscura locations
+ */
+function addAtlasObscuraLocations(existingLocations: SharedAstroSpot[]): SharedAstroSpot[] {
+  const locationMap = new Map<string, SharedAstroSpot>();
+  
+  existingLocations.forEach(loc => {
+    if (!loc.latitude || !loc.longitude) return;
+    const key = `${loc.latitude.toFixed(4)}-${loc.longitude.toFixed(4)}`;
+    locationMap.set(key, loc);
+  });
+  
+  const obscuraLocations = [
+    {
+      id: 'castle-baroness-scoppa',
+      name: 'Castle of Baroness Scoppa',
+      chineseName: '斯科帕女男爵城堡',
+      latitude: 38.6009,
+      longitude: 16.4028,
+      isDarkSkyReserve: false,
+      certification: 'Atlas Obscura Location',
+      timestamp: new Date().toISOString(),
+      bortleScale: 5,
+      siqs: 6.5
+    },
+    {
+      id: 'butterflies-maj',
+      name: 'Butterflies on Máj',
+      chineseName: '马耶的蝴蝶',
+      latitude: 50.0822,
+      longitude: 14.4199,
+      isDarkSkyReserve: false,
+      certification: 'Atlas Obscura Location',
+      timestamp: new Date().toISOString(),
+      bortleScale: 6,
+      siqs: 5.2
+    },
+    {
+      id: 'suicide-cemetery',
+      name: 'The Suicide Cemetery',
+      chineseName: '自杀者墓地',
+      latitude: 52.4967,
+      longitude: 13.2032,
+      isDarkSkyReserve: false,
+      certification: 'Atlas Obscura Location',
+      timestamp: new Date().toISOString(),
+      bortleScale: 6,
+      siqs: 5.0
+    },
+    {
+      id: 'church-our-lady',
+      name: 'Church of Our Lady',
+      chineseName: '圣母教堂',
+      latitude: 55.6804,
+      longitude: 11.0808,
+      isDarkSkyReserve: false,
+      certification: 'Atlas Obscura Location',
+      timestamp: new Date().toISOString(),
+      bortleScale: 5,
+      siqs: 6.8
+    },
+    {
+      id: 'fu-lu-shou-complex',
+      name: 'Fu Lu Shou Complex',
+      chineseName: '福禄寿综合体',
+      latitude: 1.3017,
+      longitude: 103.8546,
+      isDarkSkyReserve: false,
+      certification: 'Atlas Obscura Location',
+      timestamp: new Date().toISOString(),
+      bortleScale: 7,
+      siqs: 4.5
+    },
+    {
+      id: 'trojan-horse',
+      name: 'Çanakkale Trojan Horse',
+      chineseName: '恰纳卡莱特洛伊木马',
+      latitude: 40.1519,
+      longitude: 26.4051,
+      isDarkSkyReserve: false,
+      certification: 'Atlas Obscura Location',
+      timestamp: new Date().toISOString(),
+      bortleScale: 5,
+      siqs: 6.0
+    },
+    {
+      id: 'wied-il-ghasri',
+      name: 'Wied il-Għasri',
+      chineseName: '维埃德伊尔加斯里',
+      latitude: 36.0787,
+      longitude: 14.2284,
+      isDarkSkyReserve: false,
+      certification: 'Atlas Obscura Location',
+      timestamp: new Date().toISOString(),
+      bortleScale: 4,
+      siqs: 7.5
+    },
+    {
+      id: 'marjuns-lifting-stone',
+      name: "Marjun's Lifting Stone",
+      chineseName: '马容举石',
+      latitude: 62.3352,
+      longitude: -6.7654,
+      isDarkSkyReserve: false,
+      certification: 'Atlas Obscura Location',
+      timestamp: new Date().toISOString(),
+      bortleScale: 4,
+      siqs: 8.0
+    },
+    {
+      id: 'mingo-gc30',
+      name: 'Mingo GC30',
+      chineseName: '明戈GC30',
+      latitude: 39.2780,
+      longitude: -100.9437,
+      isDarkSkyReserve: false,
+      certification: 'Atlas Obscura Location',
+      timestamp: new Date().toISOString(),
+      bortleScale: 3,
+      siqs: 8.5
+    },
+    {
+      id: 'pere-cheney-cemetery',
+      name: 'Pere Cheney Cemetery',
+      chineseName: '佩雷切尼墓地',
+      latitude: 44.5434,
+      longitude: -84.7221,
+      isDarkSkyReserve: false,
+      certification: 'Atlas Obscura Location',
+      timestamp: new Date().toISOString(),
+      bortleScale: 4,
+      siqs: 7.8
+    },
+    {
+      id: 'tianzi-hotel',
+      name: 'Tianzi Hotel',
+      chineseName: '天子大酒店',
+      latitude: 30.7642,
+      longitude: 114.9431,
+      isDarkSkyReserve: false,
+      certification: 'Atlas Obscura Location',
+      timestamp: new Date().toISOString(),
+      bortleScale: 7,
+      siqs: 4.2
+    },
+    {
+      id: 'forbidden-city',
+      name: 'The Forbidden City',
+      chineseName: '故宫',
+      latitude: 39.9163,
+      longitude: 116.3972,
+      isDarkSkyReserve: false,
+      certification: 'Atlas Obscura Location',
+      timestamp: new Date().toISOString(),
+      bortleScale: 8,
+      siqs: 3.5
+    },
+    {
+      id: 'jiuzhaigou-valley',
+      name: 'Jiuzhaigou Valley',
+      chineseName: '九寨沟',
+      latitude: 33.2600,
+      longitude: 103.9200,
+      isDarkSkyReserve: false,
+      certification: 'Atlas Obscura Location',
+      timestamp: new Date().toISOString(),
+      bortleScale: 3,
+      siqs: 8.8
+    },
+    {
+      id: 'park-street-station',
+      name: 'Park Street Station Mural',
+      chineseName: '公园街站壁画',
+      latitude: 42.3564,
+      longitude: -71.0625,
+      isDarkSkyReserve: false,
+      certification: 'Atlas Obscura Location',
+      timestamp: new Date().toISOString(),
+      bortleScale: 8,
+      siqs: 3.0
+    },
+    {
+      id: 'willie-whale',
+      name: 'Willie the Whale',
+      chineseName: '鲸鱼威利',
+      latitude: 40.4850,
+      longitude: -86.1390,
+      isDarkSkyReserve: false,
+      certification: 'Atlas Obscura Location',
+      timestamp: new Date().toISOString(),
+      bortleScale: 6,
+      siqs: 5.5
+    }
+  ];
+  
+  obscuraLocations.forEach(location => {
+    const key = `${location.latitude.toFixed(4)}-${location.longitude.toFixed(4)}`;
+    if (!locationMap.has(key)) {
+      locationMap.set(key, location as SharedAstroSpot);
+    }
+  });
+  
+  return Array.from(locationMap.values());
+}
+
+/**
  * Pre-load all certified dark sky locations globally
  * This is called early in the application lifecycle
  */
@@ -1148,19 +1353,29 @@ async function refreshCertifiedLocationsCache(): Promise<SharedAstroSpot[]> {
     // Add ALL IDA certified locations that might be missing
     const withAllIDA = addAllIDACertifiedLocations(withLodging);
     
+    // Add Atlas Obscura locations
+    const withObscura = addAtlasObscuraLocations(withAllIDA);
+    
+    // Sort all locations by SIQS score (highest first)
+    const sortedLocations = withObscura.sort((a, b) => {
+      const siqsA = typeof a.siqs === 'number' ? a.siqs : (a.siqs?.score || 0);
+      const siqsB = typeof b.siqs === 'number' ? b.siqs : (b.siqs?.score || 0);
+      return siqsB - siqsA;
+    });
+    
     // Update cache and timestamp
-    cachedCertifiedLocations = withAllIDA;
+    cachedCertifiedLocations = sortedLocations;
     lastCacheUpdate = Date.now();
     
     // Save to localStorage for future quick loads
     try {
-      localStorage.setItem('cachedCertifiedLocations', JSON.stringify(withAllIDA));
+      localStorage.setItem('cachedCertifiedLocations', JSON.stringify(sortedLocations));
     } catch (error) {
       console.error("Error saving certified locations to cache:", error);
     }
     
-    console.log(`Total certified locations after augmentation: ${withAllIDA.length}`);
-    return withAllIDA;
+    console.log(`Total certified locations after augmentation: ${sortedLocations.length}`);
+    return sortedLocations;
   } catch (error) {
     console.error("Error refreshing certified locations cache:", error);
     // Return cached data if available, otherwise empty array

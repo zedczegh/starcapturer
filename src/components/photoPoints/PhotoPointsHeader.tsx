@@ -89,7 +89,7 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
           className={`${isMobile ? 'text-3xl' : 'text-4xl'} font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-accent to-secondary mb-3`}
           variants={titleVariants}
         >
-          {t("Stargazing Points", "观星点")}
+          {t("New Opportunities", "新机遇")}
         </motion.h1>
         
         {/* Decorative line - similar to AboutHeader */}
