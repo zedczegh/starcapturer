@@ -53,11 +53,6 @@ const MapContent: React.FC<MapContentProps> = ({
 }) => {
   const tileOptions = getTileLayerOptions(Boolean(isMobile));
   
-  // Log when displayLocations change
-  React.useEffect(() => {
-    console.log(`MapContent: Rendering ${displayLocations.length} markers for ${activeView} view`);
-  }, [displayLocations, activeView]);
-  
   const getDefaultZoom = () => {
     if (activeView === 'calculated') {
       return isMobile ? 3 : 4;

@@ -2,6 +2,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { useMapLocations, useMapUtils } from './useMapUtils';
+import { addLocationToStore } from '@/services/calculatedLocationsService';
+import { useCertifiedLocationsLoader } from './useCertifiedLocationsLoader';
 
 interface UsePhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
@@ -19,30 +21,108 @@ export const usePhotoPointsMap = ({
   const [mapReady, setMapReady] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<SharedAstroSpot | null>(null);
   
-  // Track previous activeView to detect changes
-  const prevActiveViewRef = useRef(activeView);
+  // IMPORTANT: Always load certified locations regardless of view
+  const shouldLoadCertified = true; // Always load certified locations
   
+  // Use our certified locations loader with always-on loading
+  const { 
+    certifiedLocations: allCertifiedLocations, 
+    isLoading: certifiedLocationsLoading,
+    loadingProgress 
+  } = useCertifiedLocationsLoader(shouldLoadCertified);
+  
+  const [certifiedLocationsLoaded, setCertifiedLocationsLoaded] = useState(false);
+  
+  // Store all certified locations in localStorage for persistent access
   useEffect(() => {
-    const viewChanged = prevActiveViewRef.current !== activeView;
-    if (viewChanged) {
-      console.log(`Tab switched from ${prevActiveViewRef.current} to ${activeView}`);
-      prevActiveViewRef.current = activeView;
+    if (allCertifiedLocations.length > 0) {
+      console.log(`Storing ${allCertifiedLocations.length} certified locations in localStorage`);
+      try {
+        localStorage.setItem('cachedCertifiedLocations', JSON.stringify(allCertifiedLocations));
+        setCertifiedLocationsLoaded(true);
+      } catch (err) {
+        console.error("Error storing certified locations in localStorage:", err);
+      }
+      
+      // Also store each location individually in persistent storage
+      allCertifiedLocations.forEach(location => {
+        if (location.isDarkSkyReserve || location.certification) {
+          addLocationToStore(location);
+        }
+      });
     }
-  }, [activeView]);
+  }, [allCertifiedLocations]);
   
   // Use map utilities
   const { getZoomLevel, handleLocationClick } = useMapUtils();
   
-  // Process locations for map display with proper filtering
+  // Combine locations - filter by active view
+  const combinedLocations = useCallback(() => {
+    console.log(`Processing locations - activeView: ${activeView}, certified: ${allCertifiedLocations.length}, regular: ${locations?.length || 0}`);
+    
+    // Create a Map to store unique locations
+    const locationMap = new Map<string, SharedAstroSpot>();
+    
+    if (activeView === 'certified') {
+      // Only show dark sky certified locations (not obscura or mountains)
+      allCertifiedLocations.forEach(loc => {
+        if (loc.latitude && loc.longitude) {
+          const isDarkSky = (loc.isDarkSkyReserve || loc.certification) && 
+            !loc.certification?.toLowerCase().includes('atlas obscura') &&
+            !loc.certification?.toLowerCase().includes('natural mountain');
+          
+          if (isDarkSky) {
+            const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+            locationMap.set(key, loc);
+          }
+        }
+      });
+    } else if (activeView === 'obscura') {
+      // Only show obscura locations
+      if (Array.isArray(locations)) {
+        locations.forEach(loc => {
+          if (loc.latitude && loc.longitude) {
+            const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+            locationMap.set(key, loc);
+          }
+        });
+      }
+    } else if (activeView === 'mountains') {
+      // Only show mountain locations
+      if (Array.isArray(locations)) {
+        locations.forEach(loc => {
+          if (loc.latitude && loc.longitude) {
+            const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+            locationMap.set(key, loc);
+          }
+        });
+      }
+      console.log(`Mountains view: Added ${locationMap.size} mountain locations to map`);
+    } else if (activeView === 'calculated') {
+      // Only show calculated (non-certified) locations
+      if (Array.isArray(locations)) {
+        locations.forEach(loc => {
+          if (loc.latitude && loc.longitude && !loc.isDarkSkyReserve && !loc.certification) {
+            const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+            locationMap.set(key, loc);
+          }
+        });
+      }
+    }
+    
+    const result = Array.from(locationMap.values());
+    console.log(`Combined locations for '${activeView}' view. Total: ${result.length}`);
+    return result;
+  }, [locations, allCertifiedLocations, activeView]);
+  
+  // Use the location processing hook without distance filtering for certified locations
   const { processedLocations } = useMapLocations({
     userLocation,
-    locations: locations || [],
+    locations: combinedLocations(),
     searchRadius,
     activeView,
     mapReady
   });
-  
-  console.log(`usePhotoPointsMap: Input locations=${locations.length}, Processed=${processedLocations.length}, activeView=${activeView}`);
 
   // Calculate map center coordinates - default to China if no location
   const mapCenter: [number, number] = userLocation 
@@ -57,7 +137,7 @@ export const usePhotoPointsMap = ({
   // Always use a more zoomed-out initial view
   const initialZoom = 4; // Zoomed out to see large regions
   
-  console.log(`usePhotoPointsMap: validLocations=${processedLocations.length}, activeView=${activeView}`);
+  console.log(`usePhotoPointsMap: processedLocations=${processedLocations.length}, activeView=${activeView}, searchRadius=${searchRadius}`);
   
   return {
     mapReady,
@@ -67,8 +147,10 @@ export const usePhotoPointsMap = ({
     validLocations: processedLocations,
     mapCenter,
     initialZoom,
-    certifiedLocationsLoaded: true,
-    certifiedLocationsLoading: false
+    certifiedLocationsLoaded,
+    certifiedLocationsLoading: certifiedLocationsLoading,
+    loadingProgress,
+    allCertifiedLocationsCount: allCertifiedLocations.length
   };
 };
 
