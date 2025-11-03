@@ -16,28 +16,43 @@ interface ViewToggleProps {
   activeView: PhotoPointsViewMode;
   onViewChange: (view: PhotoPointsViewMode) => void;
   loading?: boolean;
+  context?: 'photoPoints' | 'community';
 }
 
 const ViewToggle: React.FC<ViewToggleProps> = ({
   activeView,
   onViewChange,
-  loading = false
+  loading = false,
+  context = 'photoPoints'
 }) => {
   const { t } = useLanguage();
   
   const handleViewChange = (view: PhotoPointsViewMode) => {
     if (view !== activeView) {
-      console.log(`ViewToggle: Switching to ${view} view`);
+      console.log(`ViewToggle (${context}): Switching to ${view} view`);
       onViewChange(view);
     }
   };
   
-  const viewTypes = [
-    { value: 'certified' as const, label: t("Dark Sky Locations", "暗夜天空位置"), icon: BadgeCheck },
-    { value: 'calculated' as const, label: t("Recommended Near Me", "附近推荐"), icon: MapPin },
-    { value: 'obscura' as const, label: t("Natural Locations", "自然位置"), icon: Mountain },
-    { value: 'mountains' as const, label: t("Obscura Locations", "奇观位置"), icon: Eye },
-  ];
+  // Context-specific view types
+  const getViewTypes = () => {
+    if (context === 'community') {
+      return [
+        { value: 'calculated' as const, label: t("All Spots", "全部地点"), icon: Layers },
+        { value: 'certified' as const, label: t("Nightscape", "夜景"), icon: BadgeCheck },
+        { value: 'mountains' as const, label: t("Natural", "自然"), icon: Mountain },
+        { value: 'obscura' as const, label: t("Obscura", "奇观"), icon: Eye },
+      ];
+    }
+    return [
+      { value: 'certified' as const, label: t("Dark Sky Locations", "暗夜天空位置"), icon: BadgeCheck },
+      { value: 'calculated' as const, label: t("Recommended Near Me", "附近推荐"), icon: MapPin },
+      { value: 'obscura' as const, label: t("Natural Locations", "自然位置"), icon: Mountain },
+      { value: 'mountains' as const, label: t("Obscura Locations", "奇观位置"), icon: Eye },
+    ];
+  };
+  
+  const viewTypes = getViewTypes();
   
   const activeViewData = viewTypes.find(v => v.value === activeView);
   const ActiveIcon = activeViewData?.icon || Layers;
@@ -69,7 +84,7 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
         </motion.button>
       </DropdownMenuTrigger>
       
-      <DropdownMenuContent align="start" className="w-56 bg-background/95 backdrop-blur-sm">
+      <DropdownMenuContent align="start" className="w-56 bg-cosmic-900/95 backdrop-blur-md border-cosmic-700/50 z-[9999]">
         {viewTypes.map(({ value, label, icon: Icon }) => (
           <DropdownMenuItem
             key={value}

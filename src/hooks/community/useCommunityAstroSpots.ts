@@ -22,13 +22,39 @@ export const useCommunityAstroSpots = () => {
   const [isNavigatingToSpot, setIsNavigatingToSpot] = useState(false);
 
   // Use React Query to fetch data with improved caching
-  const { data: astrospots, isLoading, refetch } = useQuery({
+  const { data: astrospots, isLoading, refetch, error, isError } = useQuery({
     queryKey: ["community-astrospots-supabase"],
-    queryFn: fetchCommunityAstroSpots,
-    staleTime: 0, // Force fresh data
-    retry: 3,
-    retryDelay: 1000,
+    queryFn: async () => {
+      console.log('🚀 Query function called for community astrospots');
+      try {
+        const result = await fetchCommunityAstroSpots();
+        console.log('📊 Query function result:', result?.length, 'spots');
+        if (!result || result.length === 0) {
+          console.warn('⚠️ No spots returned from fetch');
+        }
+        return result || [];
+      } catch (err) {
+        console.error('❌ Error in query function:', err);
+        throw err;
+      }
+    },
+    staleTime: 0,
+    gcTime: 0, // Don't cache
+    retry: 1,
+    retryDelay: 500,
   });
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🔍 Community hook state:', {
+      isLoading,
+      isError,
+      hasError: !!error,
+      error: error?.message || error,
+      astrospotsCount: astrospots?.length || 0,
+      firstSpots: astrospots?.slice(0, 2)
+    });
+  }, [isLoading, error, isError, astrospots]);
   
   // Function to force data refresh
   const refreshData = useCallback(async () => {
