@@ -132,7 +132,9 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
 
   // Always ensure we have a score to display, prioritize stabilized score
   // This fixes the N/A issue on mobile
-  const displayScore = stabilizedScore ?? realTimeSiqs ?? getDisplaySiqs(spot.siqs);
+  // Also check spot.realTimeSiqs which comes from the parent component
+  const spotSiqs = (spot as any).realTimeSiqs ?? getDisplaySiqs(spot.siqs);
+  const displayScore = stabilizedScore ?? realTimeSiqs ?? spotSiqs;
   
   // Calculate marker color based on SIQS score
   const markerColor = displayScore && displayScore > 0 
