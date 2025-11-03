@@ -9,7 +9,6 @@ import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import ProfileLoader from '@/components/profile/ProfileLoader';
 import ProfileMain from '@/components/profile/ProfileMain';
-import AboutFooter from '@/components/about/AboutFooter';
 import { 
   uploadAvatar, 
   upsertUserProfile, 
@@ -288,7 +287,6 @@ const Profile = () => {
         setTags={setTags}
         bio={profile?.bio}
       />
-      <AboutFooter />
     </div>
   );
 };

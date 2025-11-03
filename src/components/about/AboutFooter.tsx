@@ -29,7 +29,7 @@ const AboutFooter = () => {
       {!isMobile && (
         <div className="absolute inset-0 -z-10 overflow-hidden">
           <motion.div
-            className="absolute top-0 -right-10 w-40 h-40 bg-blue-500/5 rounded-full blur-3xl"
+            className="absolute top-0 -right-10 w-40 h-40 bg-primary/5 rounded-full blur-3xl"
             animate={{ 
               y: [0, 10, 0],
               opacity: [0.3, 0.5, 0.3]
@@ -37,7 +37,7 @@ const AboutFooter = () => {
             transition={{ duration: 6, repeat: Infinity }}
           />
           <motion.div
-            className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-500/5 rounded-full blur-3xl"
+            className="absolute -bottom-10 -left-10 w-40 h-40 bg-primary/5 rounded-full blur-3xl"
             animate={{ 
               y: [0, -10, 0],
               opacity: [0.3, 0.5, 0.3]
@@ -47,27 +47,12 @@ const AboutFooter = () => {
         </div>
       )}
       
-      <motion.h3 
-        className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold text-cosmic-100 flex items-center justify-center gap-2`}
-        variants={buttonVariants}
-      >
-        {t("Ready to explore the night sky?", "准备探索夜空了吗？")}
-        {!isMobile && (
-          <Link 
-            to="/location/default"
-            className="text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
-          >
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        )}
-      </motion.h3>
-      
       <motion.div 
         className="flex flex-wrap gap-4 justify-center"
         variants={buttonVariants}
       >
         <Link to="/">
-          <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md shadow-blue-900/20 hover:shadow-lg hover:shadow-blue-900/30 transition-all">
+          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all">
             <Home className="mr-2 h-4 w-4" />
             {t("Return to Home", "返回首页")}
           </Button>
@@ -75,7 +60,7 @@ const AboutFooter = () => {
         
         <Link to="/bortle-now">
           <Button variant="outline" className="border-cosmic-400/30 hover:bg-cosmic-800/50 hover:border-cosmic-400/50 transition-colors">
-            <Ruler className="mr-2 h-3 w-3 text-purple-400" />
+            <Ruler className="mr-2 h-3 w-3 text-primary" />
             {t("Measure Sky Brightness", "测量夜空亮度")}
           </Button>
         </Link>
@@ -85,7 +70,7 @@ const AboutFooter = () => {
             variant="outline" 
             className="border-cosmic-400/30 hover:bg-cosmic-800/50 hover:border-cosmic-400/50 transition-colors"
           >
-            <Info className="mr-2 h-4 w-4 text-teal-400" />
+            <Info className="mr-2 h-4 w-4 text-primary" />
             {t("Calculate SIQS", "计算SIQS")}
           </Button>
         </Link>

@@ -1,12 +1,10 @@
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Camera, MapPin, Star, ArrowRight } from "lucide-react";
+import { Camera, MapPin, Star } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Button } from "@/components/ui/button";
 
 const PhotoPointsFeature = () => {
   const { t } = useLanguage();
@@ -46,8 +44,8 @@ const PhotoPointsFeature = () => {
               </div>
               
               <div className="flex flex-col gap-2">
-                <div className="bg-purple-500/10 p-2 rounded-full w-10 h-10 flex items-center justify-center">
-                  <Star size={20} className="text-purple-400" />
+                <div className="bg-primary/10 p-2 rounded-full w-10 h-10 flex items-center justify-center">
+                  <Star size={20} className="text-primary" />
                 </div>
                 <h4 className="text-sm font-medium text-cosmic-100">{t("SIQS Ratings", "SIQS评分")}</h4>
                 <p className="text-xs text-cosmic-300">{t("Each location is rated with our Sky Quality Index to help you plan", "每个位置都使用我们的天空质量指数进行评分，以帮助您规划")}</p>
@@ -60,20 +58,6 @@ const PhotoPointsFeature = () => {
                 <h4 className="text-sm font-medium text-cosmic-100">{t("Photographer Tips", "摄影师提示")}</h4>
                 <p className="text-xs text-cosmic-300">{t("Access to angles, elevation data, and best times to visit", "获取角度、海拔数据和最佳参观时间")}</p>
               </div>
-            </div>
-            
-            <div className="mt-6 p-4 bg-gradient-to-r from-cosmic-800/40 to-cosmic-800/20 rounded-lg border border-cosmic-700/20 flex flex-col md:flex-row justify-between items-center gap-4">
-              <div>
-                <h4 className="text-sm font-medium text-cosmic-100">{t("Ready to explore perfect photo locations?", "准备探索完美的摄影地点？")}</h4>
-                <p className="text-xs text-cosmic-300 mt-1">{t("Find dark sky spots near you or in your destination", "在您附近或目的地找到暗夜地点")}</p>
-              </div>
-              
-              <Link to="/photo-points">
-                <Button className="bg-gradient-to-r from-teal-600 to-blue-600 hover:opacity-90 text-white shadow-md shadow-blue-900/20">
-                  {t("Explore Photo Points", "探索摄影点")}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
             </div>
           </div>
         </CardContent>

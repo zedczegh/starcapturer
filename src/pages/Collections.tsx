@@ -12,7 +12,6 @@ import { prepareLocationForNavigation } from "@/utils/locationNavigation";
 import { sortLocationsBySiqs } from "./collections/sortLocationsBySiqs";
 import PageLoader from "@/components/loaders/PageLoader";
 import LocationStatusMessage from "@/components/location/LocationStatusMessage";
-import AboutFooter from '@/components/about/AboutFooter';
 import { useUserCollections } from "@/hooks/collections/useUserCollections";
 import { useUserAstroSpotCollections } from "@/hooks/collections/useUserAstroSpotCollections";
 import CollectionsLoadingSkeleton from "@/components/collections/CollectionsLoadingSkeleton";
@@ -112,7 +111,7 @@ const Collections = () => {
         <main className="container mx-auto px-4 py-8 pt-16 md:pt-20 flex-grow">
           <div className="mb-8">
             <div className="flex justify-between items-center mb-2">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-foreground bg-clip-text text-transparent">
                 {t("My Collections", "我的收藏")}
               </h1>
               <div className="flex items-center gap-4">
@@ -294,7 +293,6 @@ const Collections = () => {
           </Tabs>
         </main>
       </TooltipProvider>
-      <AboutFooter />
     </div>
   );
 };

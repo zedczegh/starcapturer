@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import NavBar from '@/components/NavBar';
-import AboutFooter from '@/components/about/AboutFooter';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -508,8 +507,6 @@ const MyWallet = () => {
           </div>
         </div>
       </main>
-      
-      <AboutFooter />
     </div>
   );
 };
