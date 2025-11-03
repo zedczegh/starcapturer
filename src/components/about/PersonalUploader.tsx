@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, FileText, Image, Trash2, Download, Loader2, File } from "lucide-react";
+import { Upload, FileText, Image, Trash2, Download, Loader2, File, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface UploadedFile {
   id: string;
@@ -27,8 +29,9 @@ const PersonalUploader = () => {
   const [loading, setLoading] = useState(true);
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [description, setDescription] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<Category | 'all'>('all');
-  const [postCategory, setPostCategory] = useState<Category>('writings');
+  const [selectedCategory, setSelectedCategory] = useState<Category>('artworks');
+  const [postCategory, setPostCategory] = useState<Category>('artworks');
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   useEffect(() => {
     const initializeUploader = async () => {
@@ -53,16 +56,11 @@ const PersonalUploader = () => {
 
   const loadFiles = async () => {
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from("personal_uploads")
         .select("*")
+        .eq('category', selectedCategory)
         .order("created_at", { ascending: false });
-
-      if (selectedCategory !== 'all') {
-        query = query.eq('category', selectedCategory);
-      }
-
-      const { data, error } = await query;
 
       if (error) throw error;
       setFiles(data || []);
@@ -119,6 +117,7 @@ const PersonalUploader = () => {
       });
 
       setDescription("");
+      setUploadDialogOpen(false);
       loadFiles();
     } catch (error: any) {
       toast.error("Upload failed", {
@@ -204,9 +203,81 @@ const PersonalUploader = () => {
     return null;
   }
 
+  const renderPostsGrid = (category: Category) => {
+    const categoryFiles = files.filter(f => f.category === category);
+    
+    if (loading) {
+      return (
+        <div className="flex justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-cosmic-400" />
+        </div>
+      );
+    }
+    
+    if (categoryFiles.length === 0) {
+      return (
+        <div className="text-center py-12 text-cosmic-400">
+          <p>No posts yet</p>
+          <p className="text-sm mt-2">Share your first {category.replace('_', ' ')}!</p>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="grid grid-cols-3 gap-1">
+        <AnimatePresence>
+          {categoryFiles.map((file) => (
+            <motion.div
+              key={file.id}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="relative aspect-square bg-cosmic-950 overflow-hidden group cursor-pointer"
+            >
+              {file.file_type.startsWith("image/") ? (
+                <img 
+                  src={getFileUrl(file.file_path)} 
+                  alt={file.file_name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-2">
+                  {getFileIcon(file.file_type, file.file_name)}
+                  <p className="text-cosmic-50 text-xs text-center line-clamp-2">
+                    {file.file_name}
+                  </p>
+                </div>
+              )}
+              
+              {/* Hover overlay */}
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.open(getFileUrl(file.file_path), "_blank")}
+                  className="bg-cosmic-700/80 hover:bg-cosmic-600 text-white h-8 w-8 p-0"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDelete(file.id, file.file_path)}
+                  className="bg-red-500/80 hover:bg-red-600 text-white h-8 w-8 p-0"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+    );
+  };
+
   return (
     <motion.div
-      className="mt-6"
+      className="mt-6 relative"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
@@ -218,218 +289,129 @@ const PersonalUploader = () => {
           </h3>
         </div>
 
-        {/* Category Navigation */}
-        <div className="flex gap-2 mb-6 border-b border-cosmic-700 pb-3">
-          <button
-            onClick={() => setSelectedCategory('all')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              selectedCategory === 'all'
-                ? 'bg-cosmic-600 text-white'
-                : 'text-cosmic-300 hover:text-white hover:bg-cosmic-800/50'
-            }`}
-          >
-            All
-          </button>
-          <button
-            onClick={() => setSelectedCategory('artworks')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              selectedCategory === 'artworks'
-                ? 'bg-pink-600 text-white'
-                : 'text-cosmic-300 hover:text-white hover:bg-cosmic-800/50'
-            }`}
-          >
-            🎨 Artworks
-          </button>
-          <button
-            onClick={() => setSelectedCategory('work_in_progress')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              selectedCategory === 'work_in_progress'
-                ? 'bg-yellow-600 text-white'
-                : 'text-cosmic-300 hover:text-white hover:bg-cosmic-800/50'
-            }`}
-          >
-            🚧 WIP
-          </button>
-          <button
-            onClick={() => setSelectedCategory('writings')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              selectedCategory === 'writings'
-                ? 'bg-blue-600 text-white'
-                : 'text-cosmic-300 hover:text-white hover:bg-cosmic-800/50'
-            }`}
-          >
-            📝 Writings
-          </button>
-        </div>
-        
-        {/* Create Post Section */}
-        <div className="space-y-4 mb-6 p-4 bg-cosmic-800/30 rounded-lg border border-cosmic-700">
-          <h4 className="text-sm font-medium text-cosmic-200">Create New Post</h4>
-          
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPostCategory('artworks')}
-              className={`px-3 py-1 rounded text-xs font-medium transition-all ${
-                postCategory === 'artworks'
-                  ? 'bg-pink-600 text-white'
-                  : 'bg-cosmic-700 text-cosmic-300 hover:bg-cosmic-600'
-              }`}
-            >
+        {/* Instagram-style Tabs */}
+        <Tabs value={selectedCategory} onValueChange={(v) => setSelectedCategory(v as Category)} className="w-full">
+          <TabsList className="w-full grid grid-cols-3 mb-4">
+            <TabsTrigger value="artworks" className="text-xs sm:text-sm">
               🎨 Artworks
-            </button>
-            <button
-              onClick={() => setPostCategory('work_in_progress')}
-              className={`px-3 py-1 rounded text-xs font-medium transition-all ${
-                postCategory === 'work_in_progress'
-                  ? 'bg-yellow-600 text-white'
-                  : 'bg-cosmic-700 text-cosmic-300 hover:bg-cosmic-600'
-              }`}
-            >
+            </TabsTrigger>
+            <TabsTrigger value="work_in_progress" className="text-xs sm:text-sm">
               🚧 WIP
-            </button>
-            <button
-              onClick={() => setPostCategory('writings')}
-              className={`px-3 py-1 rounded text-xs font-medium transition-all ${
-                postCategory === 'writings'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-cosmic-700 text-cosmic-300 hover:bg-cosmic-600'
-              }`}
-            >
-              📝 Writings
-            </button>
-          </div>
-
-          <div>
-            <Label htmlFor="description" className="text-cosmic-200 text-xs">
-              Caption / Description
-            </Label>
-            <Input
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="What's on your mind?"
-              className="bg-cosmic-800 border-cosmic-700 text-cosmic-50"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="file-upload" className="cursor-pointer">
-              <div className="flex items-center gap-2 px-4 py-2 bg-cosmic-600 hover:bg-cosmic-500 text-white rounded-lg transition-colors w-fit">
-                {uploading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4" />
-                )}
-                <span>{uploading ? "Uploading..." : "Upload File"}</span>
-              </div>
-            </Label>
-            <Input
-              id="file-upload"
-              type="file"
-              onChange={handleFileUpload}
-              disabled={uploading}
-              className="hidden"
-              accept="image/*,.pdf,.doc,.docx,.ppt,.pptx,.txt"
-            />
-            <p className="text-xs text-cosmic-400 mt-2">
-              Images, PDFs, Word, PowerPoint - Max 20MB
-            </p>
-          </div>
-        </div>
-
-        {/* Posts Feed - 3x3 Grid Layout */}
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-cosmic-400" />
-          </div>
-        ) : files.length === 0 ? (
-          <div className="text-center py-12 text-cosmic-400">
-            <p>No posts yet in this category</p>
-            <p className="text-sm mt-2">Share your first {selectedCategory === 'all' ? 'post' : selectedCategory.replace('_', ' ')}!</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <AnimatePresence>
-              {files.map((file) => (
-                <motion.div
-                  key={file.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  className="bg-cosmic-800/30 rounded-lg border border-cosmic-700 overflow-hidden hover:border-cosmic-600 transition-all group"
-                >
-                  {/* Image or File Preview */}
-                  <div className="relative aspect-square bg-cosmic-950">
-                    {file.file_type.startsWith("image/") ? (
-                      <img 
-                        src={getFileUrl(file.file_path)} 
-                        alt={file.file_name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center gap-3 p-4">
-                        {getFileIcon(file.file_type, file.file_name)}
-                        <div className="text-center">
-                          <p className="text-cosmic-50 font-medium text-sm line-clamp-2">
-                            {file.file_name}
-                          </p>
-                          <p className="text-xs text-cosmic-500 mt-1">
-                            {formatFileSize(file.file_size)}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Overlay with actions */}
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => window.open(getFileUrl(file.file_path), "_blank")}
-                        className="bg-cosmic-700/80 hover:bg-cosmic-600 text-white"
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(file.id, file.file_path)}
-                        className="bg-red-500/80 hover:bg-red-600 text-white"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Post Info */}
-                  <div className="p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500/30 to-purple-500/30 flex items-center justify-center text-xs text-blue-300">
-                        ZC
-                      </div>
-                      <span className={`text-xs font-medium ${getCategoryColor(file.category)}`}>
-                        {getCategoryLabel(file.category)}
-                      </span>
-                    </div>
-                    
-                    {file.description && (
-                      <p className="text-cosmic-300 text-xs line-clamp-2 mb-2">{file.description}</p>
-                    )}
-                    
-                    <p className="text-xs text-cosmic-500">
-                      {new Date(file.created_at).toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
+            </TabsTrigger>
+            <TabsTrigger value="writings" className="text-xs sm:text-sm">
+              📝 Research
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="artworks">
+            {renderPostsGrid('artworks')}
+          </TabsContent>
+          
+          <TabsContent value="work_in_progress">
+            {renderPostsGrid('work_in_progress')}
+          </TabsContent>
+          
+          <TabsContent value="writings">
+            {renderPostsGrid('writings')}
+          </TabsContent>
+        </Tabs>
       </Card>
+
+      {/* Instagram-style Plus Button */}
+      <Button
+        onClick={() => {
+          setPostCategory(selectedCategory);
+          setUploadDialogOpen(true);
+        }}
+        className="fixed bottom-8 right-8 h-14 w-14 rounded-full shadow-lg bg-gradient-to-br from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
+        size="icon"
+      >
+        <Plus className="h-6 w-6" />
+      </Button>
+
+      {/* Upload Dialog */}
+      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <DialogContent className="bg-cosmic-900 border-cosmic-700 sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-cosmic-50">Create New Post</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label className="text-cosmic-200 text-sm mb-2 block">Category</Label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPostCategory('artworks')}
+                  className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-all ${
+                    postCategory === 'artworks'
+                      ? 'bg-pink-600 text-white'
+                      : 'bg-cosmic-700 text-cosmic-300 hover:bg-cosmic-600'
+                  }`}
+                >
+                  🎨 Artworks
+                </button>
+                <button
+                  onClick={() => setPostCategory('work_in_progress')}
+                  className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-all ${
+                    postCategory === 'work_in_progress'
+                      ? 'bg-yellow-600 text-white'
+                      : 'bg-cosmic-700 text-cosmic-300 hover:bg-cosmic-600'
+                  }`}
+                >
+                  🚧 WIP
+                </button>
+                <button
+                  onClick={() => setPostCategory('writings')}
+                  className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-all ${
+                    postCategory === 'writings'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-cosmic-700 text-cosmic-300 hover:bg-cosmic-600'
+                  }`}
+                >
+                  📝 Research
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="dialog-description" className="text-cosmic-200 text-sm">
+                Caption / Description
+              </Label>
+              <Input
+                id="dialog-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="What's on your mind?"
+                className="bg-cosmic-800 border-cosmic-700 text-cosmic-50 mt-1"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="dialog-file-upload" className="cursor-pointer">
+                <div className="flex items-center justify-center gap-2 px-4 py-3 bg-cosmic-600 hover:bg-cosmic-500 text-white rounded-lg transition-colors">
+                  {uploading ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Upload className="h-5 w-5" />
+                  )}
+                  <span>{uploading ? "Uploading..." : "Select File"}</span>
+                </div>
+              </Label>
+              <Input
+                id="dialog-file-upload"
+                type="file"
+                onChange={handleFileUpload}
+                disabled={uploading}
+                className="hidden"
+                accept="image/*,.pdf,.doc,.docx,.ppt,.pptx,.txt"
+              />
+              <p className="text-xs text-cosmic-400 mt-2 text-center">
+                Images, PDFs, Documents - Max 20MB
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 };
