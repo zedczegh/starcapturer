@@ -12,7 +12,7 @@ export const useSpotData = (spotId: string, refreshTrigger: number) => {
       // Use optimized fetch for the main spot data
       const spotData = await fetchFromSupabase(
         "user_astro_spots",
-        (query) => query.select('*').eq('id', spotId).single(),
+        (query) => query.select('*').eq('id', spotId).maybeSingle(),
         { 
           skipCache: refreshTrigger > 0,
           namespace: `spot-data-${spotId}`,

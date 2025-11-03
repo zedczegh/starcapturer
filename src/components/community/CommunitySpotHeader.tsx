@@ -10,7 +10,7 @@ interface CommunitySpotHeaderProps {
   descVariants: any;
 }
 
-const CommunitySpotHeader: React.FC<CommunitySpotHeaderProps> = ({
+const CommunitySpotHeader: React.FC<CommunitySpotHeaderProps> = React.memo(({
   titleVariants,
   lineVariants,
   descVariants
@@ -46,6 +46,8 @@ const CommunitySpotHeader: React.FC<CommunitySpotHeaderProps> = ({
       </motion.p>
     </motion.div>
   );
-};
+});
+
+CommunitySpotHeader.displayName = 'CommunitySpotHeader';
 
 export default CommunitySpotHeader;

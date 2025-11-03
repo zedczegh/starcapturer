@@ -196,9 +196,10 @@ export const useCreateAstroSpot = (
             user_id: userIdToUse
           })
           .select()
-          .single();
+          .maybeSingle();
 
         if (spotError) throw spotError;
+        if (!spot) throw new Error('Failed to create spot');
 
         if (formData.images.length > 0) {
           const imagePromises = formData.images.map(async (image, index) => {

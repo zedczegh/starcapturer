@@ -20,7 +20,7 @@ interface CommunitySpotsListProps {
   onSiqsCalculated: (spotId: string, siqs: number | null, loading: boolean, confidence?: number) => void;
 }
 
-const CommunitySpotsList: React.FC<CommunitySpotsListProps> = ({
+const CommunitySpotsList: React.FC<CommunitySpotsListProps> = React.memo(({
   isLoading,
   sortedAstroSpots,
   isMobile,
@@ -133,6 +133,8 @@ const CommunitySpotsList: React.FC<CommunitySpotsListProps> = ({
       </div>
     </motion.div>
   );
-};
+});
+
+CommunitySpotsList.displayName = 'CommunitySpotsList';
 
 export default CommunitySpotsList;

@@ -36,7 +36,7 @@ export function VerificationPendingBadge({ spotId, verificationStatus, className
           .select('id')
           .eq('spot_id', spotId)
           .eq('status', 'pending')
-          .single();
+          .maybeSingle();
 
         setHasPendingApplication(!!data && !error);
       } catch (error) {

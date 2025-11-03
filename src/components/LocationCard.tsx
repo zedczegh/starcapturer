@@ -23,7 +23,7 @@ interface LocationCardProps {
   verificationStatus?: string;
 }
 
-const LocationCard = ({
+const LocationCard = React.memo(({
   id,
   name,
   latitude,
@@ -98,6 +98,8 @@ const LocationCard = ({
       </div>
     </div>
   );
-};
+});
+
+LocationCard.displayName = 'LocationCard';
 
 export default LocationCard;

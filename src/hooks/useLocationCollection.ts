@@ -46,7 +46,7 @@ export const useLocationCollection = () => {
         certification: location.certification,
         isDarkSkyReserve: location.isDarkSkyReserve,
         siqs: location.siqs
-      }).select().single();
+      }).select().maybeSingle();
 
       if (error) throw error;
 

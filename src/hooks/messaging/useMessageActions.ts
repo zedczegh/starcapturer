@@ -113,9 +113,9 @@ export const useMessageActions = (
           .from('user_messages')
           .select('sender_id, receiver_id')
           .eq('id', messageId)
-          .single();
+          .maybeSingle();
 
-        if (fetchError) throw fetchError;
+        if (fetchError || !messageData) throw fetchError || new Error('Message not found');
         
         // Verify the user is the sender
         if (messageData.sender_id !== user.id) {

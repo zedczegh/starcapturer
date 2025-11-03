@@ -16,7 +16,7 @@ interface CommunityMapSectionProps {
   onLocationUpdate?: (lat: number, lng: number) => void;
 }
 
-const CommunityMapSection: React.FC<CommunityMapSectionProps> = ({
+const CommunityMapSection: React.FC<CommunityMapSectionProps> = React.memo(({
   isLoading,
   sortedAstroSpots,
   userLocation,
@@ -70,6 +70,8 @@ const CommunityMapSection: React.FC<CommunityMapSectionProps> = ({
       </motion.div>
     </div>
   );
-};
+});
+
+CommunityMapSection.displayName = 'CommunityMapSection';
 
 export default CommunityMapSection;

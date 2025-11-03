@@ -14,7 +14,7 @@ export class SupabaseUserService implements IUserService {
       .update(data)
       .eq('id', userId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return profile;
@@ -25,7 +25,7 @@ export class SupabaseUserService implements IUserService {
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data;
@@ -50,9 +50,10 @@ export class SupabaseAstroSpotService implements IAstroSpotService {
       .from('user_astro_spots')
       .select('*')
       .eq('id', spotId)
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
+    if (!data) throw new Error('Spot not found');
     return data;
   }
 
@@ -61,7 +62,7 @@ export class SupabaseAstroSpotService implements IAstroSpotService {
       .from('user_astro_spots')
       .insert(data)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return spot;
@@ -73,7 +74,7 @@ export class SupabaseAstroSpotService implements IAstroSpotService {
       .update(data)
       .eq('id', spotId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return spot;
@@ -112,7 +113,7 @@ export class SupabaseReservationService implements IReservationService {
       .from('astro_spot_reservations')
       .insert(data)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return reservation;
@@ -124,7 +125,7 @@ export class SupabaseReservationService implements IReservationService {
       .update(data)
       .eq('id', reservationId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return reservation;
@@ -173,7 +174,7 @@ export class SupabaseMessagingService implements IMessagingService {
       .from('user_messages')
       .insert(data)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return message;

@@ -41,7 +41,7 @@ export const useBookingNotifications = () => {
               )
             `)
             .eq('id', payload.new.id)
-            .single();
+            .maybeSingle();
 
           if (error || !reservationData) {
             console.error('Error fetching reservation details:', error);

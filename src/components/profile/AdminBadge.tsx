@@ -62,7 +62,7 @@ export function AdminBadgeForUser({ userId, className = '', size = 'sm' }: Admin
           .select('role')
           .eq('user_id', userId)
           .eq('role', 'admin')
-          .single();
+          .maybeSingle();
 
         if (!error && data) {
           setIsUserAdmin(true);

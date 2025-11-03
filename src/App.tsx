@@ -53,14 +53,14 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      retry: 1,
-      staleTime: 3 * 60 * 1000, // 3 minutes - reduced for faster updates
-      gcTime: 5 * 60 * 1000, // 5 minutes - reduced to free memory faster
+      retry: 2, // Increased from 1 for better reliability
+      staleTime: 5 * 60 * 1000, // 5 minutes for better caching
+      gcTime: 10 * 60 * 1000, // 10 minutes - increased for better memory usage
       refetchOnReconnect: 'always',
       networkMode: 'online', // Only run queries when online
     },
     mutations: {
-      retry: 1,
+      retry: 2, // Increased from 1
       networkMode: 'online',
     },
   },

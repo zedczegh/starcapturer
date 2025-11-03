@@ -55,7 +55,7 @@ export const useAstroSpotCollection = () => {
         bortlescale: astroSpot.bortlescale,
         siqs: astroSpot.siqs,
         verification_status: astroSpot.verification_status
-      }).select().single();
+      }).select().maybeSingle();
 
       if (error) throw error;
 

@@ -64,7 +64,7 @@ export const useNotifications = () => {
               )
             `)
             .eq('id', payload.new.id)
-            .single();
+            .maybeSingle();
 
           if (reservationData?.astro_spot_timeslots?.user_astro_spots?.user_id === user.id) {
             fetchNewReservationsCount();

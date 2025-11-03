@@ -63,7 +63,7 @@ const WalletSection = () => {
         .from('user_wallets')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (walletError && walletError.code !== 'PGRST116') {
         throw walletError;
@@ -85,7 +85,7 @@ const WalletSection = () => {
           .from('user_wallets')
           .select('*')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
         
         if (createdWallet) setWallet(createdWallet);
       }
