@@ -47,8 +47,8 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
     return [
       { value: 'certified' as const, label: t("Dark Sky Locations", "暗夜天空位置"), icon: BadgeCheck },
       { value: 'calculated' as const, label: t("Recommended Near Me", "附近推荐"), icon: MapPin },
-      { value: 'obscura' as const, label: t("Natural Locations", "自然位置"), icon: Mountain },
-      { value: 'mountains' as const, label: t("Obscura Locations", "奇观位置"), icon: Eye },
+      { value: 'obscura' as const, label: t("Obscura Locations", "奇观位置"), icon: Eye },
+      { value: 'mountains' as const, label: t("Natural Locations", "自然位置"), icon: Mountain },
     ];
   };
   

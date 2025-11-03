@@ -181,13 +181,13 @@ const PhotoPointsNearby: React.FC = () => {
         effectiveLocation={effectiveLocation}
         certifiedLocations={certifiedLocations}
         calculatedLocations={calculatedLocations}
-        obscuraLocations={mountainsLocations}
-        mountainsLocations={obscuraLocations}
+        obscuraLocations={obscuraLocations}
+        mountainsLocations={mountainsLocations}
         searchRadius={currentSearchRadius}
         calculatedSearchRadius={calculatedSearchRadius}
         loading={
-          activeView === 'obscura' ? mountainsLoading : 
-          activeView === 'mountains' ? obscuraLoading :
+          activeView === 'obscura' ? obscuraLoading : 
+          activeView === 'mountains' ? mountainsLoading :
           (loading && !locationLoading)
         }
         hasMore={hasMore}
