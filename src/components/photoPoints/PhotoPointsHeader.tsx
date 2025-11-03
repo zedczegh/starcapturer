@@ -69,18 +69,39 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
         )}
         
         {showMapToggle && toggleMapView && (
-          <Button 
+          <motion.button
             onClick={toggleMapView}
-            variant="outline"
-            size="sm"
-            className="shadow-sm hover:bg-muted/60"
+            className="relative flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 hover:from-primary/30 hover:to-accent/30 backdrop-blur-sm border border-primary/30 shadow-lg transition-all duration-300 hover:scale-105"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
           >
-            {showMap ? (
-              <><List className="mr-2 h-4 w-4" /> {t("Show List", "显示列表")}</>
-            ) : (
-              <><Map className="mr-2 h-4 w-4" /> {t("Show Map", "显示地图")}</>
-            )}
-          </Button>
+            {/* Pulsing animation ring */}
+            <motion.div
+              className="absolute inset-0 rounded-full bg-primary/20"
+              animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.5, 0, 0.5],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+            />
+            
+            {/* Icon */}
+            <motion.div
+              initial={false}
+              animate={{ rotate: showMap ? 0 : 180 }}
+              transition={{ duration: 0.3 }}
+            >
+              {showMap ? (
+                <List className="h-6 w-6 text-primary" />
+              ) : (
+                <Map className="h-6 w-6 text-primary" />
+              )}
+            </motion.div>
+          </motion.button>
         )}
       </div>
       

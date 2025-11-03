@@ -8,12 +8,22 @@ const PageLoader: React.FC = () => {
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900 flex justify-center items-center">
-      <div className="flex flex-col items-center space-y-4 animate-fade-in">
+      <div className="flex flex-col items-center space-y-6 animate-fade-in">
         <div className="relative">
-          <Loader2 className="h-10 w-10 text-primary animate-spin" />
-          <div className="absolute inset-0 rounded-full bg-primary/10 animate-pulse"></div>
+          {/* Main spinner */}
+          <Loader2 className="h-12 w-12 text-primary animate-spin" />
+          
+          {/* Pulsing rings */}
+          <div className="absolute inset-0 rounded-full bg-primary/20 animate-pulse"></div>
+          <div 
+            className="absolute inset-[-8px] rounded-full border-2 border-primary/30"
+            style={{
+              animation: 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite'
+            }}
+          ></div>
         </div>
-        <p className="text-cosmic-300 animate-pulse">
+        
+        <p className="text-cosmic-300 text-lg font-medium animate-pulse">
           {t("Loading...", "正在加载...")}
         </p>
       </div>
