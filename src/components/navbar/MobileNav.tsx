@@ -21,7 +21,10 @@ const MobileNav: React.FC<MobileNavProps> = ({
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 mobile-nav-bar">
-      <div className="flex justify-around items-center py-2 px-2 bg-[#0f172a]/[0.90] backdrop-blur-xl border-t border-cosmic-600/15 shadow-[0_-2px_10px_rgba(0,0,0,0.2)]">
+      <div className="relative flex justify-around items-center py-3 px-3 bg-gradient-to-t from-background/95 via-background/90 to-background/85 backdrop-blur-xl border-t border-primary/20 shadow-[0_-4px_20px_rgba(139,92,246,0.1)]">
+        {/* Subtle gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 pointer-events-none" />
+        
         <MobileNavButton 
           to="/photo-points" 
           icon={<Telescope className="h-5 w-5 stroke-[1.5]" />} 

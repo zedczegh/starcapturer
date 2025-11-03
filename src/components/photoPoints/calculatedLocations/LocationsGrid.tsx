@@ -21,10 +21,10 @@ const LocationsGrid: React.FC<LocationsGridProps> = ({
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   
-  // Mobile-optimized grid layout with borderless frames
+  // Mobile-optimized grid layout with borderless frames - 3 column grid
   const gridClassName = isMobile 
     ? "grid grid-cols-1 gap-3" 
-    : "grid grid-cols-1 md:grid-cols-2 gap-4";
+    : "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4";
   
   // Reduced animation complexity on mobile for better performance
   const containerVariants = {

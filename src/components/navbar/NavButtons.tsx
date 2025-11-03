@@ -49,21 +49,33 @@ export const MobileNavButton: React.FC<MobileNavButtonProps> = ({
       to={to}
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center px-3 py-1.5 rounded-lg transition-all duration-300 mobile-nav-item",
+        "relative flex flex-col items-center px-3 py-2 rounded-xl transition-all duration-300 mobile-nav-item z-10",
         active ? "text-primary" : "text-foreground/60 hover:text-foreground/80"
       )}
     >
       <div className={cn(
-        "icon-container p-2 mb-1 rounded-full transition-all duration-300",
+        "icon-container p-2.5 mb-1.5 rounded-full transition-all duration-300 relative",
         active 
-          ? "bg-cosmic-700/60 shadow-[0_0_8px_rgba(139,92,246,0.25)] gentle-pulse-glow" 
-          : "bg-cosmic-800/40 hover:bg-cosmic-700/30"
+          ? "bg-gradient-to-br from-primary/20 to-accent/20 shadow-[0_0_12px_rgba(139,92,246,0.3)] border border-primary/30" 
+          : "bg-background/30 hover:bg-background/40 border border-border/30"
       )}>
-        {icon}
+        {active && (
+          <div className="absolute inset-0 rounded-full bg-primary/10 animate-pulse" />
+        )}
+        <div className="relative z-10">
+          {icon}
+        </div>
       </div>
-      <span className={`text-[10px] font-medium mt-0.5 ${language === 'zh' ? 'tracking-tight' : 'tracking-wide'}`}>
+      <span className={cn(
+        "text-[10px] font-medium mt-0.5 transition-colors",
+        language === 'zh' ? 'tracking-tight' : 'tracking-wide',
+        active && "font-semibold"
+      )}>
         {label}
       </span>
+      {active && (
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-gradient-to-r from-primary/0 via-primary to-primary/0 rounded-full" />
+      )}
     </Link>
   );
 };

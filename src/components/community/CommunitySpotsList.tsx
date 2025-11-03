@@ -73,7 +73,7 @@ const CommunitySpotsList: React.FC<CommunitySpotsListProps> = ({
         </span>
       </h2>
 
-      <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
         {sortedAstroSpots.map((spot, index) => (
           <motion.div
             key={spot.id}
