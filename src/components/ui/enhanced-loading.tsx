@@ -205,7 +205,7 @@ export const EnhancedLoadingFallback: React.FC<EnhancedLoadingFallbackProps> = (
           </motion.div>
         </div>
         <div className="text-center space-y-4">
-          <motion.p 
+        <motion.p 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.6 }}
@@ -213,16 +213,6 @@ export const EnhancedLoadingFallback: React.FC<EnhancedLoadingFallbackProps> = (
           >
             {message}
           </motion.p>
-          {showProgress && (
-            <motion.div
-              initial={{ opacity: 0, scaleX: 0 }}
-              animate={{ opacity: 1, scaleX: 1 }}
-              transition={{ delay: 0.6 }}
-              className="w-72"
-            >
-              <ProgressBar progress={progress} indeterminate={!progress} />
-            </motion.div>
-          )}
           <PulsingDots />
         </div>
       </motion.div>

@@ -194,6 +194,17 @@ export const useMapLocations = ({
           mountains: mountainLocations.length
         });
         
+        // Log individual mountain locations for debugging
+        if (mountainLocations.length > 0) {
+          console.log('Mountain locations found:', mountainLocations.map(m => ({
+            name: m.name,
+            siqs: m.siqs,
+            lat: m.latitude,
+            lng: m.longitude,
+            certification: m.certification
+          })));
+        }
+        
         // Determine which locations to show based on view
         let locationsToShow: SharedAstroSpot[];
         
@@ -212,6 +223,16 @@ export const useMapLocations = ({
         }
         
         console.log(`Showing ${locationsToShow.length} locations for view '${activeView}'`);
+        
+        // Debug log for mountains view specifically
+        if (activeView === 'mountains') {
+          console.log('Mountains view - locations to show:', locationsToShow.map(m => ({
+            name: m.name,
+            siqs: m.siqs,
+            lat: m.latitude,
+            lng: m.longitude
+          })));
+        }
         
         // Make sure we don't lose previously shown locations when switching views
         if (viewChanged) {

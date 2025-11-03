@@ -74,7 +74,6 @@ const LoadingFallback = () => (
   <EnhancedLoadingFallback 
     message="Into the Unknown"
     variant="detailed"
-    showProgress={true}
   />
 );
 

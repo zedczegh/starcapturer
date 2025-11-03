@@ -99,6 +99,20 @@ export const usePhotoPointsMap = ({
       }
     }
     
+    // For mountains view, only show mountain locations (passed in locations array)
+    if (activeView === 'mountains') {
+      locationMap.clear();
+      if (Array.isArray(locations)) {
+        locations.forEach(loc => {
+          if (loc.latitude && loc.longitude) {
+            const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+            locationMap.set(key, loc);
+          }
+        });
+      }
+      console.log(`Mountains view: Added ${locationMap.size} mountain locations to map`);
+    }
+    
     const result = Array.from(locationMap.values());
     console.log(`Combined ${allCertifiedLocations.length} certified and ${locations?.length || 0} calculated locations for map display. Total: ${result.length}`);
     return result;
