@@ -235,9 +235,31 @@ const PersonalUploader = () => {
     return <FileText className="h-5 w-5 text-cosmic-400" />;
   };
 
+  // Don't render anything if user is not authorized
+  if (loading) {
+    console.log("PersonalUploader still loading...");
+    return (
+      <motion.div
+        className="mt-6"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <Card className="p-6 bg-cosmic-900/50 border-cosmic-700">
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-cosmic-400" />
+          </div>
+        </Card>
+      </motion.div>
+    );
+  }
+
   if (user?.email !== "yanzeyucq@163.com") {
+    console.log("User not authorized for PersonalUploader:", user?.email);
     return null;
   }
+
+  console.log("Rendering PersonalUploader for authorized user");
 
   const renderPostsGrid = (category: Category) => {
     const categoryFiles = files.filter(f => f.category === category);
