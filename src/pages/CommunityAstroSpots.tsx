@@ -78,6 +78,14 @@ const CommunityAstroSpots: React.FC = () => {
     }
   }, [location.state, refreshData]);
 
+  // Auto-toggle map on initial load to force proper initialization
+  useEffect(() => {
+    console.log('🔄 Community page mounted - auto-toggling map for initialization');
+    // Double-toggle the map: off then back on
+    setShowMap(false);
+    setTimeout(() => setShowMap(true), 50);
+  }, []);
+
   // Auto-toggle to refresh markers when page opens or tab changes
   useEffect(() => {
     const handleVisibilityChange = () => {
