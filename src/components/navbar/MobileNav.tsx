@@ -21,9 +21,9 @@ const MobileNav: React.FC<MobileNavProps> = ({
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 mobile-nav-bar">
-      <div className="relative flex justify-around items-center py-3 px-3 bg-gradient-to-t from-background/95 via-background/90 to-background/85 backdrop-blur-xl border-t border-primary/20 shadow-[0_-4px_20px_rgba(139,92,246,0.1)]">
-        {/* Subtle gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 pointer-events-none" />
+      <div className="relative flex justify-around items-center py-3 px-3 bg-gradient-to-t from-slate-900/95 via-slate-800/90 to-slate-700/85 backdrop-blur-xl border-t border-cyan-500/20 shadow-[0_-4px_20px_rgba(6,182,212,0.1)]">
+        {/* Glacial overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-blue-500/5 to-sky-500/5 pointer-events-none" />
         
         <MobileNavButton 
           to="/photo-points" 

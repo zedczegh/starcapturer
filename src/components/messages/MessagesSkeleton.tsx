@@ -7,9 +7,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 const MessagesSkeleton: React.FC = () => {
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-gradient-to-b from-cosmic-900/40 to-cosmic-950/40">
+    <div className="flex flex-col h-full overflow-hidden bg-gradient-to-b from-slate-800/40 to-cosmic-950/40">
       {/* Skeleton header */}
-      <div className="p-3 border-b border-cosmic-800/30 bg-cosmic-900/40 flex items-center">
+      <div className="p-3 border-b border-cosmic-800/30 bg-slate-900/40 flex items-center">
         <Button variant="ghost" size="icon" className="mr-2">
           <ChevronLeft className="h-5 w-5" />
           <span className="sr-only">Back</span>

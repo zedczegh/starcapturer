@@ -18,7 +18,7 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
   const isMobile = useIsMobile();
 
   return (
-    <div className={`${isMobile ? 'p-2 pb-3' : 'p-4'} border-b border-cosmic-800/50 bg-cosmic-900/50`}>
+    <div className={`${isMobile ? 'p-2 pb-3' : 'p-4'} border-b border-cosmic-800/50 bg-slate-900/50`}>
       <h2 className={`${isMobile ? 'text-lg mb-2' : 'text-xl mb-4'} font-semibold text-white flex items-center gap-2`}>
         <MessageCircle className="h-5 w-5 text-primary" /> {t("Messages", "消息")}
       </h2>

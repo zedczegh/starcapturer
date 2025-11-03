@@ -86,7 +86,7 @@ const Collections = () => {
 
   if (locations === null && spots === null) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900">
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-cosmic-900">
         <NavBar />
         <div className="container mx-auto px-4 py-8 pt-16 md:pt-20">
           <LocationStatusMessage
@@ -114,7 +114,7 @@ const Collections = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900">
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-cosmic-900">
       <NavBar />
       <TooltipProvider>
         <main className="container mx-auto px-4 py-8 pt-16 md:pt-20 flex-grow">

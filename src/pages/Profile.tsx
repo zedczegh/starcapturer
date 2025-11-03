@@ -247,7 +247,7 @@ const Profile = () => {
   
   if (authError) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900 flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-cosmic-900 flex flex-col items-center justify-center p-4">
         <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-6 max-w-md w-full text-center">
           <h2 className="text-xl font-semibold text-red-400 mb-3">{t("Authentication Error", "认证错误")}</h2>
           <p className="text-cosmic-200 mb-5">{authError}</p>

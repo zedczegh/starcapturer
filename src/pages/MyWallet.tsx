@@ -276,7 +276,7 @@ const MyWallet = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900 flex flex-col">
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-cosmic-900 flex flex-col">
         <NavBar />
         <main className="flex-grow flex items-center justify-center">
           <div className="text-center">
@@ -289,7 +289,7 @@ const MyWallet = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-cosmic-900 flex flex-col">
       <NavBar />
       
       <main className="flex-grow container mx-auto px-4 py-8 pt-24 max-w-6xl">

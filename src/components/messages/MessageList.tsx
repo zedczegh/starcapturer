@@ -50,7 +50,7 @@ const MessageList: React.FC<MessageListProps> = memo(({
   }, [scrollToBottom]);
   
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-gradient-to-b from-cosmic-900/50 via-cosmic-900/30 to-cosmic-950/50">
+    <div className="flex flex-col h-full overflow-hidden bg-gradient-to-b from-slate-800/50 via-slate-900/30 to-cosmic-950/50">
       <MessageHeader 
         conversation={activeConversation} 
         onBack={onBack}

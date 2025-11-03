@@ -152,7 +152,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
   }, [message]);
 
   return (
-    <div className="border-t border-cosmic-700/40 p-4 bg-gradient-to-t from-cosmic-900/95 via-cosmic-900/85 to-cosmic-900/70 space-y-3 sticky bottom-0 backdrop-blur-xl z-20 shadow-[0_-8px_24px_-12px_rgba(124,58,237,0.15)]">
+    <div className="border-t border-cosmic-700/40 p-4 bg-gradient-to-t from-slate-900/95 via-slate-800/85 to-slate-700/70 space-y-3 sticky bottom-0 backdrop-blur-xl z-20 shadow-[0_-8px_24px_-12px_rgba(6,182,212,0.15)]">
       <UploadProgress 
         progress={uploadProgress} 
         fileName={imageFile?.name || ''}

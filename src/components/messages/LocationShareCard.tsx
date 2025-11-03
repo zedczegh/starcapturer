@@ -159,7 +159,7 @@ const LocationShareCard: React.FC<LocationShareCardProps> = ({
   };
 
   return (
-    <div className="bg-cosmic-900/70 backdrop-blur-md border border-cosmic-700/50 hover:border-cosmic-600/70 transition-colors duration-300 p-4 rounded-lg shadow-md">
+    <div className="bg-slate-900/70 backdrop-blur-md border border-cosmic-700/50 hover:border-cosmic-600/70 transition-colors duration-300 p-4 rounded-lg shadow-md">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           {isAstroSpot && (
