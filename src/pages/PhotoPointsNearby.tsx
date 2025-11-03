@@ -72,7 +72,7 @@ const PhotoPointsNearby: React.FC = () => {
     const loadObscuraLocations = async () => {
       try {
         setObscuraLoading(true);
-        const locations = await getAllObscuraLocations();
+        const locations = await getAllMountainLocations();
         setObscuraLocations(locations);
       } catch (error) {
         console.error("Error loading obscura locations:", error);
@@ -88,7 +88,7 @@ const PhotoPointsNearby: React.FC = () => {
     const loadMountainLocations = async () => {
       try {
         setMountainsLoading(true);
-        const locations = await getAllMountainLocations();
+        const locations = await getAllObscuraLocations();
         setMountainsLocations(locations);
       } catch (error) {
         console.error("Error loading mountain locations:", error);
