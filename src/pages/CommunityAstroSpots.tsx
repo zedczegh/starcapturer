@@ -66,6 +66,16 @@ const CommunityAstroSpots: React.FC = () => {
     sortedAstroSpots: sortedAstroSpots?.slice(0, 3) || [] // Log first 3 spots
   });
 
+  // Auto-toggle map/list twice on mount
+  useEffect(() => {
+    const timer1 = setTimeout(() => setShowMap(false), 100);
+    const timer2 = setTimeout(() => setShowMap(true), 200);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, []);
+
   // Handle refresh when returning from spot profile - without toast
   useEffect(() => {
     const refreshTimestamp = location.state?.refreshTimestamp;
