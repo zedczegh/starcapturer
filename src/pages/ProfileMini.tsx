@@ -154,32 +154,46 @@ const ProfileMini: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-cosmic-950 flex flex-col items-center px-4 pt-20">
-      <div className="max-w-xl w-full mx-auto mt-4 glassmorphism p-8 rounded-xl shadow-glow">
-        <ProfileHeader profile={profile} userId={profileId} />
-        
-        {profile.bio && (
-          <ProfileBio bio={profile.bio} t={t} />
-        )}
-        
-        <ProfileAstroSpots 
-          sortedAstroSpots={sortedAstroSpots}
-          loadingSpots={loadingSpots}
-          realTimeSiqs={realTimeSiqs}
-          profileId={profileId}
-          navigate={navigate}
-          handleSiqsCalculated={handleSiqsCalculated}
-          t={t}
-        />
-        
-        <ProfileActions
-          isFromMessages={isFromMessages}
-          user={user}
-          profileId={profileId}
-          handleSendMessage={handleSendMessage}
-          navigate={navigate}
-          t={t}
-        />
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-cosmic-950">
+      <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 pt-20 pb-8">
+        <div className="glassmorphism rounded-xl shadow-glow overflow-hidden">
+          {/* Mobile-optimized header with better spacing */}
+          <div className="p-4 sm:p-6 md:p-8 border-b border-cosmic-700/30">
+            <ProfileHeader profile={profile} userId={profileId} />
+          </div>
+          
+          {/* Bio section with proper mobile padding */}
+          {profile.bio && (
+            <div className="p-4 sm:p-6 md:p-8 border-b border-cosmic-700/30">
+              <ProfileBio bio={profile.bio} t={t} />
+            </div>
+          )}
+          
+          {/* Spots section */}
+          <div className="p-4 sm:p-6 md:p-8">
+            <ProfileAstroSpots 
+              sortedAstroSpots={sortedAstroSpots}
+              loadingSpots={loadingSpots}
+              realTimeSiqs={realTimeSiqs}
+              profileId={profileId}
+              navigate={navigate}
+              handleSiqsCalculated={handleSiqsCalculated}
+              t={t}
+            />
+          </div>
+          
+          {/* Actions section with sticky bottom on mobile */}
+          <div className="sticky bottom-0 p-4 sm:p-6 md:p-8 bg-cosmic-900/95 backdrop-blur-xl border-t border-cosmic-700/30">
+            <ProfileActions
+              isFromMessages={isFromMessages}
+              user={user}
+              profileId={profileId}
+              handleSendMessage={handleSendMessage}
+              navigate={navigate}
+              t={t}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

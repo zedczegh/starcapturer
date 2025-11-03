@@ -4,7 +4,6 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from "@/contexts/AuthContext";
 import NavBar from "@/components/NavBar";
 import ProfileContent from './ProfileContent';
-import ProfileFooter from './ProfileFooter';
 import BackButton from "@/components/navigation/BackButton";
 import { clearSpotCache } from '@/utils/cache/spotCacheCleaner';
 import { motion } from 'framer-motion';
@@ -205,8 +204,6 @@ const AstroSpotProfile = () => {
           </motion.div>
         )}
       </div>
-      
-      <ProfileFooter />
     </div>
   );
 };
