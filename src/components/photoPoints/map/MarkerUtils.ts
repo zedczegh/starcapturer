@@ -109,6 +109,7 @@ export const shouldShowLocationMarker = (
 
 /**
  * Get marker color based on SIQS score with fallback to certification color
+ * Mountains always use real-time SIQS coloring
  * @param location Location to get color for
  * @returns Hex color string
  */
