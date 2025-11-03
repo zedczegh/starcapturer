@@ -249,6 +249,126 @@ const atlasObscuraLocations: SharedAstroSpot[] = [
     timestamp: new Date().toISOString(),
     bortleScale: 7,
     siqs: 4.5
+  },
+  {
+    id: 'carhenge',
+    name: 'Carhenge',
+    chineseName: '汽车巨石阵',
+    latitude: 42.6042,
+    longitude: -103.7469,
+    isDarkSkyReserve: false,
+    certification: 'Atlas Obscura',
+    timestamp: new Date().toISOString(),
+    bortleScale: 2,
+    siqs: 9.2
+  },
+  {
+    id: 'the-wave',
+    name: 'The Wave',
+    chineseName: '波浪岩',
+    latitude: 36.9959,
+    longitude: -112.0062,
+    isDarkSkyReserve: false,
+    certification: 'Atlas Obscura',
+    timestamp: new Date().toISOString(),
+    bortleScale: 1,
+    siqs: 9.8
+  },
+  {
+    id: 'antelope-canyon',
+    name: 'Antelope Canyon',
+    chineseName: '羚羊峡谷',
+    latitude: 36.8619,
+    longitude: -111.3743,
+    isDarkSkyReserve: false,
+    certification: 'Atlas Obscura',
+    timestamp: new Date().toISOString(),
+    bortleScale: 2,
+    siqs: 9.5
+  },
+  {
+    id: 'door-to-hell',
+    name: 'Door to Hell',
+    chineseName: '地狱之门',
+    latitude: 40.2530,
+    longitude: 58.4397,
+    isDarkSkyReserve: false,
+    certification: 'Atlas Obscura',
+    timestamp: new Date().toISOString(),
+    bortleScale: 1,
+    siqs: 9.7
+  },
+  {
+    id: 'fingals-cave',
+    name: "Fingal's Cave",
+    chineseName: '芬格尔洞穴',
+    latitude: 56.4326,
+    longitude: -6.3369,
+    isDarkSkyReserve: false,
+    certification: 'Atlas Obscura',
+    timestamp: new Date().toISOString(),
+    bortleScale: 2,
+    siqs: 9.0
+  },
+  {
+    id: 'mount-roraima',
+    name: 'Mount Roraima',
+    chineseName: '罗赖马山',
+    latitude: 5.1433,
+    longitude: -60.7625,
+    isDarkSkyReserve: false,
+    certification: 'Atlas Obscura',
+    timestamp: new Date().toISOString(),
+    bortleScale: 1,
+    siqs: 9.9
+  },
+  {
+    id: 'salar-de-uyuni',
+    name: 'Salar de Uyuni',
+    chineseName: '乌尤尼盐沼',
+    latitude: -20.3078,
+    longitude: -66.8250,
+    isDarkSkyReserve: false,
+    certification: 'Atlas Obscura',
+    timestamp: new Date().toISOString(),
+    bortleScale: 1,
+    siqs: 9.8
+  },
+  {
+    id: 'stone-forest',
+    name: 'Stone Forest',
+    chineseName: '石林',
+    latitude: 24.8142,
+    longitude: 103.2717,
+    isDarkSkyReserve: false,
+    certification: 'Atlas Obscura',
+    timestamp: new Date().toISOString(),
+    bortleScale: 5,
+    siqs: 7.0
+  },
+  {
+    id: 'glowworm-caves',
+    name: 'Glowworm Caves',
+    chineseName: '萤火虫洞',
+    latitude: -38.2611,
+    longitude: 175.1031,
+    isDarkSkyReserve: false,
+    certification: 'Atlas Obscura',
+    timestamp: new Date().toISOString(),
+    bortleScale: 1,
+    siqs: 9.6
+  },
+  {
+    id: 'giants-causeway',
+    name: "Giant's Causeway",
+    chineseName: '巨人堤道',
+    latitude: 55.2408,
+    longitude: -6.5116,
+    isDarkSkyReserve: false,
+    certification: 'Atlas Obscura',
+    timestamp: new Date().toISOString(),
+    bortleScale: 3,
+    siqs: 8.7
   }
 ];
 
