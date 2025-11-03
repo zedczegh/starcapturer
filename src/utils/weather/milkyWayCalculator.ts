@@ -215,17 +215,18 @@ function lstToLocalTime(LST: number, longitude: number, date: Date): Date {
   while (UT < 0) UT += 24;
   while (UT >= 24) UT -= 24;
   
-  // Convert UT hours to local time
-  const localTime = new Date(date);
-  localTime.setHours(0, 0, 0, 0); // Set to midnight local
+  // Create a local date object for today at midnight
+  const localDate = new Date(date);
+  localDate.setHours(0, 0, 0, 0);
   
-  // Add UT hours and convert back to local time
-  // Get the UTC date at the calculated UT time
-  const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  utcDate.setUTCHours(Math.floor(UT));
-  utcDate.setUTCMinutes((UT % 1) * 60);
+  // Add the calculated hours to get the local time
+  // This preserves the local timezone
+  const hours = Math.floor(UT);
+  const minutes = Math.round((UT % 1) * 60);
   
-  return utcDate;
+  localDate.setHours(hours, minutes, 0, 0);
+  
+  return localDate;
 }
 
 /**
