@@ -40,6 +40,9 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
   const [siqsLoading, setSiqsLoading] = useState<boolean>(isCertified);
   const [siqsConfidence, setSiqsConfidence] = useState<number>(7);
   const [forceUpdate, setForceUpdate] = useState<boolean>(false);
+  
+  // Check if this is a mountain location - mountains should always fetch real-time SIQS
+  const isMountain = location.certification?.toLowerCase().includes('natural mountain');
 
   const { siqsScore, displayName, icon } = useMarkerState({
     location,
@@ -153,11 +156,12 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
         latitude={location.latitude}
         longitude={location.longitude}
         bortleScale={location.bortleScale}
-        isCertified={isCertified}
+        isCertified={isMountain ? false : isCertified}
         isDarkSkyReserve={location.isDarkSkyReserve}
         existingSiqs={location.siqs}
         onSiqsCalculated={handleSiqsCalculated}
-        forceUpdate={forceUpdate || (isCertified && !realTimeSiqs)}
+        forceUpdate={forceUpdate || (isCertified && !realTimeSiqs) || isMountain}
+        priorityLevel={isMountain ? 'high' : undefined}
       />
       
       <Marker
