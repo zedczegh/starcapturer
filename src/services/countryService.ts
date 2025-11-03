@@ -10,6 +10,7 @@ export interface Country {
 
 // Cache for country data
 let countriesCache: Country[] | null = null;
+let countriesByCodeCache: Map<string, Country> | null = null;
 
 /**
  * Fetch all countries from database
@@ -30,6 +31,13 @@ export async function getAllCountries(): Promise<Country[]> {
   }
 
   countriesCache = data || [];
+  
+  // Build code lookup map
+  countriesByCodeCache = new Map();
+  countriesCache.forEach(country => {
+    countriesByCodeCache!.set(country.code.toUpperCase(), country);
+  });
+  
   return countriesCache;
 }
 
@@ -64,11 +72,15 @@ export async function getCountryFromCoordinates(
 }
 
 /**
- * Get country by country code
+ * Get country by country code (optimized with cache)
  */
 export async function getCountryByCode(code: string): Promise<Country | null> {
-  const countries = await getAllCountries();
-  return countries.find(c => c.code === code.toUpperCase()) || null;
+  // Ensure cache is loaded
+  if (!countriesByCodeCache) {
+    await getAllCountries();
+  }
+  
+  return countriesByCodeCache?.get(code.toUpperCase()) || null;
 }
 
 /**
