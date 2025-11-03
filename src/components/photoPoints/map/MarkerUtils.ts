@@ -48,6 +48,11 @@ export const getCertificationColor = (location: SharedAstroSpot): string => {
   
   const certification = (location.certification || '').toLowerCase();
   
+  // Atlas Obscura locations get a distinctive cyan color
+  if (certification.includes('atlas obscura')) {
+    return 'rgba(6, 182, 212, 0.85)'; // Cyan for Atlas Obscura #06b6d4
+  }
+  
   // IMPORTANT: Ensure communities use gold/yellow color
   if (certification.includes('community')) {
     return 'rgba(255, 215, 0, 0.85)'; // Gold for Dark Sky Community #FFD700
@@ -74,11 +79,20 @@ export const getCertificationColor = (location: SharedAstroSpot): string => {
 export const shouldShowLocationMarker = (
   location: SharedAstroSpot, 
   isCertified: boolean,
-  activeView: 'certified' | 'calculated'
+  activeView: 'certified' | 'calculated' | 'obscura'
 ): boolean => {
-  // IMPORTANT: Skip rendering calculated locations in certified view
-  if (activeView === 'certified' && !isCertified) {
-    return false;
+  const isObscura = location.certification?.toLowerCase().includes('atlas obscura');
+  
+  // Filter based on active view
+  if (activeView === 'certified') {
+    // Only show certified dark sky locations (not obscura or calculated)
+    return isCertified && !isObscura;
+  } else if (activeView === 'obscura') {
+    // Only show Atlas Obscura locations
+    return isObscura;
+  } else if (activeView === 'calculated') {
+    // Only show calculated locations (not certified or obscura)
+    return !isCertified && !isObscura;
   }
   
   // Skip water locations for calculated spots (never skip certified)
@@ -122,10 +136,28 @@ export const getLocationMarker = (
   // Get the marker color based on location properties
   const color = getLocationColor(location);
   
+  // Check if this is an Atlas Obscura location
+  const isObscura = location.certification?.toLowerCase().includes('atlas obscura');
+  
   // Determine size based on device and hover state
   const size = isMobile ? 
     (isHovered ? 22 : 16) : // Mobile sizes
     (isHovered ? 28 : 24);  // Desktop sizes
+  
+  // Choose the appropriate icon
+  let iconSvg = '';
+  if (isObscura) {
+    // Eye icon for Atlas Obscura locations
+    iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size * 0.6}" height="${size * 0.6}" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </svg>`;
+  } else if (isCertified) {
+    // Star icon for certified dark sky locations
+    iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size * 0.6}" height="${size * 0.6}" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </svg>`;
+  }
   
   // Create a marker with a custom HTML representation
   return L.divIcon({
@@ -144,11 +176,7 @@ export const getLocationMarker = (
           justify-content: center;
         "
       >
-        ${isCertified ? 
-          `<svg xmlns="http://www.w3.org/2000/svg" width="${size * 0.6}" height="${size * 0.6}" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-           </svg>` : 
-          ''}
+        ${iconSvg}
       </div>
     `,
     iconSize: [size, size],

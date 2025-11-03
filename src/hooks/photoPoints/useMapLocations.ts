@@ -173,16 +173,26 @@ export const useMapLocations = ({
         
         console.log(`Filtered out ${calculatedLocations.length - nonWaterCalculatedLocations.length} water locations`);
         
+        // Separate obscura locations from other certified locations
+        const obscuraLocations = certifiedLocations.filter(loc => 
+          loc.certification?.toLowerCase().includes('atlas obscura')
+        );
+        const darkSkyLocations = certifiedLocations.filter(loc => 
+          !loc.certification?.toLowerCase().includes('atlas obscura')
+        );
+        
         // Determine which locations to show based on view
         let locationsToShow: SharedAstroSpot[];
         
         if (activeView === 'certified') {
-          // In certified view, only show certified locations
-          locationsToShow = certifiedLocations as SharedAstroSpot[];
+          // In certified view, only show dark sky certified locations (not obscura)
+          locationsToShow = darkSkyLocations as SharedAstroSpot[];
+        } else if (activeView === 'obscura') {
+          // In obscura view, only show Atlas Obscura locations
+          locationsToShow = obscuraLocations as SharedAstroSpot[];
         } else {
-          // For calculated view, include both calculated and certified locations
-          // This ensures calculated view shows all appropriate locations
-          locationsToShow = [...nonWaterCalculatedLocations, ...certifiedLocations] as SharedAstroSpot[];
+          // For calculated view, only show calculated locations (not certified or obscura)
+          locationsToShow = nonWaterCalculatedLocations as SharedAstroSpot[];
         }
         
         // Make sure we don't lose previously shown locations when switching views
@@ -191,9 +201,21 @@ export const useMapLocations = ({
           const cachedLocations = Array.from(locationCacheRef.current.values());
           
           // Filter cached locations by type based on active view
-          const relevantCachedLocations = activeView === 'certified' 
-            ? cachedLocations.filter(loc => loc.isDarkSkyReserve || loc.certification)
-            : cachedLocations;
+          let relevantCachedLocations: SharedAstroSpot[];
+          if (activeView === 'certified') {
+            relevantCachedLocations = cachedLocations.filter(loc => 
+              (loc.isDarkSkyReserve || loc.certification) && 
+              !loc.certification?.toLowerCase().includes('atlas obscura')
+            );
+          } else if (activeView === 'obscura') {
+            relevantCachedLocations = cachedLocations.filter(loc => 
+              loc.certification?.toLowerCase().includes('atlas obscura')
+            );
+          } else {
+            relevantCachedLocations = cachedLocations.filter(loc => 
+              !loc.isDarkSkyReserve && !loc.certification
+            );
+          }
             
           // Use a Map to deduplicate by coordinates
           const tempMap = new Map<string, SharedAstroSpot>();

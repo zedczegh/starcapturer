@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, ChevronLeft, Info, Star, Circle, Hotel } from 'lucide-react';
+import { AlertCircle, ChevronLeft, Info, Star, Circle, Hotel, Eye } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 
@@ -26,6 +26,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
   // Determine which legends to display based on props and activeView
   const displayStarLegend = showStarLegend || activeView === 'certified';
   const displayCircleLegend = showCircleLegend || activeView === 'calculated';
+  const displayObscuraLegend = activeView === 'obscura';
   
   // Function to prevent event propagation
   const stopPropagation = (e: React.MouseEvent | React.TouchEvent) => {
@@ -139,6 +140,21 @@ const MapLegend: React.FC<MapLegendProps> = ({
                     />
                   </div>
                 )}
+
+                {/* Obscura Legend */}
+                {displayObscuraLegend && (
+                  <div className="space-y-1.5 bg-muted/20 p-2 rounded-md border border-primary/10">
+                    <h4 className="text-[10px] font-medium text-primary/90 flex items-center">
+                      <Eye className="h-2.5 w-2.5 mr-1" />
+                      {t("Atlas Obscura Locations", "奇观位置")}
+                    </h4>
+                    <LegendItem 
+                      color="#06b6d4" 
+                      label={t("Atlas Obscura Location", "奇观位置")} 
+                      type="eye"
+                    />
+                  </div>
+                )}
                 
                 {/* Legend Footer */}
                 <div className="mt-1.5 text-[10px] text-muted-foreground bg-background/70 p-1.5 rounded-md border border-primary/10 shadow-sm">
@@ -208,7 +224,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
 interface LegendItemProps {
   color: string;
   label: string;
-  type: 'star' | 'circle' | 'hotel';
+  type: 'star' | 'circle' | 'hotel' | 'eye';
 }
 
 const LegendItem: React.FC<LegendItemProps> = ({ color, label, type }) => {
@@ -234,6 +250,8 @@ const LegendItem: React.FC<LegendItemProps> = ({ color, label, type }) => {
           <Star className="h-3 w-3" style={{ color, fill: color }} />
         ) : type === 'hotel' ? (
           <Hotel className="h-3 w-3" style={{ color, fill: color }} />
+        ) : type === 'eye' ? (
+          <Eye className="h-3 w-3" style={{ color, fill: 'none', stroke: color, strokeWidth: 2 }} />
         ) : (
           <Circle className="h-3 w-3" style={{ color, fill: `${color}30` }} />
         )}
