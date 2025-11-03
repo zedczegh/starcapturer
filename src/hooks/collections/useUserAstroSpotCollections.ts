@@ -11,6 +11,7 @@ interface SavedAstroSpot {
   bortlescale?: number;
   siqs?: number;
   verification_status?: string;
+  spot_type?: string;
   created_at: string;
   updated_at: string;
 }
@@ -81,13 +82,19 @@ export const useUserAstroSpotCollections = () => {
       setError(null);
       const { data, error: fetchError } = await supabase
         .from('saved_astro_spots')
-        .select('*')
+        .select(`
+          *,
+          user_astro_spots!inner(spot_type)
+        `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
 
-      const transformedSpots: SavedAstroSpot[] = data || [];
+      const transformedSpots: SavedAstroSpot[] = (data || []).map(spot => ({
+        ...spot,
+        spot_type: (spot as any).user_astro_spots?.spot_type || 'nightscape'
+      }));
       setSpots(transformedSpots);
       saveCache(transformedSpots);
     } catch (error: any) {

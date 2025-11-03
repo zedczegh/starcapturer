@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import NavBar from "@/components/NavBar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Moon, Mountain, Eye } from "lucide-react";
 import { prepareLocationForNavigation } from "@/utils/locationNavigation";
 import { sortLocationsBySiqs } from "./collections/sortLocationsBySiqs";
 import PageLoader from "@/components/loaders/PageLoader";
@@ -98,6 +99,11 @@ const Collections = () => {
 
   const sortedLocations = sortLocationsBySiqs(locations || []);
   const totalItems = (locations?.length || 0) + (spots?.length || 0);
+  
+  // Filter spots by type
+  const nightscapeSpots = spots?.filter(spot => spot.spot_type === 'nightscape') || [];
+  const naturalSpots = spots?.filter(spot => spot.spot_type === 'natural') || [];
+  const obscuraSpots = spots?.filter(spot => spot.spot_type === 'obscura') || [];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900">
@@ -136,7 +142,7 @@ const Collections = () => {
           )}
 
           <Tabs defaultValue="locations" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2 bg-cosmic-800/30 border border-cosmic-700/50">
+            <TabsList className="grid w-full grid-cols-4 bg-cosmic-800/30 border border-cosmic-700/50">
               <TabsTrigger 
                 value="locations" 
                 className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -144,10 +150,25 @@ const Collections = () => {
                 {t("Photo Locations", "摄影位置")} ({locations?.length || 0})
               </TabsTrigger>
               <TabsTrigger 
-                value="astrospots"
+                value="nightscape"
                 className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               >
-                {t("AstroSpots", "观星点")} ({spots?.length || 0})
+                <Moon className="mr-1 h-3 w-3" />
+                {t("Nightscape", "夜景")} ({nightscapeSpots.length})
+              </TabsTrigger>
+              <TabsTrigger 
+                value="natural"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <Mountain className="mr-1 h-3 w-3" />
+                {t("Natural", "自然")} ({naturalSpots.length})
+              </TabsTrigger>
+              <TabsTrigger 
+                value="obscura"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <Eye className="mr-1 h-3 w-3" />
+                {t("Obscura", "奇观")} ({obscuraSpots.length})
               </TabsTrigger>
             </TabsList>
 
@@ -181,13 +202,13 @@ const Collections = () => {
               )}
             </TabsContent>
 
-            <TabsContent value="astrospots" className="space-y-4">
-              {loading && !spots?.length ? (
+            <TabsContent value="nightscape" className="space-y-4">
+              {loading && !nightscapeSpots.length ? (
                 <CollectionsLoadingSkeleton />
-              ) : spots?.length === 0 ? (
+              ) : nightscapeSpots.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-cosmic-400 mb-4">
-                    {t("No astro spots saved yet", "尚未保存任何观星点")}
+                    {t("No nightscape spots saved yet", "尚未保存任何夜景点")}
                   </div>
                   <Button 
                     onClick={() => navigate('/community')}
@@ -199,7 +220,67 @@ const Collections = () => {
                 </div>
               ) : (
                 <AstroSpotCollectionGrid
-                  spots={spots}
+                  spots={nightscapeSpots}
+                  editMode={editMode}
+                  editingNames={editingSpotNames}
+                  savingNames={savingSpotNames}
+                  onNameChange={handleSpotNameChange}
+                  onSaveName={handleSpotSaveName}
+                  onDelete={handleSpotDelete}
+                  onViewDetails={handleViewSpotDetails}
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="natural" className="space-y-4">
+              {loading && !naturalSpots.length ? (
+                <CollectionsLoadingSkeleton />
+              ) : naturalSpots.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-cosmic-400 mb-4">
+                    {t("No natural spots saved yet", "尚未保存任何自然点")}
+                  </div>
+                  <Button 
+                    onClick={() => navigate('/community')}
+                    variant="outline"
+                    className="bg-cosmic-800/30 border-cosmic-700/50 hover:bg-cosmic-700/50"
+                  >
+                    {t("Browse Community", "浏览社区")}
+                  </Button>
+                </div>
+              ) : (
+                <AstroSpotCollectionGrid
+                  spots={naturalSpots}
+                  editMode={editMode}
+                  editingNames={editingSpotNames}
+                  savingNames={savingSpotNames}
+                  onNameChange={handleSpotNameChange}
+                  onSaveName={handleSpotSaveName}
+                  onDelete={handleSpotDelete}
+                  onViewDetails={handleViewSpotDetails}
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="obscura" className="space-y-4">
+              {loading && !obscuraSpots.length ? (
+                <CollectionsLoadingSkeleton />
+              ) : obscuraSpots.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-cosmic-400 mb-4">
+                    {t("No obscura spots saved yet", "尚未保存任何奇观点")}
+                  </div>
+                  <Button 
+                    onClick={() => navigate('/community')}
+                    variant="outline"
+                    className="bg-cosmic-800/30 border-cosmic-700/50 hover:bg-cosmic-700/50"
+                  >
+                    {t("Browse Community", "浏览社区")}
+                  </Button>
+                </div>
+              ) : (
+                <AstroSpotCollectionGrid
+                  spots={obscuraSpots}
                   editMode={editMode}
                   editingNames={editingSpotNames}
                   savingNames={savingSpotNames}

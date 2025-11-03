@@ -12,6 +12,7 @@ interface AstroSpot {
   bortlescale?: number;
   siqs?: number;
   verification_status?: string;
+  spot_type?: string;
 }
 
 export const useAstroSpotCollection = () => {
