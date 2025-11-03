@@ -57,8 +57,8 @@ const DistanceRangeSlider: React.FC<DistanceRangeSliderProps> = ({
             <Radar className="h-3.5 w-3.5 mr-1.5 text-primary/80" />
           )}
           {t(
-            "Move the slider on the bar to find more potential Astro Spots!", 
-            "在滑动条上移动以找到更多潜在的天文观测点！"
+            "Move the slider to expand your search radius and discover more photo spots!", 
+            "移动滑块以扩大搜索半径并发现更多摄影点！"
           )}
         </div>
         <motion.div 
