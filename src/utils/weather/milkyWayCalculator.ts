@@ -46,31 +46,18 @@ export function calculateMilkyWayVisibility(
     return cachedResult.result;
   }
   
-  // The Milky Way core (Sagittarius) has approximately these coordinates
-  // Right Ascension ~18h (270°) and Declination ~-27°
-  const sagittariusRA = 270; // degrees
-  const sagittariusDecl = -27; // degrees
-
-  // Convert date to day of year
-  const start = new Date(date.getFullYear(), 0, 0);
-  const diff = date.getTime() - start.getTime();
-  const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
-  
-  // Seasonal adjustment - the Milky Way's position changes throughout the year
-  // Season affects viewing times (best in summer for northern hemisphere)
-  const seasonalOffset = Math.sin((dayOfYear / 365) * 2 * Math.PI) * 2;
+  // The Milky Way galactic center (Sagittarius A*) precise coordinates
+  // Right Ascension: 17h 45m 40.0s (266.417°) and Declination: -29° 0' 28"
+  const sagittariusRA = 17.761; // decimal hours (17h 45m)
+  const sagittariusDecl = -29.008; // degrees
 
   // Calculate Local Sidereal Time when Sagittarius rises and sets
-  const LST_rise = calculateRiseSetLST(sagittariusDecl, latitude, true);
-  const LST_set = calculateRiseSetLST(sagittariusDecl, latitude, false);
+  const LST_rise = calculateRiseSetLST(sagittariusDecl, latitude, sagittariusRA, true);
+  const LST_set = calculateRiseSetLST(sagittariusDecl, latitude, sagittariusRA, false);
 
   // Convert LST to local time for today
   const riseTime = lstToLocalTime(LST_rise, longitude, date);
   const setTime = lstToLocalTime(LST_set, longitude, date);
-
-  // Adjust times based on season for better accuracy
-  riseTime.setHours(riseTime.getHours() + seasonalOffset);
-  setTime.setHours(setTime.getHours() + seasonalOffset);
 
   // Format times
   const riseString = formatTimeString(riseTime);
@@ -155,10 +142,11 @@ export function calculateMilkyWayVisibility(
  * Calculate the Local Sidereal Time (LST) when a celestial object rises or sets
  * @param declination Declination of the celestial object in degrees
  * @param latitude Observer's latitude in degrees
+ * @param ra Right Ascension in decimal hours
  * @param isRising true for rise time, false for set time
  * @returns Local Sidereal Time in decimal hours (0-24)
  */
-function calculateRiseSetLST(declination: number, latitude: number, isRising: boolean): number {
+function calculateRiseSetLST(declination: number, latitude: number, ra: number, isRising: boolean): number {
   // Convert to radians
   const decl = (declination * Math.PI) / 180;
   const lat = (latitude * Math.PI) / 180;
@@ -192,9 +180,8 @@ function calculateRiseSetLST(declination: number, latitude: number, isRising: bo
   // Convert hour angle to hours (0-24)
   const hourAngle = (H * 12) / Math.PI;
   
-  // Calculate LST: RA ± Hour Angle (+ for setting, - for rising)
-  const RA = 18; // Sagittarius is around 18h Right Ascension
-  let LST = isRising ? RA - hourAngle : RA + hourAngle;
+  // Calculate LST: RA ± Hour Angle (- for rising, + for setting)
+  let LST = isRising ? ra - hourAngle : ra + hourAngle;
   
   // Normalize to 0-24 range
   while (LST < 0) LST += 24;
@@ -206,7 +193,7 @@ function calculateRiseSetLST(declination: number, latitude: number, isRising: bo
 /**
  * Convert Local Sidereal Time to local time
  * @param LST Local Sidereal Time in decimal hours
- * @param longitude Observer's longitude in degrees
+ * @param longitude Observer's longitude in degrees (positive East, negative West)
  * @param date Date to calculate for
  * @returns Date object representing the local time
  */
@@ -214,19 +201,31 @@ function lstToLocalTime(LST: number, longitude: number, date: Date): Date {
   // Get the Greenwich Mean Sidereal Time (GMST) at 0h UT for the date
   const GMST0 = calculateGMST0(date);
   
-  // Calculate UT when LST occurs
-  let UT = (LST - GMST0 - longitude/15) * 0.9972;
+  // Calculate the LST at Greenwich (GMST) for the given LST at the observer's location
+  // LST = GMST + longitude/15 (longitude in hours)
+  // So GMST = LST - longitude/15
+  const longitudeHours = longitude / 15.0;
+  
+  // Calculate UT: The time when the given LST occurs
+  // GMST = GMST0 + UT * 1.00273790935 (sidereal day is ~23h 56m 4s)
+  // UT = (LST - longitudeHours - GMST0) / 1.00273790935
+  let UT = (LST - longitudeHours - GMST0) / 1.00273790935;
   
   // Normalize to 0-24 range
   while (UT < 0) UT += 24;
   while (UT >= 24) UT -= 24;
   
-  // Convert to local time by applying timezone offset
+  // Convert UT hours to local time
   const localTime = new Date(date);
-  localTime.setUTCHours(0, 0, 0, 0); // Set to midnight UTC
-  localTime.setUTCHours(UT); // Add calculated UT hours
+  localTime.setHours(0, 0, 0, 0); // Set to midnight local
   
-  return localTime;
+  // Add UT hours and convert back to local time
+  // Get the UTC date at the calculated UT time
+  const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  utcDate.setUTCHours(Math.floor(UT));
+  utcDate.setUTCMinutes((UT % 1) * 60);
+  
+  return utcDate;
 }
 
 /**
