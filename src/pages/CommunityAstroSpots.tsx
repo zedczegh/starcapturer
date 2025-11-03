@@ -9,7 +9,7 @@ import { useAnimationVariants } from "@/hooks/community/useAnimationVariants";
 import CommunitySpotHeader from "@/components/community/CommunitySpotHeader";
 import CommunityMapSection from "@/components/community/CommunityMapSection";
 import CommunitySpotsList from "@/components/community/CommunitySpotsList";
-import SpotTypeFilter, { SpotType } from "@/components/community/SpotTypeFilter";
+import CircularSpotTypeFilter, { SpotType } from "@/components/community/CircularSpotTypeFilter";
 import { useState } from "react";
 
 // Default map center coordinates
@@ -43,6 +43,14 @@ const CommunityAstroSpots: React.FC = () => {
     if (activeSpotType === 'all') return sortedAstroSpots;
     return sortedAstroSpots.filter(spot => spot.spot_type === activeSpotType);
   }, [sortedAstroSpots, activeSpotType]);
+
+  // Calculate counts for each type
+  const spotCounts = React.useMemo(() => ({
+    all: sortedAstroSpots?.length || 0,
+    nightscape: sortedAstroSpots?.filter(s => s.spot_type === 'nightscape').length || 0,
+    natural: sortedAstroSpots?.filter(s => s.spot_type === 'natural').length || 0,
+    obscura: sortedAstroSpots?.filter(s => s.spot_type === 'obscura').length || 0,
+  }), [sortedAstroSpots]);
   
   console.log('🏠 Community page debug:', {
     isLoading,
@@ -75,9 +83,10 @@ const CommunityAstroSpots: React.FC = () => {
         />
 
         {/* Spot Type Filter */}
-        <SpotTypeFilter 
+        <CircularSpotTypeFilter 
           activeType={activeSpotType}
           onTypeChange={setActiveSpotType}
+          counts={spotCounts}
         />
 
         {/* Map Section */}

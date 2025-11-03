@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import NavBar from "@/components/NavBar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Moon, Mountain, Eye } from "lucide-react";
+import { Moon, Mountain, Eye, Camera } from "lucide-react";
+import { CircularTabs } from "@/components/ui/circular-tabs";
 import { prepareLocationForNavigation } from "@/utils/locationNavigation";
 import { sortLocationsBySiqs } from "./collections/sortLocationsBySiqs";
 import PageLoader from "@/components/loaders/PageLoader";
@@ -26,6 +27,7 @@ const Collections = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [editMode, setEditMode] = useState(false);
+  const [activeTab, setActiveTab] = useState('locations');
 
   // Location collections
   const {
@@ -104,6 +106,13 @@ const Collections = () => {
   const naturalSpots = spots?.filter(spot => spot.spot_type === 'natural') || [];
   const obscuraSpots = spots?.filter(spot => spot.spot_type === 'obscura') || [];
 
+  const collectionTabs = [
+    { value: 'locations', label: t('Photo Locations', '摄影位置'), icon: Camera, count: locations?.length || 0 },
+    { value: 'nightscape', label: t('Nightscape', '夜景'), icon: Moon, count: nightscapeSpots.length },
+    { value: 'natural', label: t('Natural', '自然'), icon: Mountain, count: naturalSpots.length },
+    { value: 'obscura', label: t('Obscura', '奇观'), icon: Eye, count: obscuraSpots.length },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900">
       <NavBar />
@@ -140,38 +149,16 @@ const Collections = () => {
             />
           )}
 
-          <Tabs defaultValue="locations" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 bg-cosmic-800/30 border border-cosmic-700/50">
-              <TabsTrigger 
-                value="locations" 
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                {t("Photo Locations", "摄影位置")} ({locations?.length || 0})
-              </TabsTrigger>
-              <TabsTrigger 
-                value="nightscape"
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <Moon className="mr-1 h-3 w-3" />
-                {t("Nightscape", "夜景")} ({nightscapeSpots.length})
-              </TabsTrigger>
-              <TabsTrigger 
-                value="natural"
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <Mountain className="mr-1 h-3 w-3" />
-                {t("Natural", "自然")} ({naturalSpots.length})
-              </TabsTrigger>
-              <TabsTrigger 
-                value="obscura"
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-              >
-                <Eye className="mr-1 h-3 w-3" />
-                {t("Obscura", "奇观")} ({obscuraSpots.length})
-              </TabsTrigger>
-            </TabsList>
+          {/* Circular Tabs Navigation */}
+          <CircularTabs 
+            tabs={collectionTabs}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            className="mb-8"
+          />
 
-            <TabsContent value="locations" className="space-y-4">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsContent value="locations" className="space-y-4 mt-0">
               {loading && !locations?.length ? (
                 <CollectionsLoadingSkeleton />
               ) : locations?.length === 0 ? (

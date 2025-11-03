@@ -60,7 +60,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center">
                   <Star className="h-3.5 w-3.5 mr-1 text-primary" />
-                  <span className="text-xs font-medium bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-400">
+                  <span className="text-xs font-medium bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-foreground">
                     {t("Map Indicators Guide", "地图标记指南")}
                   </span>
                 </div>
@@ -84,7 +84,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
                       {t("Certified Dark Sky Locations", "认证暗夜地点")}
                     </h4>
                     <LegendItem 
-                      color="#9b87f5" 
+                      color="hsl(var(--primary))" 
                       label={t("Dark Sky Reserve/Sanctuary", "暗夜保护区/庇护所")} 
                       type="star"
                     />
@@ -194,12 +194,12 @@ const MapLegend: React.FC<MapLegendProps> = ({
             stopPropagation(e);
             setIsCollapsed(!isCollapsed);
           }}
-          className={`flex items-center justify-center p-0.5 bg-gradient-to-br from-purple-500/70 via-blue-500/60 to-blue-400/70
-                    rounded-full shadow-lg border border-blue-300/30 backdrop-blur-sm transition-all ${isCollapsed ? '' : 'hidden'}`}
-          style={{ boxShadow: '0 0 15px rgba(139, 92, 246, 0.5)' }}
+          className={`flex items-center justify-center p-0.5 bg-gradient-to-br from-primary/70 via-primary/60 to-primary/70
+                    rounded-full shadow-lg border border-primary/30 backdrop-blur-sm transition-all ${isCollapsed ? '' : 'hidden'}`}
+          style={{ boxShadow: '0 0 15px hsl(var(--primary) / 0.5)' }}
         >
-          <div className="w-9 h-9 flex items-center justify-center rounded-full bg-gradient-to-br from-purple-600/80 to-blue-500/80">
-            <AlertCircle className="h-5 w-5 text-white/90" strokeWidth={2.2} />
+          <div className="w-9 h-9 flex items-center justify-center rounded-full bg-gradient-to-br from-primary/80 to-primary/80">
+            <AlertCircle className="h-5 w-5 text-primary-foreground/90" strokeWidth={2.2} />
           </div>
           
           {/* Add pulsing effect to button when collapsed */}
@@ -207,10 +207,10 @@ const MapLegend: React.FC<MapLegendProps> = ({
             className="absolute inset-0 rounded-full"
             animate={{ 
               boxShadow: [
-                '0 0 0 rgba(139, 92, 246, 0)',
-                '0 0 10px rgba(139, 92, 246, 0.7)',
-                '0 0 20px rgba(139, 92, 246, 0.4)',
-                '0 0 0 rgba(139, 92, 246, 0)'
+                '0 0 0 hsl(var(--primary) / 0)',
+                '0 0 10px hsl(var(--primary) / 0.7)',
+                '0 0 20px hsl(var(--primary) / 0.4)',
+                '0 0 0 hsl(var(--primary) / 0)'
               ]
             }}
             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
