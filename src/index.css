@@ -5,43 +5,43 @@
 
 @layer base {
   :root {
-    --background: 200 35% 8%;
-    --foreground: 40 95% 95%;
-    --card: 200 30% 10%;
-    --card-foreground: 40 95% 95%;
-    --popover: 200 30% 10%;
-    --popover-foreground: 40 95% 95%;
-    --primary: 30 90% 55%;
-    --primary-foreground: 200 35% 8%;
-    --secondary: 120 30% 25%;
-    --secondary-foreground: 40 95% 95%;
-    --muted: 150 20% 20%;
-    --muted-foreground: 40 30% 65%;
-    --accent: 160 45% 35%;
-    --accent-foreground: 40 95% 95%;
-    --destructive: 0 65% 45%;
-    --destructive-foreground: 40 95% 95%;
-    --border: 150 20% 20%;
-    --input: 150 20% 20%;
-    --ring: 30 80% 60%;
+    --background: 200 20% 12%;
+    --foreground: 30 25% 85%;
+    --card: 200 18% 16%;
+    --card-foreground: 30 25% 85%;
+    --popover: 200 18% 16%;
+    --popover-foreground: 30 25% 85%;
+    --primary: 20 45% 55%;
+    --primary-foreground: 30 25% 95%;
+    --secondary: 30 20% 40%;
+    --secondary-foreground: 30 25% 95%;
+    --muted: 200 15% 25%;
+    --muted-foreground: 30 15% 60%;
+    --accent: 35 30% 50%;
+    --accent-foreground: 30 25% 95%;
+    --destructive: 0 50% 50%;
+    --destructive-foreground: 30 25% 95%;
+    --border: 200 15% 25%;
+    --input: 200 15% 25%;
+    --ring: 20 40% 55%;
     --radius: 0.5rem;
     
     /* Color palette for SIQS score ranges */
-    --red-500: 0 65% 55%;
-    --orange-400: 30 90% 60%;
-    --yellow-400: 45 95% 65%;
-    --olive-500: 60 45% 35%;
-    --green-500: 140 65% 45%;
-    --cosmic-100: 40 50% 90%;
-    --cosmic-200: 35 40% 75%;
-    --cosmic-300: 150 15% 55%;
-    --cosmic-400: 155 20% 45%;
-    --cosmic-500: 160 25% 35%;
-    --cosmic-600: 165 30% 28%;
-    --cosmic-700: 170 35% 22%;
-    --cosmic-800: 180 40% 15%;
-    --cosmic-900: 190 40% 12%;
-    --cosmic-950: 200 40% 8%;
+    --red-500: 0 50% 50%;
+    --orange-400: 25 50% 55%;
+    --yellow-400: 40 45% 60%;
+    --olive-500: 35 25% 45%;
+    --green-500: 150 30% 45%;
+    --cosmic-100: 30 30% 88%;
+    --cosmic-200: 28 25% 75%;
+    --cosmic-300: 200 12% 55%;
+    --cosmic-400: 200 14% 45%;
+    --cosmic-500: 200 16% 35%;
+    --cosmic-600: 200 18% 28%;
+    --cosmic-700: 200 18% 22%;
+    --cosmic-800: 200 20% 16%;
+    --cosmic-900: 200 20% 14%;
+    --cosmic-950: 200 20% 12%;
   }
 }
 
