@@ -71,7 +71,7 @@ import { EnhancedLoadingFallback } from './components/ui/enhanced-loading';
 
 const LoadingFallback = () => (
   <EnhancedLoadingFallback 
-    message="Opening your next starry journey..."
+    message="Into the Unknown"
     variant="detailed"
     showProgress={true}
   />

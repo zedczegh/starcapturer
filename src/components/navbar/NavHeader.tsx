@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { MoonStar } from "lucide-react";
+import { Compass } from "lucide-react";
 import LanguageSwitcher from "../LanguageSwitcher";
 import { cn } from "@/lib/utils";
 import UtilitiesButton from "./UtilitiesButton";
@@ -27,9 +27,9 @@ const NavHeader: React.FC<NavHeaderProps> = ({
           to="/" 
           className="flex items-center space-x-2 z-20 transition-all duration-300 hover:opacity-80 hover:scale-[1.02]"
         >
-          <MoonStar className="h-8 w-8 text-primary" />
+          <Compass className="h-8 w-8 text-primary" />
           <span className="text-xl font-bold tracking-tight">
-            Astro<span className="text-primary">SIQS</span>
+            <span className="text-primary">Meteo</span>tinary
           </span>
         </Link>
         

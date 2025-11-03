@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { Star, Github, Twitter, BookOpen } from "lucide-react";
+import { Compass, Github, Twitter, BookOpen } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const AstroFooter: React.FC = () => {
@@ -12,12 +12,12 @@ const AstroFooter: React.FC = () => {
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center mb-4 md:mb-0">
-            <Star className="h-5 w-5 text-primary mr-2" />
-            <span className="font-bold text-lg text-cosmic-100">Astro<span className="text-primary">SIQS</span></span>
+            <Compass className="h-5 w-5 text-primary mr-2" />
+            <span className="font-bold text-lg text-cosmic-100"><span className="text-primary">Meteo</span>tinary</span>
           </div>
           <div className="flex flex-wrap gap-x-8 gap-y-2 mb-4 md:mb-0">
             <Link to="/photo-points" className="text-sm text-cosmic-300 hover:text-primary transition-colors">
-              {t("Photo Points", "拍摄点")}
+              {t("Stargazing Points", "观星点")}
             </Link>
             <Link to="/share" className="text-sm text-cosmic-300 hover:text-primary transition-colors">
               {t("Bortle Now", "实时光污染")}
@@ -26,7 +26,7 @@ const AstroFooter: React.FC = () => {
               {t("Resources", "资源")}
             </Link>
             <Link to="/about" className="text-sm text-cosmic-300 hover:text-primary transition-colors">
-              {t("About SIQS", "关于SIQS")}
+              {t("About", "关于")}
             </Link>
           </div>
           <div className="flex items-center gap-4 mb-2 md:mb-0">
@@ -41,7 +41,7 @@ const AstroFooter: React.FC = () => {
             </a>
           </div>
           <div className="text-xs text-cosmic-400 mt-2 md:mt-0">
-            &copy; {new Date().getFullYear()} AstroSIQS
+            &copy; {new Date().getFullYear()} Meteotinary
           </div>
         </div>
       </div>

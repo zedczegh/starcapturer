@@ -2,7 +2,7 @@
 import React from 'react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
-import { MoonStar } from "lucide-react";
+import { Compass } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const AboutHeader = () => {
@@ -32,34 +32,34 @@ const AboutHeader = () => {
         />
       </div>
       
-      {/* Logo and SIQS Badge */}
+      {/* Logo and Platform Badge */}
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.2, duration: 0.5 }}
         className="flex justify-center items-center gap-3 mb-3"
       >
-        <MoonStar className="h-8 w-8 text-primary" />
+        <Compass className="h-8 w-8 text-primary" />
         <div className="bg-cosmic-800/30 backdrop-blur-sm p-2 rounded-full inline-flex items-center border border-cosmic-700/30">
           <span className="text-xs text-cosmic-200">
-            {t("Astro SIQS 1.0", "Astro SIQS 1.0")}
+            {t("Adventure Platform v1.0", "探险平台 v1.0")}
           </span>
         </div>
       </motion.div>
       
       {/* Main title with gradient */}
       <motion.h1 
-        className={`${isMobile ? 'text-3xl' : 'text-4xl'} font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400`}
+        className={`${isMobile ? 'text-3xl' : 'text-4xl'} font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-accent to-secondary`}
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.3, duration: 0.5 }}
       >
-        {t("About SIQS", "关于 SIQS")}
+        {t("About Meteotinary", "关于 Meteotinary")}
       </motion.h1>
       
       {/* Decorative line */}
       <motion.div
-        className="w-20 h-1 bg-gradient-to-r from-blue-400 to-purple-400 mx-auto my-4 rounded-full"
+        className="w-20 h-1 bg-gradient-to-r from-primary to-accent mx-auto my-4 rounded-full"
         initial={{ width: 0 }}
         animate={{ width: 80 }}
         transition={{ delay: 0.4, duration: 0.6 }}
@@ -73,8 +73,8 @@ const AboutHeader = () => {
         transition={{ delay: 0.5, duration: 0.5 }}
       >
         {t(
-          "Our companion for stargazing and astrophotography in optimal conditions", 
-          "我们的星空观测和天文摄影最佳伙伴"
+          "Your accurate meteorology-guided itinerary platform for stargazing, hiking, and outdoor adventures worldwide", 
+          "您准确的气象导向行程规划平台，适用于全球观星、徒步和户外探险"
         )}
       </motion.p>
     </motion.div>

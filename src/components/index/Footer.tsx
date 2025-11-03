@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { MoonStar } from "lucide-react";
+import { Compass } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const Footer: React.FC = () => {
@@ -12,15 +12,15 @@ const Footer: React.FC = () => {
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center mb-6 md:mb-0">
-            <MoonStar className="h-6 w-6 text-primary mr-2" />
+            <Compass className="h-6 w-6 text-primary mr-2" />
             <span className="text-xl font-bold tracking-tight">
-              Astro<span className="text-primary">SIQS</span>
+              <span className="text-primary">Meteo</span>tinary
             </span>
           </div>
           
           <div className="flex flex-wrap justify-center gap-x-8 gap-y-2 mb-6 md:mb-0">
             <Link to="/photo-points" className="text-sm text-foreground/70 hover:text-primary transition-colors">
-              {t("Photo Points", "拍摄点")}
+              {t("Stargazing Points", "观星点")}
             </Link>
             <Link to="/share" className="text-sm text-foreground/70 hover:text-primary transition-colors">
               {t("Bortle Now", "实时光污染")}
@@ -29,12 +29,12 @@ const Footer: React.FC = () => {
               {t("Resources", "资源")}
             </Link>
             <Link to="/about" className="text-sm text-foreground/70 hover:text-primary transition-colors">
-              {t("About SIQS", "关于SIQS")}
+              {t("About", "关于")}
             </Link>
           </div>
           
           <div className="text-sm text-foreground/50">
-            &copy; {new Date().getFullYear()} AstroSIQS
+            &copy; {new Date().getFullYear()} Meteotinary
           </div>
         </div>
       </div>

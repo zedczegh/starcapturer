@@ -20,10 +20,10 @@ const AstroSpotsHeader: React.FC<AstroSpotsHeaderProps> = ({
     <div className="mb-8 flex justify-between items-center">
       <div>
         <h1 className="text-2xl font-bold text-white tracking-tight drop-shadow-sm mb-1">
-          {t("My AstroSpots", "我的观星点")}
+          {t("My Meteo Spots", "我的气象点")}
         </h1>
         <p className="text-cosmic-300">
-          {t("Manage and track your favorite astronomical observation locations", "管理和追踪您最喜欢的天文观测地点")}
+          {t("Manage and track your favorite outdoor adventure locations", "管理和追踪您最喜欢的户外探险地点")}
         </p>
       </div>
       {spotsCount > 0 && (

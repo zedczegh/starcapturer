@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Loader2, Sparkles, MapPin, Stars, Camera } from 'lucide-react';
+import { Compass, Mountain, Cloud, Wind } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface LoadingSpinnerProps {
@@ -28,11 +28,17 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
   return (
     <motion.div
-      animate={{ rotate: 360 }}
-      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+      animate={{ 
+        rotate: 360,
+        scale: [1, 1.1, 1]
+      }}
+      transition={{ 
+        rotate: { duration: 2, repeat: Infinity, ease: "linear" },
+        scale: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+      }}
       className={cn(sizeClasses[size], variantClasses[variant], className)}
     >
-      <Loader2 className="h-full w-full" />
+      <Compass className="h-full w-full" />
     </motion.div>
   );
 };
@@ -43,7 +49,7 @@ interface FloatingIconsProps {
 }
 
 export const FloatingIcons: React.FC<FloatingIconsProps> = ({ 
-  icons = [Sparkles, MapPin, Stars, Camera],
+  icons = [Mountain, Cloud, Wind, Compass],
   className 
 }) => {
   return (
@@ -54,27 +60,24 @@ export const FloatingIcons: React.FC<FloatingIconsProps> = ({
           className="absolute"
           initial={{ 
             opacity: 0, 
-            scale: 0,
-            x: Math.random() * 300,
-            y: Math.random() * 300
+            scale: 0.8,
+            x: `${20 + (index * 20)}%`,
+            y: `${40 + (index * 10)}%`
           }}
           animate={{ 
-            opacity: [0, 0.6, 0],
-            scale: [0, 1, 0],
-            y: [-20, -80],
+            opacity: [0, 0.8, 0],
+            scale: [0.8, 1.2, 0.8],
+            x: `${20 + (index * 20) + Math.sin(index) * 10}%`,
+            y: [`${40 + (index * 10)}%`, `${30 + (index * 10)}%`, `${40 + (index * 10)}%`],
           }}
           transition={{
-            duration: 3,
+            duration: 2.5,
             repeat: Infinity,
-            delay: index * 0.5,
-            ease: "easeOut"
-          }}
-          style={{
-            left: `${20 + (index * 20)}%`,
-            top: `${60 + (index * 5)}%`,
+            delay: index * 0.4,
+            ease: "easeInOut"
           }}
         >
-          <Icon className="h-6 w-6 text-primary/30" />
+          <Icon className="h-8 w-8 text-primary/40" strokeWidth={1.5} />
         </motion.div>
       ))}
     </div>
@@ -157,7 +160,7 @@ interface EnhancedLoadingFallbackProps {
 }
 
 export const EnhancedLoadingFallback: React.FC<EnhancedLoadingFallbackProps> = ({
-  message = "Opening your next starry journey...",
+  message = "Into the Unknown",
   showProgress = false,
   progress = 0,
   variant = 'detailed',
@@ -172,41 +175,50 @@ export const EnhancedLoadingFallback: React.FC<EnhancedLoadingFallbackProps> = (
     ),
     detailed: (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-center space-y-6 relative"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6 }}
+        className="flex flex-col items-center space-y-8 relative"
       >
         <FloatingIcons />
         <div className="relative">
           <motion.div
+            className="absolute inset-0 rounded-full"
             animate={{ 
               boxShadow: [
-                "0 0 20px rgba(107, 107, 255, 0.3)",
-                "0 0 40px rgba(107, 107, 255, 0.6)",
-                "0 0 20px rgba(107, 107, 255, 0.3)"
-              ]
+                "0 0 30px rgba(200, 120, 80, 0.4)",
+                "0 0 50px rgba(200, 120, 80, 0.6)",
+                "0 0 30px rgba(200, 120, 80, 0.4)"
+              ],
+              scale: [1, 1.05, 1]
             }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="p-4 rounded-full bg-cosmic-900/80 backdrop-blur-sm"
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            animate={{ 
+              rotate: [0, 360]
+            }}
+            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+            className="p-6 rounded-full bg-cosmic-900/90 backdrop-blur-md border border-primary/20"
           >
-            <LoadingSpinner size="lg" variant="gradient" />
+            <LoadingSpinner size="lg" variant="primary" />
           </motion.div>
         </div>
-        <div className="text-center space-y-3">
+        <div className="text-center space-y-4">
           <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="text-cosmic-200 text-lg font-medium"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.6 }}
+            className="text-cosmic-100 text-2xl font-bold tracking-wide"
           >
             {message}
           </motion.p>
           {showProgress && (
             <motion.div
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: "100%" }}
-              transition={{ delay: 0.5 }}
-              className="w-64"
+              initial={{ opacity: 0, scaleX: 0 }}
+              animate={{ opacity: 1, scaleX: 1 }}
+              transition={{ delay: 0.6 }}
+              className="w-72"
             >
               <ProgressBar progress={progress} indeterminate={!progress} />
             </motion.div>
@@ -219,27 +231,38 @@ export const EnhancedLoadingFallback: React.FC<EnhancedLoadingFallbackProps> = (
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="flex flex-col items-center space-y-4 relative"
+        className="flex flex-col items-center space-y-6 relative"
       >
         <div className="relative">
           <motion.div
             animate={{ rotate: 360 }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="absolute inset-0 border-2 border-transparent border-t-primary/30 border-r-cosmic-400/30 rounded-full"
+            transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+            className="absolute inset-0 border-2 border-transparent border-t-primary/40 border-r-accent/30 rounded-full"
           />
           <motion.div
             animate={{ rotate: -360 }}
-            transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-            className="absolute inset-2 border border-transparent border-t-cosmic-300/20 border-l-primary/20 rounded-full"
+            transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+            className="absolute inset-2 border border-transparent border-t-cosmic-300/30 border-l-primary/20 rounded-full"
           />
-          <div className="w-16 h-16 flex items-center justify-center">
-            <Stars className="h-8 w-8 text-primary animate-pulse" />
+          <div className="w-20 h-20 flex items-center justify-center">
+            <motion.div
+              animate={{ 
+                rotate: [0, 360],
+                scale: [1, 1.1, 1]
+              }}
+              transition={{ 
+                rotate: { duration: 4, repeat: Infinity, ease: "linear" },
+                scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+              }}
+            >
+              <Compass className="h-10 w-10 text-primary" strokeWidth={2} />
+            </motion.div>
           </div>
         </div>
         <motion.p 
           animate={{ opacity: [0.7, 1, 0.7] }}
           transition={{ duration: 2, repeat: Infinity }}
-          className="text-cosmic-200 font-medium"
+          className="text-cosmic-200 font-semibold text-lg"
         >
           {message}
         </motion.p>
