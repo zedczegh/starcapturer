@@ -178,22 +178,40 @@ export const useMapLocations = ({
           loc.certification?.toLowerCase().includes('atlas obscura')
         );
         const darkSkyLocations = certifiedLocations.filter(loc => 
-          !loc.certification?.toLowerCase().includes('atlas obscura')
+          !loc.certification?.toLowerCase().includes('atlas obscura') &&
+          !loc.certification?.toLowerCase().includes('natural mountain')
         );
+        const mountainLocations = certifiedLocations.filter(loc =>
+          loc.certification?.toLowerCase().includes('natural mountain')
+        );
+        
+        console.log(`Filtering for view '${activeView}':`, {
+          total: validLocations.length,
+          certified: certifiedLocations.length,
+          calculated: calculatedLocations.length,
+          darkSky: darkSkyLocations.length,
+          obscura: obscuraLocations.length,
+          mountains: mountainLocations.length
+        });
         
         // Determine which locations to show based on view
         let locationsToShow: SharedAstroSpot[];
         
         if (activeView === 'certified') {
-          // In certified view, only show dark sky certified locations (not obscura)
+          // In certified view, only show dark sky certified locations (not obscura or mountains)
           locationsToShow = darkSkyLocations as SharedAstroSpot[];
         } else if (activeView === 'obscura') {
           // In obscura view, only show Atlas Obscura locations
           locationsToShow = obscuraLocations as SharedAstroSpot[];
+        } else if (activeView === 'mountains') {
+          // In mountains view, only show mountain locations
+          locationsToShow = mountainLocations as SharedAstroSpot[];
         } else {
           // For calculated view, only show calculated locations (not certified or obscura)
           locationsToShow = nonWaterCalculatedLocations as SharedAstroSpot[];
         }
+        
+        console.log(`Showing ${locationsToShow.length} locations for view '${activeView}'`);
         
         // Make sure we don't lose previously shown locations when switching views
         if (viewChanged) {
@@ -205,11 +223,16 @@ export const useMapLocations = ({
           if (activeView === 'certified') {
             relevantCachedLocations = cachedLocations.filter(loc => 
               (loc.isDarkSkyReserve || loc.certification) && 
-              !loc.certification?.toLowerCase().includes('atlas obscura')
+              !loc.certification?.toLowerCase().includes('atlas obscura') &&
+              !loc.certification?.toLowerCase().includes('natural mountain')
             );
           } else if (activeView === 'obscura') {
             relevantCachedLocations = cachedLocations.filter(loc => 
               loc.certification?.toLowerCase().includes('atlas obscura')
+            );
+          } else if (activeView === 'mountains') {
+            relevantCachedLocations = cachedLocations.filter(loc =>
+              loc.certification?.toLowerCase().includes('natural mountain')
             );
           } else {
             relevantCachedLocations = cachedLocations.filter(loc => 

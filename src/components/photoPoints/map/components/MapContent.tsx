@@ -132,11 +132,13 @@ const MapContent: React.FC<MapContentProps> = ({
         
         const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
         const locationId = location.id || `loc-${location.latitude?.toFixed(6)}-${location.longitude?.toFixed(6)}`;
+        // Include activeView in key to force remount on view change
+        const uniqueKey = `${activeView}-${locationId}`;
         const isHovered = hoveredLocationId === locationId;
         
         return (
           <LocationMarker
-            key={locationId}
+            key={uniqueKey}
             location={location}
             onClick={stableOnLocationClick}
             isHovered={isHovered}
