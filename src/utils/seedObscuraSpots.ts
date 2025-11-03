@@ -802,6 +802,326 @@ export const obscuraLocations = [
     bortlescale: 3,
     description: "V-shaped gorge with waterfalls in Miyazaki, Japan.",
     spot_type: "obscura"
+  },
+  {
+    name: "Marble Caves",
+    latitude: -46.6581,
+    longitude: -72.6267,
+    bortlescale: 1,
+    description: "Stunning blue marble formations in Chilean Patagonia.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Socotra Island",
+    latitude: 12.5000,
+    longitude: 53.8333,
+    bortlescale: 1,
+    description: "Alien-looking dragon blood trees and unique biodiversity in Yemen.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Fly Geyser",
+    latitude: 40.8594,
+    longitude: -119.3303,
+    bortlescale: 1,
+    description: "Colorful man-made geyser in Nevada's Black Rock Desert.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Tunnel of Love",
+    latitude: 51.5156,
+    longitude: 25.9442,
+    bortlescale: 4,
+    description: "Railway track covered by green arches in Ukraine.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Lake Hillier",
+    latitude: -34.0956,
+    longitude: 123.2056,
+    bortlescale: 1,
+    description: "Bright pink lake on Middle Island, Australia.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Waitomo Glowworm Caves",
+    latitude: -38.2611,
+    longitude: 175.1031,
+    bortlescale: 1,
+    description: "Underground caves lit by thousands of glowworms in New Zealand.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Rainbow Mountains Peru",
+    latitude: -13.8700,
+    longitude: -71.3031,
+    bortlescale: 2,
+    description: "Vinicunca mountain with natural rainbow-colored stripes.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Moeraki Boulders",
+    latitude: -45.3453,
+    longitude: 170.8264,
+    bortlescale: 2,
+    description: "Spherical boulders scattered on Koekohe Beach, New Zealand.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Deadvlei",
+    latitude: -24.7603,
+    longitude: 15.2944,
+    bortlescale: 1,
+    description: "White clay pan with dead camel thorn trees in Namibia.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Blood Falls",
+    latitude: -77.7167,
+    longitude: 162.2667,
+    bortlescale: 1,
+    description: "Red waterfall flowing from Taylor Glacier in Antarctica.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Hang Son Doong",
+    latitude: 17.4577,
+    longitude: 106.2839,
+    bortlescale: 1,
+    description: "World's largest cave with its own ecosystem in Vietnam.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Cano Cristales",
+    latitude: 2.2167,
+    longitude: -73.7833,
+    bortlescale: 1,
+    description: "The Liquid Rainbow river with five colors in Colombia.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Mendenhall Ice Caves",
+    latitude: 58.4191,
+    longitude: -134.5458,
+    bortlescale: 2,
+    description: "Glowing blue ice caves beneath Mendenhall Glacier, Alaska.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Lake Natron",
+    latitude: -2.4167,
+    longitude: 36.0000,
+    bortlescale: 1,
+    description: "Red alkaline lake that turns animals into calcified statues in Tanzania.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Cave of Crystals",
+    latitude: 27.8500,
+    longitude: -105.4950,
+    bortlescale: 1,
+    description: "Giant selenite crystals up to 36 feet long in Naica, Mexico.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Racetrack Playa",
+    latitude: 36.6817,
+    longitude: -117.5633,
+    bortlescale: 1,
+    description: "Moving rocks leave mysterious trails in Death Valley.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Spitzkoppe",
+    latitude: -21.8458,
+    longitude: 15.1961,
+    bortlescale: 1,
+    description: "Dramatic granite peak with ancient rock art in Namibia.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Vatnajökull Ice Cave",
+    latitude: 64.4200,
+    longitude: -16.5800,
+    bortlescale: 1,
+    description: "Blue ice cave within Europe's largest glacier in Iceland.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Rotorua Geothermal Area",
+    latitude: -38.1368,
+    longitude: 176.2497,
+    bortlescale: 5,
+    description: "Bubbling mud pools and colorful hot springs in New Zealand.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Horseshoe Bend",
+    latitude: 36.8794,
+    longitude: -111.5103,
+    bortlescale: 2,
+    description: "Horseshoe-shaped meander of the Colorado River in Arizona.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Bryce Canyon Hoodoos",
+    latitude: 37.5930,
+    longitude: -112.1871,
+    bortlescale: 2,
+    description: "Thousands of colorful rock spires in Utah.",
+    spot_type: "obscura"
+  },
+  {
+    name: "White Sands",
+    latitude: 32.7872,
+    longitude: -106.3256,
+    bortlescale: 1,
+    description: "Gypsum sand dunes creating a white desert in New Mexico.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Tsingy de Bemaraha",
+    latitude: -18.6667,
+    longitude: 44.7500,
+    bortlescale: 1,
+    description: "Limestone needle forest in Madagascar.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Avenue of the Baobabs",
+    latitude: -20.2506,
+    longitude: 44.4194,
+    bortlescale: 2,
+    description: "Iconic row of ancient baobab trees in Madagascar.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Mount Yasur",
+    latitude: -19.5314,
+    longitude: 169.4422,
+    bortlescale: 1,
+    description: "Continuously erupting volcano in Vanuatu since 1774.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Chocolate Hills",
+    latitude: 9.8167,
+    longitude: 124.1667,
+    bortlescale: 4,
+    description: "Over 1,200 grass-covered limestone hills in Philippines.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Spotted Lake",
+    latitude: 49.0739,
+    longitude: -119.5667,
+    bortlescale: 3,
+    description: "Polka-dot lake with colorful mineral deposits in Canada.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Devil's Tower",
+    latitude: 44.5903,
+    longitude: -104.7150,
+    bortlescale: 2,
+    description: "Massive igneous rock formation in Wyoming.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Ha Long Bay",
+    latitude: 20.9101,
+    longitude: 107.1839,
+    bortlescale: 4,
+    description: "Limestone karsts and islands in Vietnam.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Dallol Volcano",
+    latitude: 14.2417,
+    longitude: 40.3000,
+    bortlescale: 1,
+    description: "Colorful sulfur springs and acid pools in Ethiopia.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Arches National Park",
+    latitude: 38.7331,
+    longitude: -109.5925,
+    bortlescale: 2,
+    description: "Over 2,000 natural stone arches in Utah.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Valle de la Luna",
+    latitude: -22.9167,
+    longitude: -68.2667,
+    bortlescale: 1,
+    description: "Moon-like landscape in Atacama Desert, Chile.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Batu Caves",
+    latitude: 3.2379,
+    longitude: 101.6841,
+    bortlescale: 7,
+    description: "Limestone caves with Hindu temples in Malaysia.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Zhangye National Geopark",
+    latitude: 38.9333,
+    longitude: 100.5167,
+    bortlescale: 3,
+    description: "Rainbow-colored rock formations in China.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Lençóis Maranhenses",
+    latitude: -2.4856,
+    longitude: -43.1289,
+    bortlescale: 1,
+    description: "White sand dunes with turquoise lagoons in Brazil.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Trolltunga",
+    latitude: 60.1242,
+    longitude: 6.7400,
+    bortlescale: 2,
+    description: "Spectacular rock formation jutting out 700m above a lake in Norway.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Shilin Stone Forest",
+    latitude: 24.8142,
+    longitude: 103.2717,
+    bortlescale: 5,
+    description: "280 million year old limestone pillars in China.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Darvaza Gas Crater",
+    latitude: 40.2530,
+    longitude: 58.4397,
+    bortlescale: 1,
+    description: "The Door to Hell burning gas crater in Turkmenistan.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Pamukkale Thermal Pools",
+    latitude: 37.9200,
+    longitude: 29.1211,
+    bortlescale: 4,
+    description: "Cotton Castle white travertine terraces in Turkey.",
+    spot_type: "obscura"
+  },
+  {
+    name: "Mount Roraima Tepui",
+    latitude: 5.1433,
+    longitude: -60.7625,
+    bortlescale: 1,
+    description: "Table-top mountain inspiring Conan Doyle's Lost World.",
+    spot_type: "obscura"
   }
 ];
 
