@@ -27,6 +27,8 @@ export const useRecommendedLocations = (
   const { t } = useLanguage();
   const [searchRadius, setSearchRadius] = useState<number>(initialRadius);
   const [locations, setLocations] = useState<SharedAstroSpot[]>([]);
+  const [allLoadedLocations, setAllLoadedLocations] = useState<SharedAstroSpot[]>([]); // Cache for filtering
+  const [maxLoadedRadius, setMaxLoadedRadius] = useState<number>(initialRadius); // Track max loaded radius
   const [loading, setLoading] = useState<boolean>(false);
   const [searching, setSearching] = useState<boolean>(false);
   const [hasMore, setHasMore] = useState<boolean>(false);
@@ -43,29 +45,51 @@ export const useRecommendedLocations = (
   const { findLocationsWithinRadius, sortLocationsByQuality } = useLocationFind();
   const { findCalculatedLocations } = useCalculatedLocationsFind();
   
-  // Optimized load locations with debouncing and smart caching
-  const loadLocationsInternal = useCallback(async () => {
+  // Client-side filtering of pre-loaded locations for fast slider response
+  const filterLocationsByRadius = useCallback((allLocs: SharedAstroSpot[], radius: number, center: Location) => {
+    return allLocs.filter(loc => {
+      const dx = loc.latitude - center.latitude;
+      const dy = loc.longitude - center.longitude;
+      const distance = Math.sqrt(dx * dx + dy * dy) * 111; // Approximate km
+      return distance <= radius;
+    });
+  }, []);
+
+  // Optimized load locations with smart caching for instant slider response
+  const loadLocationsInternal = useCallback(async (forceReload: boolean = false) => {
     if (!userLocation) {
       return;
     }
     
     try {
-      setLoading(true);
-      
       const locationChanged = !prevLocationRef.current ||
         Math.abs(userLocation.latitude - prevLocationRef.current.latitude) > 0.001 ||
         Math.abs(userLocation.longitude - prevLocationRef.current.longitude) > 0.001;
       
+      // If radius is within already loaded range and location hasn't changed, just filter
+      if (!forceReload && !locationChanged && searchRadius <= maxLoadedRadius && allLoadedLocations.length > 0) {
+        console.log(`Fast filtering: Using cached ${allLoadedLocations.length} locations for radius ${searchRadius}km`);
+        const filtered = filterLocationsByRadius(allLoadedLocations, searchRadius, userLocation);
+        const sortedResults = sortLocationsByQuality(filtered);
+        setLocations(sortedResults);
+        previousLocationsRef.current = sortedResults;
+        return; // Fast path - no API call needed!
+      }
+      
+      setLoading(true);
+      
       prevRadiusRef.current = searchRadius;
       prevLocationRef.current = userLocation;
       
-      console.log(`Loading locations within ${searchRadius}km of ${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}`);
+      // Load with a buffer for slider responsiveness (load 1.5x the requested radius)
+      const loadRadius = Math.max(searchRadius * 1.5, searchRadius + 50);
+      console.log(`Loading locations within ${loadRadius}km (display: ${searchRadius}km) of ${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}`);
       
       // Start prefetching in background
       optimizedLocationDataService.prefetchNearbyData(
         userLocation.latitude,
         userLocation.longitude,
-        searchRadius
+        loadRadius
       );
       
       // Load certified and calculated locations in parallel using optimized service
@@ -78,7 +102,7 @@ export const useRecommendedLocations = (
         optimizedLocationDataService.getCalculatedLocations(
           userLocation.latitude,
           userLocation.longitude,
-          searchRadius,
+          loadRadius, // Load more than requested
           20
         )
       ]);
@@ -88,11 +112,19 @@ export const useRecommendedLocations = (
       if (combinedResults.length === 0) {
         console.log("No locations found within the search radius");
         setLocations([]);
+        setAllLoadedLocations([]);
+        setMaxLoadedRadius(loadRadius);
         previousLocationsRef.current = [];
         setHasMore(false);
         setCanLoadMoreCalculated(false);
       } else {
-        const sortedResults = sortLocationsByQuality(combinedResults);
+        // Store all loaded locations for fast filtering
+        setAllLoadedLocations(combinedResults);
+        setMaxLoadedRadius(loadRadius);
+        
+        // Filter to display radius
+        const filtered = filterLocationsByRadius(combinedResults, searchRadius, userLocation);
+        const sortedResults = sortLocationsByQuality(filtered);
         setLocations(sortedResults);
         previousLocationsRef.current = sortedResults;
         setHasMore(sortedResults.length >= 20);
@@ -114,16 +146,17 @@ export const useRecommendedLocations = (
         )
       );
       setLocations([]);
+      setAllLoadedLocations([]);
       setHasMore(false);
       setCanLoadMoreCalculated(false);
     } finally {
       setLoading(false);
     }
-  }, [searchRadius, userLocation, t, sortLocationsByQuality]);
+  }, [searchRadius, userLocation, t, sortLocationsByQuality, maxLoadedRadius, allLoadedLocations, filterLocationsByRadius]);
 
-  // Debounced version to prevent excessive API calls
+  // Debounced version with shorter delay for better responsiveness
   const loadLocations = useMemo(
-    () => debounce(loadLocationsInternal, 300),
+    () => debounce(loadLocationsInternal, 150),
     [loadLocationsInternal]
   );
   
@@ -270,7 +303,10 @@ export const useRecommendedLocations = (
     }
   }, [loadLocations, userLocation, t]);
   
+  // Optimized effect: instant filtering for radius changes within loaded range
   useEffect(() => {
+    if (!userLocation) return;
+    
     const radiusChanged = searchRadius !== prevRadiusRef.current;
     const locationChanged = 
       (userLocation && !prevLocationRef.current) ||
@@ -279,10 +315,24 @@ export const useRecommendedLocations = (
         (Math.abs(userLocation.latitude - prevLocationRef.current.latitude) > 0.001 || 
          Math.abs(userLocation.longitude - prevLocationRef.current.longitude) > 0.001));
     
-    if (userLocation && (radiusChanged || locationChanged)) {
+    if (locationChanged) {
+      // Location changed - force full reload
       loadLocations();
+    } else if (radiusChanged) {
+      // Radius changed - try instant filtering first
+      if (searchRadius <= maxLoadedRadius && allLoadedLocations.length > 0) {
+        // Instant client-side filtering
+        const filtered = filterLocationsByRadius(allLoadedLocations, searchRadius, userLocation);
+        const sortedResults = sortLocationsByQuality(filtered);
+        setLocations(sortedResults);
+        previousLocationsRef.current = sortedResults;
+        prevRadiusRef.current = searchRadius;
+      } else {
+        // Need to load more data
+        loadLocations();
+      }
     }
-  }, [loadLocations, searchRadius, userLocation]);
+  }, [loadLocations, searchRadius, userLocation, maxLoadedRadius, allLoadedLocations, filterLocationsByRadius, sortLocationsByQuality]);
   
   return {
     searchRadius,
