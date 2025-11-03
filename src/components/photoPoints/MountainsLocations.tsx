@@ -25,51 +25,20 @@ const MountainsLocations: React.FC<MountainsLocationsProps> = ({
 }) => {
   const { t } = useLanguage();
 
-  // Calculate distance between two coordinates using Haversine formula
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 6371; // Earth's radius in km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  };
-
-  // Sort locations: prioritize nearby (within 2000km) with high SIQS (>8) first
+  // Sort locations by SIQS score (high to low)
   const sortedLocations = React.useMemo(() => {
-    if (!userLocation) return locations;
-
-    const priorityLocations: SharedAstroSpot[] = [];
-    const otherLocations: SharedAstroSpot[] = [];
-
-    locations.forEach(location => {
-      const distance = calculateDistance(
-        userLocation.latitude,
-        userLocation.longitude,
-        location.latitude,
-        location.longitude
-      );
-      const siqs = typeof location.siqs === 'number' ? location.siqs : (location.siqs?.score || 0);
-
-      if (distance <= 2000 && siqs > 8) {
-        priorityLocations.push(location);
-      } else {
-        otherLocations.push(location);
-      }
+    // Clone to avoid mutating original array
+    const sorted = [...locations];
+    
+    // Sort by SIQS score (high to low)
+    sorted.sort((a, b) => {
+      const siqsA = typeof a.siqs === 'number' ? a.siqs : (a.siqs?.score || 0);
+      const siqsB = typeof b.siqs === 'number' ? b.siqs : (b.siqs?.score || 0);
+      return siqsB - siqsA; // Descending order
     });
 
-    // Sort priority locations by distance (nearest first)
-    priorityLocations.sort((a, b) => {
-      const distA = calculateDistance(userLocation.latitude, userLocation.longitude, a.latitude, a.longitude);
-      const distB = calculateDistance(userLocation.latitude, userLocation.longitude, b.latitude, b.longitude);
-      return distA - distB;
-    });
-
-    return [...priorityLocations, ...otherLocations];
-  }, [locations, userLocation]);
+    return sorted;
+  }, [locations]);
 
   if (loading && initialLoad) {
     return (

@@ -72,8 +72,17 @@ const PhotoPointsNearby: React.FC = () => {
     const loadObscuraLocations = async () => {
       try {
         setObscuraLoading(true);
-        const locations = await getAllObscuraLocations();
-        setObscuraLocations(locations);
+        const rawLocations = await getAllObscuraLocations();
+        
+        // Remove hardcoded SIQS values to force real-time calculation
+        const locationsWithoutSiqs = rawLocations.map(loc => ({
+          ...loc,
+          siqs: undefined,
+          siqsResult: undefined
+        }));
+        
+        setObscuraLocations(locationsWithoutSiqs);
+        console.log(`Loaded ${locationsWithoutSiqs.length} obscura locations (SIQS will be calculated in real-time)`);
       } catch (error) {
         console.error("Error loading obscura locations:", error);
       } finally {
@@ -88,8 +97,17 @@ const PhotoPointsNearby: React.FC = () => {
     const loadMountainLocations = async () => {
       try {
         setMountainsLoading(true);
-        const locations = await getAllMountainLocations();
-        setMountainsLocations(locations);
+        const rawLocations = await getAllMountainLocations();
+        
+        // Remove hardcoded SIQS values to force real-time calculation
+        const locationsWithoutSiqs = rawLocations.map(loc => ({
+          ...loc,
+          siqs: undefined,
+          siqsResult: undefined
+        }));
+        
+        setMountainsLocations(locationsWithoutSiqs);
+        console.log(`Loaded ${locationsWithoutSiqs.length} mountain locations (SIQS will be calculated in real-time)`);
       } catch (error) {
         console.error("Error loading mountain locations:", error);
       } finally {
