@@ -7,7 +7,7 @@ import { useGeolocation } from '@/hooks/location/useGeolocation';
 import { getCurrentPosition } from '@/utils/geolocationUtils';
 
 export const usePhotoPointsState = () => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const location = useLocation();
   
   const [activeView, setActiveView] = useState<'certified' | 'calculated' | 'obscura' | 'mountains'>('calculated');
@@ -120,11 +120,10 @@ export const usePhotoPointsState = () => {
       { 
         enableHighAccuracy: true, 
         timeout: 10000, 
-        maximumAge: 0,
-        language
+        maximumAge: 0
       }
     );
-  }, [t, language]);
+  }, [t]);
   
   // Simplified view change handler with no delays
   const handleViewChange = useCallback((view: 'certified' | 'calculated' | 'obscura' | 'mountains') => {
