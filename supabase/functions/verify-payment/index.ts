@@ -1,11 +1,17 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Input validation schema
+const verifyRequestSchema = z.object({
+  sessionId: z.string().min(1, "Session ID is required"),
+});
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -14,12 +20,11 @@ serve(async (req) => {
   }
 
   try {
-    // Get request body
-    const { sessionId } = await req.json();
-
-    if (!sessionId) {
-      throw new Error("Session ID is required");
-    }
+    const body = await req.json();
+    
+    // Validate and parse input with zod
+    const validatedData = verifyRequestSchema.parse(body);
+    const { sessionId } = validatedData;
 
     // Initialize Stripe
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -79,9 +84,27 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error("Payment verification error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    
+    // Handle validation errors
+    if (error instanceof z.ZodError) {
+      return new Response(
+        JSON.stringify({ 
+          error: "Invalid verification request", 
+          details: error.errors 
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        }
+      );
+    }
+    
+    return new Response(
+      JSON.stringify({ error: "Payment verification failed" }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      }
+    );
   }
 });

@@ -545,7 +545,7 @@ export type Database = {
           location_name: string | null
           longitude: number | null
           siqs_score: number | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           additional_metadata?: Json | null
@@ -556,7 +556,7 @@ export type Database = {
           location_name?: string | null
           longitude?: number | null
           siqs_score?: number | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           additional_metadata?: Json | null
@@ -567,7 +567,7 @@ export type Database = {
           location_name?: string | null
           longitude?: number | null
           siqs_score?: number | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: []
       }

@@ -1,11 +1,19 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Input validation schema
+const paymentRequestSchema = z.object({
+  timeslotId: z.string().uuid("Invalid timeslot ID format"),
+  amount: z.number().min(1, "Amount must be at least 1").max(10000, "Amount cannot exceed 10000"),
+  currency: z.enum(['usd', 'eur', 'gbp']).default('usd'),
+});
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -14,8 +22,11 @@ serve(async (req) => {
   }
 
   try {
-    // Get request body
-    const { timeslotId, amount, currency = "usd" } = await req.json();
+    const body = await req.json();
+    
+    // Validate and parse input with zod
+    const validatedData = paymentRequestSchema.parse(body);
+    const { timeslotId, amount, currency } = validatedData;
 
     // Create Supabase client using the anon key for user authentication
     const supabaseClient = createClient(
@@ -78,9 +89,27 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error("Payment creation error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    
+    // Handle validation errors
+    if (error instanceof z.ZodError) {
+      return new Response(
+        JSON.stringify({ 
+          error: "Invalid payment request", 
+          details: error.errors 
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        }
+      );
+    }
+    
+    return new Response(
+      JSON.stringify({ error: "Payment processing failed" }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      }
+    );
   }
 });
