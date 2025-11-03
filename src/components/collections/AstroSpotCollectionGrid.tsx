@@ -64,11 +64,6 @@ const AstroSpotCollectionGrid: React.FC<AstroSpotCollectionGridProps> = ({
         
         return (
           <Card key={spot.id} className="relative group cosmic-border bg-cosmic-900/50 backdrop-blur-sm hover:bg-cosmic-800/50 transition-all duration-200">
-            {/* Country Flag - Top Right Corner */}
-            <div className="absolute top-3 right-3 z-20">
-              <CountryFlag latitude={spot.latitude} longitude={spot.longitude} />
-            </div>
-            
             {editMode && (
               <Button
                 variant="destructive"
@@ -150,6 +145,10 @@ const AstroSpotCollectionGrid: React.FC<AstroSpotCollectionGridProps> = ({
                 <Eye className="h-4 w-4 mr-2" />
                 {t("View Details", "查看详情")}
               </Button>
+              
+              <div className="flex items-center gap-2 mt-2">
+                <CountryFlag latitude={spot.latitude} longitude={spot.longitude} />
+              </div>
             </CardContent>
           </Card>
         );

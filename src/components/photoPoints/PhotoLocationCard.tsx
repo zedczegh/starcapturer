@@ -172,11 +172,6 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   return (
     <VisibilityObserver onVisibilityChange={setIsVisible}>
       <CardContainer index={index} isVisible={effectiveIsVisible} isMobile={isMobile}>
-        {/* Country Flag - Top Right Corner */}
-        <div className="absolute top-3 right-3 z-10">
-          <CountryFlag latitude={location.latitude} longitude={location.longitude} />
-        </div>
-        
         <div className="flex justify-between items-start mb-2">
           <LocationHeaderMainDisplay
             mainName={mainName}
@@ -200,7 +195,10 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
           language={language}
           showBortleScale={showBortleScale}
         />
-        <CardActions onViewDetails={handleViewDetails} />
+        <div className="flex items-center justify-between mt-3">
+          <CountryFlag latitude={location.latitude} longitude={location.longitude} />
+          <CardActions onViewDetails={handleViewDetails} />
+        </div>
         {showRealTimeSiqs && (
           <RealTimeSiqsProvider
             isVisible={effectiveIsVisible}
