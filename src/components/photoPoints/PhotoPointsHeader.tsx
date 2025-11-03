@@ -138,8 +138,8 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
           variants={descriptionVariants}
         >
           {t(
-            "Discover the best locations for astrophotography near you. Filter by certified dark sky areas or algorithmically calculated spots.",
-            "发现您附近最佳的天文摄影地点。按认证暗夜区域或算法计算的位置进行筛选。"
+            "Discover the best locations for astrophotography near you. Switch between tabs to explore certified dark sky areas, calculated SIQS locations, mountain peaks, or atlas obscura spots.",
+            "发现您附近最佳的天文摄影地点。在标签之间切换，探索认证暗夜区域、计算的SIQS位置、山峰或奇观地点。"
           )}
         </motion.p>
       </div>

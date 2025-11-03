@@ -67,15 +67,28 @@ const queryClient = new QueryClient({
 });
 
 import useAppInitializer from './hooks/useAppInitializer';
-
 import { EnhancedLoadingFallback } from './components/ui/enhanced-loading';
+import { useLanguage } from '@/contexts/LanguageContext';
 
-const LoadingFallback = () => (
+// Simple loading fallback that doesn't need language context
+const SimpleLoadingFallback = () => (
   <EnhancedLoadingFallback 
     message="Into the Unknown"
     variant="detailed"
   />
 );
+
+// Language-aware loading fallback for use within providers
+const LanguageAwareLoadingFallback = () => {
+  const { t, language } = useLanguage();
+  
+  return (
+    <EnhancedLoadingFallback 
+      message={language === 'zh' ? "让我们共赴山海！" : "Into the Unknown"}
+      variant="detailed"
+    />
+  );
+};
 
 function AppContent() {
   // Add the booking notifications hook
@@ -84,13 +97,13 @@ function AppContent() {
   return (
     <Routes>
       <Route path="/" element={
-        <Suspense fallback={<LoadingFallback />}>
+        <Suspense fallback={<SimpleLoadingFallback />}>
           <LazyCommunityAstroSpots />
         </Suspense>
       } />
       <Route path="/calculator" element={<IndexPage />} />
       <Route path="/photo-points" element={
-        <Suspense fallback={<LoadingFallback />}>
+        <Suspense fallback={<SimpleLoadingFallback />}>
           <LazyPhotoPointsNearby />
         </Suspense>
       } />
@@ -103,13 +116,13 @@ function AppContent() {
       <Route path="/about-siqs" element={<Navigate to="/about/siqs" replace />} />
       <Route path="/location/:id" element={
         <ErrorBoundary>
-          <Suspense fallback={<LoadingFallback />}>
+          <Suspense fallback={<SimpleLoadingFallback />}>
             <LazyLocationDetails />
           </Suspense>
         </ErrorBoundary>
       } />
       <Route path="/location/siqs-calculator" element={
-        <Suspense fallback={<LoadingFallback />}>
+        <Suspense fallback={<SimpleLoadingFallback />}>
           <LazyLocationDetails />
         </Suspense>
       } />
@@ -133,7 +146,7 @@ function AppContent() {
       <Route path="/parallel-video-generator" element={<ParallelVideoGenerator />} />
       <Route path="/critical-analysis" element={<CriticalAnalysis />} />
       <Route path="/space-tracker" element={
-        <Suspense fallback={<LoadingFallback />}>
+        <Suspense fallback={<SimpleLoadingFallback />}>
           <LazySpaceStationTracker />
         </Suspense>
       } />

@@ -96,7 +96,7 @@ export const siqsEmojis: SiqsEmoji[] = [
   {
     id: "clear-night",
     name: "Clear Night",
-    icon: <Moon className="h-6 w-6 text-purple-600 fill-purple-300 drop-shadow-[0_0_3px_rgba(147,51,234,0.7)]" />,
+    icon: <Moon className="h-6 w-6 text-primary fill-primary/20 drop-shadow-[0_0_3px_hsl(var(--primary)/0.7)]" />,
     description: "Perfect viewing conditions",
     category: "location"
   },
@@ -124,7 +124,7 @@ export const siqsEmojis: SiqsEmoji[] = [
   {
     id: "stargazing-route",
     name: "Stargazing Route",
-    icon: <Route className="h-6 w-6 text-purple-600 fill-purple-100 drop-shadow-[0_0_3px_rgba(147,51,234,0.7)]" />,
+    icon: <Route className="h-6 w-6 text-primary fill-primary/20 drop-shadow-[0_0_3px_hsl(var(--primary)/0.7)]" />,
     description: "Path to good viewing",
     category: "location"
   },

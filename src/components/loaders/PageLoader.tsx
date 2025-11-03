@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const PageLoader: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-cosmic-950 to-cosmic-900 flex justify-center items-center">
@@ -24,7 +24,7 @@ const PageLoader: React.FC = () => {
         </div>
         
         <p className="text-cosmic-300 text-lg font-medium animate-pulse">
-          {t("Loading...", "正在加载...")}
+          {language === 'zh' ? "让我们共赴山海！" : t("Into the Unknown", "Into the Unknown")}
         </p>
       </div>
     </div>

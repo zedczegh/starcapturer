@@ -39,10 +39,10 @@ const CommunitySpotHeader: React.FC<CommunitySpotHeaderProps> = ({
         className="text-center mb-2 mt-1 max-w-2xl text-base md:text-lg text-muted-foreground leading-relaxed"
         variants={descVariants}
       >
-        {t(
-          "Discover and explore meteo spots contributed by our community members. View their favorite locations for stargazing, hiking, and outdoor adventures on the interactive map.",
-          "探索社区成员贡献的气象点。在互动地图上查看他们最喜欢的观星、徒步和户外探险地点。"
-        )}
+          {t(
+            "Discover and explore different types of meteo spots. Each tab offers unique locations from certified dark sky areas to mountains and obscura sites.",
+            "探索不同类型的气象点。每个标签提供从认证暗夜区域到山脉和奇观地点的独特位置。"
+          )}
       </motion.p>
     </motion.div>
   );
