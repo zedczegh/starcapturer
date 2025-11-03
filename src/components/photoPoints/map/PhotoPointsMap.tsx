@@ -10,7 +10,7 @@ interface PhotoPointsMapProps {
   locations: SharedAstroSpot[];
   certifiedLocations: SharedAstroSpot[];
   calculatedLocations: SharedAstroSpot[];
-  activeView: 'certified' | 'calculated';
+  activeView: 'certified' | 'calculated' | 'obscura';
   searchRadius: number;
   onLocationClick?: (location: SharedAstroSpot) => void;
   onLocationUpdate?: (latitude: number, longitude: number) => void;

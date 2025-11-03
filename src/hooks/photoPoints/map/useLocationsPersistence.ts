@@ -4,13 +4,15 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 
 export function useLocationsPersistence(
   locations: SharedAstroSpot[],
-  activeView: 'certified' | 'calculated'
+  activeView: 'certified' | 'calculated' | 'obscura'
 ) {
   useEffect(() => {
     if (locations && locations.length > 0) {
       try {
         const storageKey = activeView === 'certified' ? 
           'persistent_certified_locations' : 
+          activeView === 'obscura' ?
+          'persistent_obscura_locations' :
           'persistent_calculated_locations';
         
         const existingData = sessionStorage.getItem(storageKey);

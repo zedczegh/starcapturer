@@ -7,7 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 interface MapDataLoaderProps {
   loading: boolean;
   locationCount: number;
-  activeView: 'certified' | 'calculated';
+  activeView: 'certified' | 'calculated' | 'obscura';
   searchRadius?: number;
   phase?: 'initial' | 'fetching' | 'processing' | 'ready' | 'changing_location';
 }

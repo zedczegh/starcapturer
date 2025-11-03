@@ -9,7 +9,7 @@ interface UsePhotoPointsMapProps {
   userLocation: { latitude: number; longitude: number } | null;
   locations: SharedAstroSpot[];
   searchRadius: number;
-  activeView: 'certified' | 'calculated';
+  activeView: 'certified' | 'calculated' | 'obscura';
 }
 
 export const usePhotoPointsMap = ({
@@ -81,6 +81,19 @@ export const usePhotoPointsMap = ({
             if (!locationMap.has(key)) {
               locationMap.set(key, loc);
             }
+          }
+        });
+      }
+    }
+    
+    // For obscura view, only show obscura locations (passed in locations array)
+    if (activeView === 'obscura') {
+      locationMap.clear();
+      if (Array.isArray(locations)) {
+        locations.forEach(loc => {
+          if (loc.latitude && loc.longitude) {
+            const key = `${loc.latitude.toFixed(6)}-${loc.longitude.toFixed(6)}`;
+            locationMap.set(key, loc);
           }
         });
       }

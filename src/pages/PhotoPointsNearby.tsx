@@ -1,5 +1,5 @@
 
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
@@ -13,6 +13,7 @@ import { useRecommendedLocations } from '@/hooks/photoPoints/useRecommendedLocat
 import { useCertifiedLocations } from '@/hooks/location/useCertifiedLocations';
 import { prepareLocationForNavigation } from '@/utils/locationNavigation';
 import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
+import { getAllObscuraLocations } from '@/services/obscuraLocationsService';
 
 const PhotoPointsNearby: React.FC = () => {
   const navigate = useNavigate();
@@ -57,6 +58,26 @@ const PhotoPointsNearby: React.FC = () => {
     certifiedLocations, 
     calculatedLocations 
   } = useCertifiedLocations(locations);
+
+  // Load obscura locations
+  const [obscuraLocations, setObscuraLocations] = useState<SharedAstroSpot[]>([]);
+  const [obscuraLoading, setObscuraLoading] = useState(true);
+
+  useEffect(() => {
+    const loadObscuraLocations = async () => {
+      try {
+        setObscuraLoading(true);
+        const locations = await getAllObscuraLocations();
+        setObscuraLocations(locations);
+      } catch (error) {
+        console.error("Error loading obscura locations:", error);
+      } finally {
+        setObscuraLoading(false);
+      }
+    };
+
+    loadObscuraLocations();
+  }, []);
 
   // Update search radius when view changes, but avoid unnecessary refreshes
   useEffect(() => {
@@ -138,9 +159,10 @@ const PhotoPointsNearby: React.FC = () => {
         effectiveLocation={effectiveLocation}
         certifiedLocations={certifiedLocations}
         calculatedLocations={calculatedLocations}
+        obscuraLocations={obscuraLocations}
         searchRadius={currentSearchRadius}
         calculatedSearchRadius={calculatedSearchRadius}
-        loading={loading && !locationLoading}
+        loading={activeView === 'obscura' ? obscuraLoading : (loading && !locationLoading)}
         hasMore={hasMore}
         loadMore={loadMore}
         refreshSiqs={refreshSiqsData}

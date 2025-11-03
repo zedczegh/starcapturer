@@ -9,7 +9,7 @@ interface MapLegendProps {
   showStarLegend?: boolean;
   showCircleLegend?: boolean;
   className?: string;
-  activeView?: 'certified' | 'calculated';
+  activeView?: 'certified' | 'calculated' | 'obscura';
   onToggle?: (isOpen: boolean) => void;
 }
 

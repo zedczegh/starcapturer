@@ -4,15 +4,17 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import PhotoPointsMap from './map/PhotoPointsMap';
 import CalculatedLocations from './CalculatedLocations';
 import CertifiedLocations from './CertifiedLocations';
+import ObscuraLocations from './ObscuraLocations';
 import { sortLocationsBySiqs } from '@/utils/siqsHelpers';
 
 interface PhotoPointsViewProps {
   showMap: boolean;
-  activeView: 'certified' | 'calculated';
+  activeView: 'certified' | 'calculated' | 'obscura';
   initialLoad: boolean;
   effectiveLocation: { latitude: number; longitude: number } | null;
   certifiedLocations: SharedAstroSpot[];
   calculatedLocations: SharedAstroSpot[];
+  obscuraLocations?: SharedAstroSpot[];
   searchRadius: number;
   calculatedSearchRadius: number;
   loading: boolean;
@@ -34,6 +36,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   effectiveLocation,
   certifiedLocations,
   calculatedLocations,
+  obscuraLocations = [],
   searchRadius,
   calculatedSearchRadius,
   loading,
@@ -54,6 +57,20 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   // Sort locations by SIQS score before displaying
   const sortedCertifiedLocations = sortLocationsBySiqs(certifiedLocations);
   const sortedCalculatedLocations = sortLocationsBySiqs(calculatedLocations);
+  const sortedObscuraLocations = sortLocationsBySiqs(obscuraLocations);
+
+  // Determine which locations to show on map based on active view
+  const getMapLocations = () => {
+    switch (activeView) {
+      case 'certified':
+        return sortedCertifiedLocations;
+      case 'obscura':
+        return sortedObscuraLocations;
+      case 'calculated':
+      default:
+        return sortedCalculatedLocations;
+    }
+  };
 
   return (
     <div className="mt-4">
@@ -61,7 +78,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
         <div className="mb-6 relative max-w-xl mx-auto">
           <PhotoPointsMap
             userLocation={effectiveLocation}
-            locations={activeView === 'certified' ? sortedCertifiedLocations : sortedCalculatedLocations}
+            locations={getMapLocations()}
             onLocationClick={onLocationClick}
             onLocationUpdate={handleMapLocationUpdate}
             searchRadius={activeView === 'calculated' ? calculatedSearchRadius : searchRadius}
@@ -97,6 +114,16 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
           onLoadMoreCalculated={loadMoreCalculated}
           loadMoreClickCount={loadMoreClickCount}
           maxLoadMoreClicks={maxLoadMoreClicks}
+        />
+      )}
+
+      {!showMap && activeView === 'obscura' && (
+        <ObscuraLocations
+          locations={sortedObscuraLocations}
+          loading={loading}
+          onViewDetails={onLocationClick}
+          onRefresh={refreshSiqs}
+          initialLoad={initialLoad}
         />
       )}
     </div>

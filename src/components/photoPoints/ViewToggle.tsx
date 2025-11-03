@@ -2,9 +2,9 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { BadgeCheck, MapPin } from 'lucide-react';
+import { BadgeCheck, MapPin, Eye } from 'lucide-react';
 
-export type PhotoPointsViewMode = 'certified' | 'calculated';
+export type PhotoPointsViewMode = 'certified' | 'calculated' | 'obscura';
 
 interface ViewToggleProps {
   activeView: PhotoPointsViewMode;
@@ -29,8 +29,8 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
   
   return (
     <div className="flex justify-center mb-6 px-4">
-      <div className="flex flex-col sm:flex-row gap-3 p-3 rounded-lg bg-card/50 backdrop-blur-sm border border-border/50 shadow-sm w-full max-w-xl">
-        {/* Certified Dark Skies Button */}
+      <div className="flex flex-col sm:flex-row gap-3 p-3 rounded-lg bg-card/50 backdrop-blur-sm border border-border/50 shadow-sm w-full max-w-4xl">
+        {/* Dark Sky Locations Button */}
         <Button
           variant={activeView === 'certified' ? "default" : "ghost"}
           size="lg"
@@ -47,11 +47,11 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
           )}
           <BadgeCheck className={`h-5 w-5 mr-2 ${activeView === 'certified' ? 'text-amber-100' : 'text-amber-500'}`} />
           <span className={`font-medium ${activeView === 'certified' ? 'text-white' : 'text-amber-600 dark:text-amber-400'}`}>
-            {t("Certified Dark Skies", "认证暗夜区")}
+            {t("Dark Sky Locations", "暗夜天空位置")}
           </span>
         </Button>
         
-        {/* Calculated Spots Button */}
+        {/* Recommended Near Me Button */}
         <Button
           variant={activeView === 'calculated' ? "default" : "ghost"}
           size="lg"
@@ -68,7 +68,28 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
           )}
           <MapPin className={`h-5 w-5 mr-2 ${activeView === 'calculated' ? 'text-purple-100' : 'text-purple-500'}`} />
           <span className={`font-medium ${activeView === 'calculated' ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`}>
-            {t("Calculated Spots", "计算位置")}
+            {t("Recommended Near Me", "附近推荐")}
+          </span>
+        </Button>
+        
+        {/* Obscura Locations Button */}
+        <Button
+          variant={activeView === 'obscura' ? "default" : "ghost"}
+          size="lg"
+          onClick={() => handleViewChange('obscura')}
+          disabled={activeView === 'obscura'}
+          className={`relative w-full min-w-[160px] group ${
+            activeView === 'obscura'
+              ? 'bg-gradient-to-r from-cyan-500 to-teal-600 hover:from-cyan-600 hover:to-teal-700'
+              : 'hover:bg-cyan-500/10'
+          }`}
+        >
+          {activeView === 'obscura' && (
+            <div className="absolute inset-0 rounded-md opacity-20 bg-gradient-to-r from-cyan-200 to-teal-300 animate-pulse" />
+          )}
+          <Eye className={`h-5 w-5 mr-2 ${activeView === 'obscura' ? 'text-cyan-100' : 'text-cyan-500'}`} />
+          <span className={`font-medium ${activeView === 'obscura' ? 'text-white' : 'text-cyan-600 dark:text-cyan-400'}`}>
+            {t("Obscura Locations", "奇观位置")}
           </span>
         </Button>
       </div>
