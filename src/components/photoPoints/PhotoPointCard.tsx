@@ -51,10 +51,10 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     locationCounter: null
   });
 
-  // SWAP: displayName should be the main title, smallName is geocoded
-  const mainName = displayName || t("Unnamed Location", "未命名位置");
-  const smallName = (language === "zh" ? point.name : point.chineseName) || "";
-  const showSmallName = smallName && smallName !== mainName;
+  // Main title should be the original name, subtitle is the geocoded address
+  const mainName = point.name || t("Unnamed Location", "未命名位置");
+  const smallName = displayName || "";
+  const showSmallName = smallName && smallName !== mainName && smallName !== point.name;
 
   const formatCardDistance = (distance?: number) => {
     if (distance === undefined) return t("Unknown distance", "未知距离");
