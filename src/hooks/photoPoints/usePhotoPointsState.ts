@@ -90,8 +90,21 @@ export const usePhotoPointsState = () => {
   }, [t]);
   
   const handleResetLocation = useCallback(() => {
+    // Clear any cached permission states when user explicitly requests location
+    try {
+      localStorage.removeItem('geolocation_permission');
+      localStorage.removeItem('geolocation_denied_at');
+      console.log("Cleared cached geolocation permission states");
+    } catch (e) {
+      console.warn("Could not clear geolocation cache:", e);
+    }
+    
+    // Show a loading toast
+    const loadingToast = toast.loading(t("Getting your location...", "正在获取您的位置..."));
+    
     getCurrentPosition(
       (position) => {
+        toast.dismiss(loadingToast);
         const { latitude, longitude } = position.coords;
         setEffectiveLocation({
           latitude,
@@ -99,6 +112,7 @@ export const usePhotoPointsState = () => {
         });
         
         console.log(`Location reset to current position: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        toast.success(t("Location updated successfully", "位置更新成功"));
         
         try {
           const leafletMap = (window as any).leafletMap;
@@ -114,8 +128,19 @@ export const usePhotoPointsState = () => {
         }
       },
       (error) => {
-        console.error("Error resetting location:", error);
-        toast.error(t("Unable to get your location", "无法获取您的位置"));
+        toast.dismiss(loadingToast);
+        console.error("Geolocation error:", error);
+        
+        let errorMessage = t("Unable to get your location", "无法获取您的位置");
+        if (error.code === 1) {
+          errorMessage = t("Location permission denied. Please enable location access in your browser settings.", "位置权限被拒绝。请在浏览器设置中启用位置访问。");
+        } else if (error.code === 2) {
+          errorMessage = t("Location unavailable. Please check your device settings.", "位置不可用。请检查您的设备设置。");
+        } else if (error.code === 3) {
+          errorMessage = t("Location request timed out. Please try again.", "位置请求超时。请重试。");
+        }
+        
+        toast.error(errorMessage);
       },
       { 
         enableHighAccuracy: true, 
