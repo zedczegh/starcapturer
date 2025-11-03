@@ -2,7 +2,6 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getCurrentPosition } from '@/utils/geolocationUtils';
 
 export function useLocationManagement(
   onLocationUpdate?: (latitude: number, longitude: number) => void
@@ -21,7 +20,7 @@ export function useLocationManagement(
     
     const loadingToast = toast.loading(t("Getting your location...", "正在获取您的位置..."));
     
-    getCurrentPosition(
+    navigator.geolocation.getCurrentPosition(
       (position) => {
         toast.dismiss(loadingToast);
         const { latitude, longitude } = position.coords;
@@ -47,11 +46,11 @@ export function useLocationManagement(
         
         let errorMessage = t("Could not get your location", "无法获取您的位置");
         if (error.code === 1) {
-          errorMessage = t("Location permission denied. Please enable location access in your browser settings.", "位置权限被拒绝。请在浏览器设置中启用位置访问。");
+          errorMessage = t("Location permission denied", "位置权限被拒绝");
         } else if (error.code === 2) {
-          errorMessage = t("Location unavailable. Please check your device settings.", "位置不可用。请检查您的设备设置。");
+          errorMessage = t("Location unavailable", "位置不可用");
         } else if (error.code === 3) {
-          errorMessage = t("Location request timed out. Please try again.", "位置请求超时。请重试。");
+          errorMessage = t("Location request timed out", "位置请求超时");
         }
         
         toast.error(errorMessage);

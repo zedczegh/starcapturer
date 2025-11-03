@@ -64,7 +64,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
   const sortedMountainsLocations = sortLocationsBySiqs(mountainsLocations);
 
   // Determine which locations to show on map based on active view
-  const getMapLocations = () => {
+  const mapLocations = React.useMemo(() => {
     switch (activeView) {
       case 'certified':
         return sortedCertifiedLocations;
@@ -76,7 +76,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
       default:
         return sortedCalculatedLocations;
     }
-  };
+  }, [activeView, sortedCertifiedLocations, sortedObscuraLocations, sortedMountainsLocations, sortedCalculatedLocations]);
 
   return (
     <div className="mt-4">
@@ -84,7 +84,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
         <div className="mb-6 relative max-w-xl mx-auto">
           <PhotoPointsMap
             userLocation={effectiveLocation}
-            locations={getMapLocations()}
+            locations={mapLocations}
             onLocationClick={onLocationClick}
             onLocationUpdate={handleMapLocationUpdate}
             searchRadius={activeView === 'calculated' ? calculatedSearchRadius : searchRadius}
