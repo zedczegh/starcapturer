@@ -116,12 +116,16 @@ export const getLocationColor = (location: SharedAstroSpot): string => {
   // Always prioritize SIQS-based color if we have a valid SIQS score
   const siqsScore = getSiqsScore(location);
   
-  if (siqsScore > 0) {
+  // Check if this is a mountain location - mountains ALWAYS use SIQS coloring
+  const isMountain = location.certification?.toLowerCase().includes('natural mountain');
+  
+  if (siqsScore > 0 || isMountain) {
     // Use SIQS-based color for all locations with valid scores
-    return getProgressColor(siqsScore);
+    // Mountains always use SIQS color, even if score is 0 (will show as low SIQS)
+    return getProgressColor(siqsScore || 0);
   }
   
-  // Fall back to certification color if no SIQS score available
+  // Fall back to certification color if no SIQS score available (for non-mountain certified locations)
   if (location.isDarkSkyReserve || location.certification) {
     return getCertificationColor(location);
   }
