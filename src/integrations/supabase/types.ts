@@ -483,7 +483,15 @@ export type Database = {
           user_id?: string
           verification_status?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "saved_astro_spots_spot_id_fkey"
+            columns: ["spot_id"]
+            isOneToOne: false
+            referencedRelation: "user_astro_spots"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       saved_locations: {
         Row: {
