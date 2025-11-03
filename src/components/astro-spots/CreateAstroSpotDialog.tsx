@@ -62,7 +62,7 @@ const CreateAstroSpotDialog: React.FC<CreateAstroSpotDialogProps> = ({
   const defaultTrigger = (
     <Button className="gap-2">
       <Plus className="h-4 w-4" />
-      {t("Create New Meteo Spot", "创建新的气象点")}
+      {t("Create New Spot", "创建新地点")}
     </Button>
   );
 
@@ -78,8 +78,8 @@ const CreateAstroSpotDialog: React.FC<CreateAstroSpotDialogProps> = ({
           <DialogTitle className="flex items-center gap-2 text-xl">
             <MapPin className="h-5 w-5 text-primary" />
             {isEditing 
-              ? t("Edit Meteo Spot", "编辑气象点")
-              : t("Create New Meteo Spot", "创建新的气象点")
+              ? t("Edit Spot", "编辑地点")
+              : t("Create New Spot", "创建新地点")
             }
           </DialogTitle>
         </DialogHeader>
@@ -158,7 +158,7 @@ const CreateAstroSpotDialog: React.FC<CreateAstroSpotDialogProps> = ({
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting 
                 ? (isEditing ? t("Updating...", "更新中...") : t("Creating...", "创建中..."))
-                : (isEditing ? t("Update Information", "更新信息") : t("Create Meteo Spot", "创建气象点"))
+                : (isEditing ? t("Update Information", "更新信息") : t("Create Spot", "创建地点"))
               }
             </Button>
           </div>

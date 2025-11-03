@@ -216,7 +216,7 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
                     border border-primary/20
                   `}
                 >
-                  {t("Create My Meteo Spot", "创建我的气象点")}
+                  {t("Create My Spot", "创建我的地点")}
                 </button>
               )}
             </div>
@@ -228,7 +228,7 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
         <CreateAstroSpotDialog
           latitude={position[0]}
           longitude={position[1]}
-          defaultName={locationName || t("My Meteo Spot", "我的气象点")}
+          defaultName={locationName || t("My Spot", "我的地点")}
           onClose={handleCloseDialog}
         />
       )}

@@ -138,7 +138,7 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
                 border border-primary/20
               `}
             >
-              {t("Create My Meteo Spot", "创建我的气象点")}
+              {t("Create My Spot", "创建我的地点")}
             </button>
           </div>
         )}
@@ -164,7 +164,7 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
         <CreateAstroSpotDialog
           latitude={latitude}
           longitude={longitude}
-          defaultName={name || t("My Meteo Spot", "我的气象点")}
+          defaultName={name || t("My Spot", "我的地点")}
           onClose={handleCloseDialog}
         />
       )}

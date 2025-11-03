@@ -20,7 +20,7 @@ const AstroSpotsHeader: React.FC<AstroSpotsHeaderProps> = ({
     <div className="mb-8 flex justify-between items-center">
       <div>
         <h1 className="text-2xl font-bold text-white tracking-tight drop-shadow-sm mb-1">
-          {t("My Meteo Spots", "我的气象点")}
+          {t("My Niche Spots", "我的小众地点")}
         </h1>
         <p className="text-cosmic-300">
           {t("Manage and track your favorite outdoor adventure locations", "管理和追踪您最喜欢的户外探险地点")}

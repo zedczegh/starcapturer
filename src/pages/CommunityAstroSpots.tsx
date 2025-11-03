@@ -79,7 +79,7 @@ const CommunityAstroSpots: React.FC = () => {
   }, [location.state, refreshData]);
 
   return (
-    <PhotoPointsLayout pageTitle={t("Meteo Spots Community | Meteotinary", "气象点社区 | Meteotinary")}>
+    <PhotoPointsLayout pageTitle={t("Meteo Spots Community | Meteotinary", "趣小众社区 | 趣小众")}>
       <div className="max-w-5xl mx-auto pt-10 px-4 pb-14">
         {/* Header Section */}
         <CommunitySpotHeader 

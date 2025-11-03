@@ -28,7 +28,7 @@ const CommunitySpotHeader: React.FC<CommunitySpotHeaderProps> = ({
         className="font-extrabold bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent text-3xl md:text-4xl text-center drop-shadow tracking-tight"
         variants={titleVariants}
       >
-        {t("Meteo Spots Community", "气象点社区")}
+        {t("Meteo Spots Community", "趣小众社区")}
       </motion.h1>
       <motion.div
         className="rounded-full h-1 bg-gradient-to-r from-primary to-accent mb-1"
@@ -40,8 +40,8 @@ const CommunitySpotHeader: React.FC<CommunitySpotHeaderProps> = ({
         variants={descVariants}
       >
           {t(
-            "Discover and explore different types of meteo spots. Each tab offers unique locations from certified dark sky areas to mountains and obscura sites.",
-            "探索不同类型的气象点。每个标签提供从认证暗夜区域到山脉和奇观地点的独特位置。"
+            "Discover and explore different types of niche spots. Each tab offers unique locations from certified dark sky areas to mountains and obscura sites.",
+            "探索不同类型的小众地点。每个标签提供从认证暗夜区域到山脉和奇观地点的独特位置。"
           )}
       </motion.p>
     </motion.div>

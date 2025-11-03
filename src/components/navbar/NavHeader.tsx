@@ -5,6 +5,7 @@ import { Compass } from "lucide-react";
 import LanguageSwitcher from "../LanguageSwitcher";
 import { cn } from "@/lib/utils";
 import UtilitiesButton from "./UtilitiesButton";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface NavHeaderProps {
   scrolled: boolean;
@@ -15,6 +16,8 @@ const NavHeader: React.FC<NavHeaderProps> = ({
   scrolled,
   children
 }) => {
+  const { language } = useLanguage();
+  
   return (
     <header
       className={cn(
@@ -29,7 +32,11 @@ const NavHeader: React.FC<NavHeaderProps> = ({
         >
           <Compass className="h-8 w-8 text-primary" />
           <span className="text-xl font-bold tracking-tight">
-            <span className="text-primary">Meteo</span>tinary
+            {language === 'zh' ? (
+              <span className="text-primary">趣小众</span>
+            ) : (
+              <><span className="text-primary">Meteo</span>tinary</>
+            )}
           </span>
         </Link>
         

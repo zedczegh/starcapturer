@@ -5,7 +5,7 @@ import { Compass, Github, Twitter, BookOpen } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const AstroFooter: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   return (
     <footer className="w-full bg-cosmic-900/80 border-t border-cosmic-800/30 py-8 relative z-10">
@@ -13,7 +13,13 @@ const AstroFooter: React.FC = () => {
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center mb-4 md:mb-0">
             <Compass className="h-5 w-5 text-primary mr-2" />
-            <span className="font-bold text-lg text-cosmic-100"><span className="text-primary">Meteo</span>tinary</span>
+            <span className="font-bold text-lg text-cosmic-100">
+              {language === 'zh' ? (
+                <span className="text-primary">趣小众</span>
+              ) : (
+                <><span className="text-primary">Meteo</span>tinary</>
+              )}
+            </span>
           </div>
           <div className="flex flex-wrap gap-x-8 gap-y-2 mb-4 md:mb-0">
             <Link to="/photo-points" className="text-sm text-cosmic-300 hover:text-primary transition-colors">
@@ -41,7 +47,7 @@ const AstroFooter: React.FC = () => {
             </a>
           </div>
           <div className="text-xs text-cosmic-400 mt-2 md:mt-0">
-            &copy; {new Date().getFullYear()} Meteotinary
+            &copy; {new Date().getFullYear()} {t("Meteotinary", "趣小众")}
           </div>
         </div>
       </div>

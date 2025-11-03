@@ -23,7 +23,7 @@ const UsefulLinks = () => {
     window.scrollTo(0, 0);
     
     // Set page title
-    document.title = t("Astronomy Resources - AstroSIQS", "天文资源 - AstroSIQS");
+    document.title = t("Astronomy Resources - Meteotinary", "天文资源 - 趣小众");
     
     // Auto-show filters if there's a search query
     if (searchQuery) {

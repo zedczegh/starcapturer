@@ -54,7 +54,7 @@ const AboutHeader = () => {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.3, duration: 0.5 }}
       >
-        {t("About Meteotinary", "关于 Meteotinary")}
+        {t("About Meteotinary", "关于趣小众")}
       </motion.h1>
       
       {/* Decorative line */}

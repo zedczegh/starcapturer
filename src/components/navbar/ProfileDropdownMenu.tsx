@@ -62,7 +62,7 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
     { icon: BookmarkPlus, label: t('My Collections', '我的收藏'), path: '/collections' },
     { 
       icon: MapPin, 
-      label: t('My Meteo Spots', '我的气象点'), 
+      label: t('My Niche Spots', '我的小众地点'), 
       onClick: handleAstroSpotsClick,
       badge: newReservationsCount
     },
