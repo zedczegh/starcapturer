@@ -36,24 +36,34 @@ const PhotoLocationCard: React.FC<PhotoLocationCardProps> = ({
   const isMobile = useIsMobile();
   const certInfo = useMemo(() => getCertificationInfo(location), [location]);
 
-  // displayName: official/certified name (what you want as the MAIN title everywhere)
-  // location.name/chineseName: reverse geocoded/physical place name
+  // displayName: geocoded/enhanced address details
+  // location.name/chineseName: original location name
   const { displayName } = useDisplayName({
     location,
     language,
     locationCounter: null
   });
 
-  // SWAP: mainName must always be the OFFICIAL/CERTIFIED name
-  const mainName = displayName || "";
-  // smallName should be the reverse geocoded place name (if different)
-  const smallName = (language === "zh"
-    ? location.name
-    : location.chineseName) || "";
-  // Show small name only if it exists and is NOT the same as displayName
-  const showSmallName =
-    smallName &&
-    smallName !== mainName;
+  // Helper to detect Chinese characters
+  const hasChinese = (text: string) => /[\u4e00-\u9fa5]/.test(text);
+  
+  // Main title: use the original location name based on language
+  const originalName = language === "zh" 
+    ? (location.chineseName || location.name)
+    : location.name;
+  
+  // Filter out if wrong language
+  const mainName = (language === "zh" && originalName && !hasChinese(originalName))
+    ? (displayName || "未命名位置")
+    : (language === "en" && originalName && hasChinese(originalName))
+    ? (displayName || "Unnamed Location")
+    : (originalName || (language === "zh" ? "未命名位置" : "Unnamed Location"));
+  
+  // Subtitle: geocoded address (only if different from main name)
+  const smallName = displayName && displayName !== mainName && displayName !== originalName 
+    ? displayName 
+    : "";
+  const showSmallName = Boolean(smallName);
 
   const getLocationId = useCallback(() => {
     if (!location) return null;

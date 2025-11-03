@@ -51,10 +51,26 @@ const PhotoPointCard: React.FC<PhotoPointCardProps> = ({
     locationCounter: null
   });
 
-  // Main title should be the original name, subtitle is the geocoded address
-  const mainName = point.name || t("Unnamed Location", "未命名位置");
-  const smallName = displayName || "";
-  const showSmallName = smallName && smallName !== mainName && smallName !== point.name;
+  // Helper to detect Chinese characters
+  const hasChinese = (text: string) => /[\u4e00-\u9fa5]/.test(text);
+  
+  // Main title: use the original location name based on language
+  const originalName = language === "zh" 
+    ? (point.chineseName || point.name)
+    : point.name;
+  
+  // Filter out if wrong language
+  const mainName = (language === "zh" && originalName && !hasChinese(originalName))
+    ? (displayName || t("未命名位置", "Unnamed Location"))
+    : (language === "en" && originalName && hasChinese(originalName))
+    ? (displayName || t("Unnamed Location", "未命名位置"))
+    : (originalName || t("Unnamed Location", "未命名位置"));
+  
+  // Subtitle: geocoded address (only if different from main name)
+  const smallName = displayName && displayName !== mainName && displayName !== originalName 
+    ? displayName 
+    : "";
+  const showSmallName = Boolean(smallName);
 
   const formatCardDistance = (distance?: number) => {
     if (distance === undefined) return t("Unknown distance", "未知距离");
