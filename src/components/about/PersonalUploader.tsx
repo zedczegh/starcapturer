@@ -287,6 +287,16 @@ const PersonalUploader = () => {
           <h3 className="text-xl font-semibold text-cosmic-50">
             Portfolio & Research
           </h3>
+          <Button
+            onClick={() => {
+              setPostCategory(selectedCategory);
+              setUploadDialogOpen(true);
+            }}
+            className="h-10 w-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
+            size="icon"
+          >
+            <Plus className="h-5 w-5" />
+          </Button>
         </div>
 
         {/* Instagram-style Tabs */}
@@ -316,18 +326,6 @@ const PersonalUploader = () => {
           </TabsContent>
         </Tabs>
       </Card>
-
-      {/* Instagram-style Plus Button */}
-      <Button
-        onClick={() => {
-          setPostCategory(selectedCategory);
-          setUploadDialogOpen(true);
-        }}
-        className="fixed bottom-8 right-8 h-14 w-14 rounded-full shadow-lg bg-gradient-to-br from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
-        size="icon"
-      >
-        <Plus className="h-6 w-6" />
-      </Button>
 
       {/* Upload Dialog */}
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
