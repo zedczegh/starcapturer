@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import LocationSearch from "./LocationSearch";
 import NavigationButtons from "./navigation/NavigationButtons";
+import CountryFlag from "./CountryFlag";
 
 interface LocationDetailsViewportProps {
   locationData: any;
@@ -166,14 +167,22 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
       ref={detailsContainerRef}
     >
       <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {/* Navigation app picker button */}
           {locationData?.latitude && locationData?.longitude && (
-            <NavigationButtons 
-              latitude={locationData.latitude}
-              longitude={locationData.longitude}
-              locationName={locationData?.name || ""}
-            />
+            <>
+              <NavigationButtons 
+                latitude={locationData.latitude}
+                longitude={locationData.longitude}
+                locationName={locationData?.name || ""}
+              />
+              <CountryFlag 
+                latitude={locationData.latitude}
+                longitude={locationData.longitude}
+                showName={true}
+                className="text-lg"
+              />
+            </>
           )}
         </div>
         <div className="flex gap-2">
