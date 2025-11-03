@@ -107,10 +107,10 @@ const Collections = () => {
   const obscuraSpots = spots?.filter(spot => spot.spot_type === 'obscura') || [];
 
   const collectionTabs = [
-    { value: 'locations', label: t('Photo Locations', '摄影位置'), icon: Camera, count: locations?.length || 0 },
-    { value: 'nightscape', label: t('Nightscape', '夜景'), icon: Moon, count: nightscapeSpots.length },
-    { value: 'natural', label: t('Natural', '自然'), icon: Mountain, count: naturalSpots.length },
-    { value: 'obscura', label: t('Obscura', '奇观'), icon: Eye, count: obscuraSpots.length },
+    { value: 'locations', label: t('Photo Locations', '拍摄地点'), icon: Camera, count: locations?.length || 0 },
+    { value: 'nightscape', label: t('Nightscape', '夜景地点'), icon: Moon, count: nightscapeSpots.length },
+    { value: 'natural', label: t('Natural', '自然风光'), icon: Mountain, count: naturalSpots.length },
+    { value: 'obscura', label: t('Obscura', '探索奇观'), icon: Eye, count: obscuraSpots.length },
   ];
 
   return (
@@ -138,7 +138,7 @@ const Collections = () => {
               </div>
             </div>
             <p className="text-cosmic-400">
-              {t("Manage your saved locations and astro spots", "管理您保存的位置和观星点")}
+              {t("Manage your saved locations and astro spots", "管理已收藏的拍摄地点和小众景点")}
             </p>
           </div>
 
@@ -164,14 +164,14 @@ const Collections = () => {
               ) : locations?.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-cosmic-400 mb-4">
-                    {t("No photo locations saved yet", "尚未保存任何摄影位置")}
+                    {t("No photo locations saved yet", "还没有收藏任何拍摄地点")}
                   </div>
                   <Button 
                     onClick={() => navigate('/explore')}
                     variant="outline"
                     className="bg-cosmic-800/30 border-cosmic-700/50 hover:bg-cosmic-700/50"
                   >
-                    {t("Explore Locations", "探索位置")}
+                    {t("Explore Locations", "探索地点")}
                   </Button>
                 </div>
               ) : (
@@ -194,14 +194,14 @@ const Collections = () => {
               ) : nightscapeSpots.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-cosmic-400 mb-4">
-                    {t("No nightscape spots saved yet", "尚未保存任何夜景点")}
+                    {t("No nightscape spots saved yet", "还没有收藏任何夜景地点")}
                   </div>
                   <Button 
                     onClick={() => navigate('/community')}
                     variant="outline"
                     className="bg-cosmic-800/30 border-cosmic-700/50 hover:bg-cosmic-700/50"
                   >
-                    {t("Browse Community", "浏览社区")}
+                    {t("Browse Community", "浏览小众社区")}
                   </Button>
                 </div>
               ) : (
@@ -224,14 +224,14 @@ const Collections = () => {
               ) : naturalSpots.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-cosmic-400 mb-4">
-                    {t("No natural spots saved yet", "尚未保存任何自然点")}
+                    {t("No natural spots saved yet", "还没有收藏任何自然风光")}
                   </div>
                   <Button 
                     onClick={() => navigate('/community')}
                     variant="outline"
                     className="bg-cosmic-800/30 border-cosmic-700/50 hover:bg-cosmic-700/50"
                   >
-                    {t("Browse Community", "浏览社区")}
+                    {t("Browse Community", "浏览小众社区")}
                   </Button>
                 </div>
               ) : (
@@ -254,14 +254,14 @@ const Collections = () => {
               ) : obscuraSpots.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-cosmic-400 mb-4">
-                    {t("No obscura spots saved yet", "尚未保存任何奇观点")}
+                    {t("No obscura spots saved yet", "还没有收藏任何奇观地点")}
                   </div>
                   <Button 
                     onClick={() => navigate('/community')}
                     variant="outline"
                     className="bg-cosmic-800/30 border-cosmic-700/50 hover:bg-cosmic-700/50"
                   >
-                    {t("Browse Community", "浏览社区")}
+                    {t("Browse Community", "浏览小众社区")}
                   </Button>
                 </div>
               ) : (

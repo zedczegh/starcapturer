@@ -78,6 +78,24 @@ const CommunityAstroSpots: React.FC = () => {
     }
   }, [location.state, refreshData]);
 
+  // Auto-toggle to refresh markers when page opens or tab changes
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('🔄 Community page visible - auto-toggling to refresh markers');
+        // Quick toggle to force marker refresh
+        setActiveView(prev => {
+          const temp = prev === 'certified' ? 'calculated' : 'certified';
+          setTimeout(() => setActiveView(prev), 10);
+          return prev;
+        });
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
   return (
     <PhotoPointsLayout pageTitle={t("Meteo Spots Community | Meteotinary", "趣小众社区 | 趣小众")}>
       <div className="max-w-5xl mx-auto pt-10 px-4 pb-14">

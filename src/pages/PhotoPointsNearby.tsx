@@ -133,6 +133,21 @@ const PhotoPointsNearby: React.FC = () => {
       console.log(`Valid locations after SIQS filtering: ${validLocations.length}`);
     }
   }, [locations]);
+
+  // Auto-toggle to refresh markers when page opens or tab changes
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('🔄 Photo points page visible - auto-toggling to refresh markers');
+        // Quick toggle to force marker refresh
+        handleViewChange(activeView === 'certified' ? 'calculated' : 'certified');
+        setTimeout(() => handleViewChange(activeView), 10);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [activeView, handleViewChange]);
   
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (!location) return;
