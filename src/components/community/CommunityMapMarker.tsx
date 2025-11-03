@@ -11,11 +11,12 @@ import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
 import { getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
 import UserAvatarDisplay from "@/components/photoPoints/cards/UserAvatarDisplay";
+import { getProgressColor } from "@/components/siqs/utils/progressColor";
 
-function createCommunityMarkerIcon(isHovered: boolean, isMobile: boolean): L.DivIcon {
+function createCommunityMarkerIcon(isHovered: boolean, isMobile: boolean, markerColor: string): L.DivIcon {
   const size = isMobile ? (isHovered ? 28 : 20) : (isHovered ? 32 : 26);
   
-  // Create the HTML for the icon, but we'll render the actual telescope SVG in the DOM
+  // Create the HTML for the icon with dynamic color based on SIQS score
   return L.divIcon({
     className: "community-marker",
     iconSize: [size, size],
@@ -25,7 +26,7 @@ function createCommunityMarkerIcon(isHovered: boolean, isMobile: boolean): L.Div
             width:${size}px;
             height:${size}px;
             border-radius:50%;
-            background:rgba(30,174,219,0.93);
+            background:${markerColor};
             display:flex;
             align-items:center;
             justify-content:center;
@@ -52,7 +53,6 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
   onMarkerClick,
 }) => {
   const navigate = useNavigate();
-  const icon = createCommunityMarkerIcon(isHovered, isMobile);
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
   const [loadingSiqs, setLoadingSiqs] = useState<boolean>(false);
   const [siqsConfidence, setSiqsConfidence] = useState<number>(7);
@@ -133,6 +133,14 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
   // Always ensure we have a score to display, prioritize stabilized score
   // This fixes the N/A issue on mobile
   const displayScore = stabilizedScore ?? realTimeSiqs ?? getDisplaySiqs(spot.siqs);
+  
+  // Calculate marker color based on SIQS score
+  const markerColor = displayScore && displayScore > 0 
+    ? getProgressColor(displayScore) 
+    : 'rgba(30,174,219,0.93)'; // Default cyan if no score
+  
+  // Create icon with dynamic color
+  const icon = createCommunityMarkerIcon(isHovered, isMobile, markerColor);
 
   return (
     <Marker
