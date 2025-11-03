@@ -133,23 +133,6 @@ const PhotoPointsNearby: React.FC = () => {
       console.log(`Valid locations after SIQS filtering: ${validLocations.length}`);
     }
   }, [locations]);
-
-  // Auto-toggle map twice when view changes (only in map mode)
-  useEffect(() => {
-    if (showMap) {
-      const timer1 = setTimeout(() => toggleMapView(), 50);
-      const timer2 = setTimeout(() => toggleMapView(), 150);
-      const timer3 = setTimeout(() => toggleMapView(), 250);
-      const timer4 = setTimeout(() => toggleMapView(), 350);
-      
-      return () => {
-        clearTimeout(timer1);
-        clearTimeout(timer2);
-        clearTimeout(timer3);
-        clearTimeout(timer4);
-      };
-    }
-  }, [activeView]);
   
   const handleLocationClick = useCallback((location: SharedAstroSpot) => {
     if (!location) return;
