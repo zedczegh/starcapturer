@@ -9,6 +9,8 @@ import { Upload, FileText, Image, Trash2, Download, Loader2, File, Plus } from "
 import { motion, AnimatePresence } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { OptimizedImage } from "@/components/ui/optimized-components";
+import { fetchWithCache, clearCacheForUrl } from "@/utils/fetchWithCache";
 
 interface UploadedFile {
   id: string;
@@ -40,13 +42,13 @@ const PersonalUploader = () => {
       const { data: { session } } = await supabase.auth.getSession();
       console.log("Session user:", session?.user?.email);
       setUser(session?.user ?? null);
+      setLoading(false);
       
       if (session?.user?.email === "yanzeyucq@163.com") {
         console.log("User is authorized, loading files...");
-        await loadFiles();
+        loadFiles();
       } else {
         console.log("User not authorized");
-        setLoading(false);
       }
     };
 
@@ -76,8 +78,6 @@ const PersonalUploader = () => {
       toast.error("Failed to load files", {
         description: error.message || "Unknown error"
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -167,6 +167,9 @@ const PersonalUploader = () => {
 
   const handleDelete = async (fileId: string, filePath: string) => {
     try {
+      // Optimistically update UI
+      setFiles(prevFiles => prevFiles.filter(f => f.id !== fileId));
+
       // Delete from storage
       const { error: storageError } = await supabase.storage
         .from("personal-uploads")
@@ -185,12 +188,11 @@ const PersonalUploader = () => {
       toast.success("File deleted", {
         description: "Your file has been removed",
       });
-
-      loadFiles();
     } catch (error: any) {
       toast.error("Delete failed", {
         description: error.message,
       });
+      loadFiles(); // Reload on error
     }
   };
 
@@ -297,10 +299,11 @@ const PersonalUploader = () => {
             >
               <div className="aspect-square relative overflow-hidden">
                 {file.file_type.startsWith("image/") ? (
-                  <img 
+                  <OptimizedImage
                     src={getFileUrl(file.file_path)} 
                     alt={file.file_name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
                   />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-2 bg-cosmic-900">
@@ -415,7 +418,7 @@ const PersonalUploader = () => {
               {/* Image Preview */}
               {previewFile.file_type.startsWith("image/") && (
                 <div className="relative w-full">
-                  <img 
+                  <OptimizedImage
                     src={getFileUrl(previewFile.file_path)} 
                     alt={previewFile.file_name}
                     className="w-full h-auto rounded-lg"
