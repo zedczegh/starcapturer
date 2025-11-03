@@ -124,6 +124,7 @@ const PhotoPointsView: React.FC<PhotoPointsViewProps> = ({
           onViewDetails={onLocationClick}
           onRefresh={refreshSiqs}
           initialLoad={initialLoad}
+          userLocation={effectiveLocation}
         />
       )}
     </div>

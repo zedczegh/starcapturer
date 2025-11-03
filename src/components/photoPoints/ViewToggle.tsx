@@ -59,15 +59,15 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
           disabled={activeView === 'calculated'}
           className={`relative w-full min-w-[160px] group ${
             activeView === 'calculated'
-              ? 'bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700'
-              : 'hover:bg-purple-500/10'
+              ? 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700'
+              : 'hover:bg-emerald-500/10'
           }`}
         >
           {activeView === 'calculated' && (
-            <div className="absolute inset-0 rounded-md opacity-20 bg-gradient-to-r from-violet-200 to-purple-300 animate-pulse" />
+            <div className="absolute inset-0 rounded-md opacity-20 bg-gradient-to-r from-green-200 to-emerald-300 animate-pulse" />
           )}
-          <MapPin className={`h-5 w-5 mr-2 ${activeView === 'calculated' ? 'text-purple-100' : 'text-purple-500'}`} />
-          <span className={`font-medium ${activeView === 'calculated' ? 'text-white' : 'text-purple-600 dark:text-purple-400'}`}>
+          <MapPin className={`h-5 w-5 mr-2 ${activeView === 'calculated' ? 'text-emerald-100' : 'text-emerald-500'}`} />
+          <span className={`font-medium ${activeView === 'calculated' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`}>
             {t("Recommended Near Me", "附近推荐")}
           </span>
         </Button>

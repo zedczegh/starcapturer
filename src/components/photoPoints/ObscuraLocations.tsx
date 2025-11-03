@@ -13,15 +13,63 @@ interface ObscuraLocationsProps {
   onViewDetails: (location: SharedAstroSpot) => void;
   onRefresh?: () => void;
   initialLoad?: boolean;
+  userLocation?: { latitude: number; longitude: number } | null;
 }
 
 const ObscuraLocations: React.FC<ObscuraLocationsProps> = ({
   locations,
   loading,
   onViewDetails,
-  initialLoad = false
+  initialLoad = false,
+  userLocation
 }) => {
   const { t } = useLanguage();
+
+  // Calculate distance between two coordinates using Haversine formula
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Sort locations: prioritize nearby (within 1000km) with high SIQS (>6) first
+  const sortedLocations = React.useMemo(() => {
+    if (!userLocation) return locations;
+
+    const priorityLocations: SharedAstroSpot[] = [];
+    const otherLocations: SharedAstroSpot[] = [];
+
+    locations.forEach(location => {
+      const distance = calculateDistance(
+        userLocation.latitude,
+        userLocation.longitude,
+        location.latitude,
+        location.longitude
+      );
+      const siqs = typeof location.siqs === 'number' ? location.siqs : (location.siqs?.score || 0);
+
+      if (distance <= 1000 && siqs > 6) {
+        priorityLocations.push(location);
+      } else {
+        otherLocations.push(location);
+      }
+    });
+
+    // Sort priority locations by distance (nearest first)
+    priorityLocations.sort((a, b) => {
+      const distA = calculateDistance(userLocation.latitude, userLocation.longitude, a.latitude, a.longitude);
+      const distB = calculateDistance(userLocation.latitude, userLocation.longitude, b.latitude, b.longitude);
+      return distA - distB;
+    });
+
+    return [...priorityLocations, ...otherLocations];
+  }, [locations, userLocation]);
 
   if (loading && initialLoad) {
     return (
@@ -34,7 +82,7 @@ const ObscuraLocations: React.FC<ObscuraLocationsProps> = ({
     );
   }
 
-  if (!locations || locations.length === 0) {
+  if (!sortedLocations || sortedLocations.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <Eye className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
@@ -60,15 +108,15 @@ const ObscuraLocations: React.FC<ObscuraLocationsProps> = ({
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
             {t(
-              `${locations.length} fascinating places from around the world`,
-              `来自世界各地的 ${locations.length} 个迷人地点`
+              `${sortedLocations.length} fascinating places from around the world`,
+              `来自世界各地的 ${sortedLocations.length} 个迷人地点`
             )}
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {locations.map((location, index) => (
+        {sortedLocations.map((location, index) => (
           <motion.div
             key={location.id || `${location.latitude}-${location.longitude}`}
             initial={{ opacity: 0, y: 20 }}
