@@ -59,9 +59,28 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
   const [openPopup, setOpenPopup] = useState<boolean>(false);
   const [forceUpdate, setForceUpdate] = useState<boolean>(false);
   const markerRef = useRef<L.Marker>(null);
+  const [isMarkerVisible, setIsMarkerVisible] = useState<boolean>(false);
   
   // Stabilize SIQS score to prevent flicker
   const [stabilizedScore, setStabilizedScore] = useState<number | null>(null);
+  
+  // Initialize with existing SIQS if available
+  useEffect(() => {
+    const initialSiqs = (spot as any).realTimeSiqs ?? getDisplaySiqs(spot.siqs);
+    if (initialSiqs && initialSiqs > 0 && !stabilizedScore) {
+      setStabilizedScore(initialSiqs);
+      setRealTimeSiqs(initialSiqs);
+    }
+  }, []);
+  
+  // Track marker visibility for lazy loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsMarkerVisible(true);
+    }, Math.random() * 500); // Stagger SIQS calculations
+    
+    return () => clearTimeout(timer);
+  }, []);
   
   useEffect(() => {
     if (realTimeSiqs !== null && realTimeSiqs > 0) {
@@ -134,12 +153,15 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
   // This fixes the N/A issue on mobile
   // Also check spot.realTimeSiqs which comes from the parent component
   const spotSiqs = (spot as any).realTimeSiqs ?? getDisplaySiqs(spot.siqs);
-  const displayScore = stabilizedScore ?? realTimeSiqs ?? spotSiqs;
+  const displayScore = stabilizedScore ?? realTimeSiqs ?? spotSiqs ?? 0;
   
   // Calculate marker color based on SIQS score
-  const markerColor = displayScore && displayScore > 0 
+  // Use a more neutral color during loading to avoid flickering
+  const markerColor = displayScore > 0
     ? getProgressColor(displayScore) 
-    : 'rgba(30,174,219,0.93)'; // Default cyan if no score
+    : (loadingSiqs && !stabilizedScore) 
+      ? 'rgba(100,116,139,0.7)' // Neutral gray during loading
+      : 'rgba(30,174,219,0.93)'; // Default cyan if no score
   
   // Create icon with dynamic color
   const icon = createCommunityMarkerIcon(isHovered, isMobile, markerColor);
@@ -205,15 +227,15 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
             View Profile
           </Button>
           
-          {/* Hidden SIQS Provider Component */}
+          {/* SIQS Provider Component - Always visible for color loading */}
           <RealTimeSiqsProvider
-            isVisible={openPopup || !isMobile}
+            isVisible={isMarkerVisible}
             latitude={spot.latitude}
             longitude={spot.longitude}
             bortleScale={spot.bortleScale}
             existingSiqs={spot.siqs}
             onSiqsCalculated={handleSiqsCalculated}
-            priorityLevel={openPopup ? 'high' : 'medium'}
+            priorityLevel={openPopup ? 'high' : 'low'}
             debugLabel={`community-${spot.id.substring(0, 6)}`}
             forceUpdate={forceUpdate}
           />
