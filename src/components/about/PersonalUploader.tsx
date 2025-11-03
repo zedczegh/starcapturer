@@ -75,6 +75,8 @@ const PersonalUploader = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    console.log("Starting file upload:", file.name, file.size);
+
     // Validate description is not empty
     if (!description.trim()) {
       toast.error("Description required", {
@@ -94,18 +96,26 @@ const PersonalUploader = () => {
     }
 
     setUploading(true);
+    console.log("Upload started, user:", user?.id);
 
     try {
       const fileExt = file.name.split(".").pop();
       const fileName = `${Date.now()}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
 
+      console.log("Uploading to storage:", filePath);
+
       // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from("personal-uploads")
         .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("Storage upload error:", uploadError);
+        throw uploadError;
+      }
+
+      console.log("Storage upload successful, saving to database");
 
       // Save metadata to database
       const { error: dbError } = await supabase
@@ -120,7 +130,12 @@ const PersonalUploader = () => {
           category: postCategory,
         });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error("Database insert error:", dbError);
+        throw dbError;
+      }
+
+      console.log("Upload complete");
 
       toast.success("Upload successful", {
         description: "Your file has been uploaded",
@@ -128,10 +143,11 @@ const PersonalUploader = () => {
 
       setDescription("");
       setUploadDialogOpen(false);
-      loadFiles();
+      await loadFiles();
     } catch (error: any) {
+      console.error("Upload failed:", error);
       toast.error("Upload failed", {
-        description: error.message,
+        description: error.message || "Unknown error occurred",
       });
     } finally {
       setUploading(false);
