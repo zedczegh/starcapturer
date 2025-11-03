@@ -83,15 +83,15 @@ function AppContent() {
   
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/photo-points" replace />} />
+      <Route path="/" element={
+        <Suspense fallback={<LoadingFallback />}>
+          <LazyCommunityAstroSpots />
+        </Suspense>
+      } />
+      <Route path="/calculator" element={<IndexPage />} />
       <Route path="/photo-points" element={
         <Suspense fallback={<LoadingFallback />}>
           <LazyPhotoPointsNearby />
-        </Suspense>
-      } />
-      <Route path="/community" element={
-        <Suspense fallback={<LoadingFallback />}>
-          <LazyCommunityAstroSpots />
         </Suspense>
       } />
       <Route path="/about" element={<About />} />

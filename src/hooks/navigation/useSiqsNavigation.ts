@@ -20,9 +20,8 @@ export const useSiqsNavigation = () => {
       e.stopPropagation();
     }
     
-    // Navigate directly to the homepage first, then to the calculator section
-    // This ensures we're on a clean state
-    navigate("/", { replace: true });
+    // Navigate to the calculator page
+    navigate("/calculator", { replace: true });
     
     // After a short delay, scroll to calculator section
     setTimeout(() => {

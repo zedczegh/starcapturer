@@ -127,18 +127,18 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
               onClick={handleOpenDialog}
               className={`
                 text-xs flex items-center justify-center w-full 
-                bg-gradient-to-br from-purple-500/80 to-indigo-600/80 
+                bg-gradient-to-br from-primary/80 to-accent/80 
                 text-white 
                 ${isMobile ? 'py-3' : 'py-1.5'} 
                 px-2 rounded-lg 
                 transition-all duration-300 
                 hover:scale-[1.02] hover:shadow-lg 
                 active:scale-[0.98]
-                shadow-md shadow-purple-500/30
-                border border-purple-500/20
+                shadow-md shadow-primary/30
+                border border-primary/20
               `}
             >
-              {t("Create My Astro Spot", "创建我的观星点")}
+              {t("Create My Meteo Spot", "创建我的气象点")}
             </button>
           </div>
         )}
@@ -164,7 +164,7 @@ const MapTooltip: React.FC<MapTooltipProps> = ({
         <CreateAstroSpotDialog
           latitude={latitude}
           longitude={longitude}
-          defaultName={name || t("My Astro Spot", "我的观星点")}
+          defaultName={name || t("My Meteo Spot", "我的气象点")}
           onClose={handleCloseDialog}
         />
       )}

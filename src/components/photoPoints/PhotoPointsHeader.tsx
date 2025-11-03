@@ -86,15 +86,15 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
       
       <div className="flex flex-col items-center text-center mb-8">
         <motion.h1 
-          className={`${isMobile ? 'text-3xl' : 'text-4xl'} font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 mb-3`}
+          className={`${isMobile ? 'text-3xl' : 'text-4xl'} font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-accent to-secondary mb-3`}
           variants={titleVariants}
         >
-          {t("Astronomy Photo Points", "天文摄影点")}
+          {t("Stargazing Points", "观星点")}
         </motion.h1>
         
         {/* Decorative line - similar to AboutHeader */}
         <motion.div
-          className="w-20 h-1 bg-gradient-to-r from-blue-400 to-purple-400 mx-auto my-4 rounded-full"
+          className="w-20 h-1 bg-gradient-to-r from-primary to-accent mx-auto my-4 rounded-full"
           initial={{ width: 0 }}
           animate={{ width: 80 }}
           transition={{ delay: 0.4, duration: 0.6 }}

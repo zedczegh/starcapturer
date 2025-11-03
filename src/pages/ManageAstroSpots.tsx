@@ -63,11 +63,11 @@ const ManageAstroSpots = () => {
       <NavBar />
       <div className="container mx-auto px-4 py-8 pt-16 md:pt-20 min-h-screen">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent mb-2">
-            {t("My AstroSpots", "我的观星点")}
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
+            {t("My Meteo Spots", "我的气象点")}
           </h1>
           <p className="text-cosmic-400">
-            {t("Manage and share your astronomy observation spots", "管理和分享您的天文观测点")}
+            {t("Manage and share your favorite outdoor adventure locations", "管理和分享您最喜欢的户外探险地点")}
           </p>
         </div>
 

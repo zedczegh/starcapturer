@@ -9,6 +9,8 @@ import { useAnimationVariants } from "@/hooks/community/useAnimationVariants";
 import CommunitySpotHeader from "@/components/community/CommunitySpotHeader";
 import CommunityMapSection from "@/components/community/CommunityMapSection";
 import CommunitySpotsList from "@/components/community/CommunitySpotsList";
+import SpotTypeFilter, { SpotType } from "@/components/community/SpotTypeFilter";
+import { useState } from "react";
 
 // Default map center coordinates
 const DEFAULT_CENTER: [number, number] = [30, 104];
@@ -18,6 +20,7 @@ const CommunityAstroSpots: React.FC = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const { titleVariants, lineVariants, descVariants } = useAnimationVariants();
+  const [activeSpotType, setActiveSpotType] = useState<SpotType>('all');
 
   // Use custom hook to handle all data and interactions
   const {
@@ -53,13 +56,19 @@ const CommunityAstroSpots: React.FC = () => {
   }, [location.state, refreshData]);
 
   return (
-    <PhotoPointsLayout pageTitle={t("Astrospots Community | SIQS", "观星社区 | SIQS")}>
+    <PhotoPointsLayout pageTitle={t("Meteo Spots Community | Meteotinary", "气象点社区 | Meteotinary")}>
       <div className="max-w-5xl mx-auto pt-10 px-4 pb-14">
         {/* Header Section */}
         <CommunitySpotHeader 
           titleVariants={titleVariants} 
           lineVariants={lineVariants} 
           descVariants={descVariants} 
+        />
+
+        {/* Spot Type Filter */}
+        <SpotTypeFilter 
+          activeType={activeSpotType}
+          onTypeChange={setActiveSpotType}
         />
 
         {/* Map Section */}

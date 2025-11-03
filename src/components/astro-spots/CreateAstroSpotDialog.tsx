@@ -10,6 +10,7 @@ import LocationTypeSelector from './LocationTypeSelector';
 import LocationAdvantagesSelector from './LocationAdvantagesSelector';
 import ImageUploader from './ImageUploader';
 import { useCreateAstroSpot } from '@/hooks/useCreateAstroSpot';
+import SpotTypeSelector, { SpotType } from './SpotTypeSelector';
 
 interface CreateAstroSpotDialogProps {
   latitude: number;
@@ -34,6 +35,7 @@ const CreateAstroSpotDialog: React.FC<CreateAstroSpotDialogProps> = ({
 }) => {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState<boolean>(true);
+  const [spotType, setSpotType] = useState<SpotType>('nightscape');
   
   const {
     formData,
@@ -60,7 +62,7 @@ const CreateAstroSpotDialog: React.FC<CreateAstroSpotDialogProps> = ({
   const defaultTrigger = (
     <Button className="gap-2">
       <Plus className="h-4 w-4" />
-      {t("Create New Astro Spot", "创建新的观星点")}
+      {t("Create New Meteo Spot", "创建新的气象点")}
     </Button>
   );
 
@@ -76,13 +78,20 @@ const CreateAstroSpotDialog: React.FC<CreateAstroSpotDialogProps> = ({
           <DialogTitle className="flex items-center gap-2 text-xl">
             <MapPin className="h-5 w-5 text-primary" />
             {isEditing 
-              ? t("Edit Astro Spot", "编辑观星点")
-              : t("Create New Astro Spot", "创建新的观星点")
+              ? t("Edit Meteo Spot", "编辑气象点")
+              : t("Create New Meteo Spot", "创建新的气象点")
             }
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              {t("Spot Type", "地点类型")} *
+            </label>
+            <SpotTypeSelector value={spotType} onChange={setSpotType} />
+          </div>
+
           <div>
             <label className="text-sm font-medium mb-2 block">
               {t("Location Name", "位置名称")} *
@@ -149,7 +158,7 @@ const CreateAstroSpotDialog: React.FC<CreateAstroSpotDialogProps> = ({
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting 
                 ? (isEditing ? t("Updating...", "更新中...") : t("Creating...", "创建中..."))
-                : (isEditing ? t("Update Information", "更新信息") : t("Create Astro Spot", "创建观星点"))
+                : (isEditing ? t("Update Information", "更新信息") : t("Create Meteo Spot", "创建气象点"))
               }
             </Button>
           </div>
