@@ -23,7 +23,8 @@ export async function fetchCommunityAstroSpots() {
           description,
           created_at,
           user_id,
-          verification_status
+          verification_status,
+          spot_type
         `)
         .neq("verification_status", "rejected") // Hide rejected spots from community
         .order("created_at", { ascending: false })
@@ -74,7 +75,8 @@ export async function fetchCommunityAstroSpots() {
             timestamp: spot.created_at,
             user_id: spot.user_id,
             verification_status: spot.verification_status,
-            availableBookings: availableBookings
+            availableBookings: availableBookings,
+            spot_type: spot.spot_type || 'nightscape'
           };
           
           console.log(`✅ Processed spot: ${spot.name}`, result);
@@ -92,7 +94,8 @@ export async function fetchCommunityAstroSpots() {
             timestamp: spot.created_at,
             user_id: spot.user_id,
             verification_status: spot.verification_status,
-            availableBookings: 0
+            availableBookings: 0,
+            spot_type: spot.spot_type || 'nightscape'
           };
           
           console.log(`⚠️ Fallback result for spot: ${spot.name}`, result);

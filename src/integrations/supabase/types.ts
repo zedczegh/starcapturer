@@ -548,6 +548,7 @@ export type Database = {
           longitude: number
           name: string
           siqs: number | null
+          spot_type: string | null
           updated_at: string
           user_id: string
           verification_status: string | null
@@ -563,6 +564,7 @@ export type Database = {
           longitude: number
           name: string
           siqs?: number | null
+          spot_type?: string | null
           updated_at?: string
           user_id: string
           verification_status?: string | null
@@ -578,6 +580,7 @@ export type Database = {
           longitude?: number
           name?: string
           siqs?: number | null
+          spot_type?: string | null
           updated_at?: string
           user_id?: string
           verification_status?: string | null

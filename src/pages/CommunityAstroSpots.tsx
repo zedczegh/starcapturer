@@ -36,10 +36,19 @@ const CommunityAstroSpots: React.FC = () => {
     handleMarkerClick,
     refreshData
   } = useCommunityAstroSpots();
+
+  // Filter spots based on active spot type
+  const filteredSpots = React.useMemo(() => {
+    if (!sortedAstroSpots) return [];
+    if (activeSpotType === 'all') return sortedAstroSpots;
+    return sortedAstroSpots.filter(spot => spot.spot_type === activeSpotType);
+  }, [sortedAstroSpots, activeSpotType]);
   
   console.log('🏠 Community page debug:', {
     isLoading,
+    activeSpotType,
     sortedAstroSpotsLength: sortedAstroSpots?.length || 0,
+    filteredSpotsLength: filteredSpots?.length || 0,
     sortedAstroSpots: sortedAstroSpots?.slice(0, 3) || [] // Log first 3 spots
   });
 
@@ -74,7 +83,7 @@ const CommunityAstroSpots: React.FC = () => {
         {/* Map Section */}
         <CommunityMapSection 
           isLoading={isLoading}
-          sortedAstroSpots={sortedAstroSpots}
+          sortedAstroSpots={filteredSpots}
           userLocation={userLocation}
           DEFAULT_CENTER={DEFAULT_CENTER}
           isMobile={isMobile}
@@ -85,7 +94,7 @@ const CommunityAstroSpots: React.FC = () => {
         {/* Spots List Section */}
         <CommunitySpotsList 
           isLoading={isLoading}
-          sortedAstroSpots={sortedAstroSpots}
+          sortedAstroSpots={filteredSpots}
           isMobile={isMobile}
           onCardClick={handleCardClick}
           realTimeSiqs={realTimeSiqs}

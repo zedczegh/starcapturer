@@ -43,6 +43,7 @@ import UtilitiesPage from './pages/about/UtilitiesPage';
 import SiqsPage from './pages/about/SiqsPage';
 import DarkSkyPage from './pages/about/DarkSkyPage';
 import ResourcesPage from './pages/about/ResourcesPage';
+import SeedObscuraSpots from './pages/SeedObscuraSpots';
 
 const LazySpaceStationTracker = lazy(() => import('./pages/SpaceStationTracker'));
 import ErrorBoundary from './components/ErrorBoundary';
@@ -140,6 +141,7 @@ function AppContent() {
       <Route path="/service-test" element={<ServiceTest />} />
       <Route path="/admin/verification" element={<VerificationApplicationsManager />} />
       <Route path="/payment-success" element={<PaymentSuccess />} />
+      <Route path="/seed-obscura-spots" element={<SeedObscuraSpots />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
