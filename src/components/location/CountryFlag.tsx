@@ -40,7 +40,17 @@ const CountryFlag: React.FC<CountryFlagProps> = ({
   if (showName) {
     return (
       <div className={`flex items-center gap-1.5 ${className}`}>
-        <span className="text-2xl leading-none" style={{ fontSize: '1.5rem' }}>{countryInfo.flag}</span>
+        <span 
+          className="text-2xl leading-none flex-shrink-0" 
+          style={{ 
+            fontSize: '2rem',
+            fontFamily: '"Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif',
+            WebkitFontSmoothing: 'antialiased',
+            MozOsxFontSmoothing: 'grayscale'
+          }}
+        >
+          {countryInfo.flag}
+        </span>
         <span className="text-xs text-muted-foreground font-medium">{countryName}</span>
       </div>
     );
@@ -51,10 +61,18 @@ const CountryFlag: React.FC<CountryFlagProps> = ({
       <Tooltip>
         <TooltipTrigger asChild>
           <span 
-            className={`inline-flex items-center justify-center cursor-help transition-transform hover:scale-110 ${className}`}
+            className={`inline-flex items-center justify-center cursor-help transition-transform hover:scale-110 flex-shrink-0 ${className}`}
             role="img"
             aria-label={countryName}
-            style={{ fontSize: '1.5rem', lineHeight: 1 }}
+            style={{ 
+              fontSize: '2rem',
+              lineHeight: 1,
+              fontFamily: '"Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif',
+              WebkitFontSmoothing: 'antialiased',
+              MozOsxFontSmoothing: 'grayscale',
+              minWidth: '2rem',
+              minHeight: '2rem'
+            }}
           >
             {countryInfo.flag}
           </span>
