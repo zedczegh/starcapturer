@@ -24,6 +24,9 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
   return (
     <>
       <nav className="hidden md:flex items-center space-x-6">
+        <NavLink to="/" active={location.pathname === "/"}>
+          {t("Community", "社区")}
+        </NavLink>
         <NavLink to="/photo-points" active={location.pathname === "/photo-points"}>
           {t("Photo Points", "拍摄点")}
         </NavLink>
@@ -32,9 +35,6 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
           active={location.pathname.startsWith('/location/')}
         >
           {t("Location Details", "位置详情")}
-        </NavLink>
-        <NavLink to="/community" active={location.pathname === "/community"}>
-          {t("Community", "社区")}
         </NavLink>
         <NavLink to="/share" active={location.pathname === "/share"}>
           {t("Bortle Now", "实时光污染")}

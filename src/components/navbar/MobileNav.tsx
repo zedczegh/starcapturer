@@ -25,6 +25,13 @@ const MobileNav: React.FC<MobileNavProps> = ({
         {/* Glacial overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-blue-500/5 to-sky-500/5 pointer-events-none" />
         
+        <MobileNavButton
+          to="/"
+          icon={<Users className="h-5 w-5 stroke-[1.5]" />}
+          label={t("Community", "社区")}
+          active={location.pathname === "/"}
+        />
+        
         <MobileNavButton 
           to="/photo-points" 
           icon={<Telescope className="h-5 w-5 stroke-[1.5]" />} 
@@ -37,13 +44,6 @@ const MobileNav: React.FC<MobileNavProps> = ({
           icon={<Map className="h-5 w-5 stroke-[1.5]" />} 
           label={t("Location", "位置")} 
           active={location.pathname.startsWith('/location/')} 
-        />
-
-        <MobileNavButton
-          to="/community"
-          icon={<Users className="h-5 w-5 stroke-[1.5]" />}
-          label={t("Community", "社区")}
-          active={location.pathname === "/community"}
         />
 
         <MobileNavButton 

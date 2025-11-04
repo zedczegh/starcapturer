@@ -12,9 +12,15 @@ import CommunitySpotsList from "@/components/community/CommunitySpotsList";
 import ViewToggle from "@/components/photoPoints/ViewToggle";
 import { PhotoPointsViewMode } from "@/components/photoPoints/ViewToggle";
 import { Button } from "@/components/ui/button";
-import { Map as MapIcon, List, Loader2 } from "lucide-react";
+import { Map as MapIcon, List, Loader2, Info } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Default map center coordinates
 const DEFAULT_CENTER: [number, number] = [30, 104];
@@ -131,13 +137,31 @@ const CommunityAstroSpots: React.FC = () => {
             context="community"
           />
           
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
             {isLoading && (
               <div className="flex items-center text-sm text-muted-foreground mr-4">
                 <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                 {t("Loading spots...", "正在加载地点...")}
               </div>
             )}
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <motion.div className="flex items-center">
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </motion.div>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-xs">
+                  <p className="text-xs">
+                    {t(
+                      "Double-click the toggle button to refresh map markers",
+                      "双击切换按钮以刷新地图标记"
+                    )}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           
           <motion.button
