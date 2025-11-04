@@ -254,11 +254,6 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
                   <DynamicWindIcon windSpeed={15} className="inline h-4 w-4 mr-1" />
                   {t("Wind", "风速")}
                 </TableHead>
-                <TableHead className="text-center">
-                  <DynamicHumidityIcon humidity={50} className="inline h-4 w-4 mr-1" />
-                  {t("Humid", "湿度")}
-                </TableHead>
-                <TableHead>{t("Conditions", "天气状况")}</TableHead>
                 <TableHead className="text-center">{t("Astro Score", "天文评分")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -312,18 +307,6 @@ const ForecastTable: React.FC<ForecastTableProps> = React.memo(({
                       <div className="flex items-center justify-center">
                         <DynamicWindIcon windSpeed={forecast.windSpeed} className="mr-1 h-4 w-4" />
                         <span>{isNaN(forecast.windSpeed) ? "--" : forecast.windSpeed} {t("km/h", "公里/小时")}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center border-b border-cosmic-700/20">
-                      <div className="flex items-center justify-center">
-                        <DynamicHumidityIcon humidity={forecast.humidity} className="mr-1 h-4 w-4" />
-                        <span>{isNaN(forecast.humidity) ? "--" : forecast.humidity}%</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="border-b border-cosmic-700/20">
-                      <div className="flex items-center gap-2">
-                        <DynamicPrecipitationIcon precipitation={forecast.precipitation} weatherCode={forecast.weatherCode} />
-                        <span>{formatCondition(forecast.cloudCover, t)}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-center border-b border-cosmic-700/20">

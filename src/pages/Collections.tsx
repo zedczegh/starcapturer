@@ -107,10 +107,19 @@ const Collections = () => {
   const sortedLocations = sortLocationsBySiqs(safeLocations);
   const totalItems = safeLocations.length + safeSpots.length;
   
-  // Filter spots by type - with safety checks
-  const nightscapeSpots = safeSpots.filter(spot => spot?.spot_type === 'nightscape');
-  const naturalSpots = safeSpots.filter(spot => spot?.spot_type === 'natural');
-  const obscuraSpots = safeSpots.filter(spot => spot?.spot_type === 'obscura');
+  // Sort function for spots by SIQS (high to low)
+  const sortSpotsBySiqs = (spots: any[]) => {
+    return [...spots].sort((a, b) => {
+      const siqsA = a?.siqs ?? 0;
+      const siqsB = b?.siqs ?? 0;
+      return siqsB - siqsA; // High to low
+    });
+  };
+  
+  // Filter spots by type and sort by SIQS
+  const nightscapeSpots = sortSpotsBySiqs(safeSpots.filter(spot => spot?.spot_type === 'nightscape'));
+  const naturalSpots = sortSpotsBySiqs(safeSpots.filter(spot => spot?.spot_type === 'natural'));
+  const obscuraSpots = sortSpotsBySiqs(safeSpots.filter(spot => spot?.spot_type === 'obscura'));
 
   const collectionTabs = [
     { value: 'locations', label: t('Photo Locations', '拍摄地点'), icon: Camera, count: safeLocations.length },

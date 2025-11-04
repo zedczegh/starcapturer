@@ -75,7 +75,7 @@ const MoonlessNightDisplay: React.FC<MoonlessNightDisplayProps> = ({ latitude, l
             </div>
             <div>
               <h3 className="text-sm font-medium">
-                {t('Astronomical Night', '天文夜晚')}
+                {t('Tonight', '今晚')}
               </h3>
             </div>
           </div>
