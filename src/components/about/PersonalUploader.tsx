@@ -196,11 +196,41 @@ const PersonalUploader = () => {
     }
   };
 
-  const getFileUrl = (filePath: string) => {
-    const { data } = supabase.storage
-      .from("personal-uploads")
-      .getPublicUrl(filePath);
-    return data.publicUrl;
+  const getFileUrl = (filePath: string, forDownload = false) => {
+    // Use edge function to serve files to avoid browser blocking
+    const supabaseUrl = supabase.storage.from('personal-uploads').getPublicUrl('').data.publicUrl.split('/object/public')[0];
+    const params = new URLSearchParams({
+      path: filePath,
+      bucket: 'personal-uploads',
+      download: forDownload.toString()
+    });
+    return `${supabaseUrl}/functions/v1/download-file?${params.toString()}`;
+  };
+
+  const downloadFile = async (filePath: string, fileName: string) => {
+    try {
+      const response = await fetch(getFileUrl(filePath, true));
+      if (!response.ok) throw new Error('Download failed');
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success("Download started", {
+        description: "Your file is downloading"
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error("Download failed", {
+        description: "Please try again"
+      });
+    }
   };
 
   const getCategoryLabel = (category: string) => {
@@ -321,7 +351,7 @@ const PersonalUploader = () => {
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      window.open(getFileUrl(file.file_path), "_blank");
+                      downloadFile(file.file_path, file.file_name);
                     }}
                     className="bg-cosmic-700/80 hover:bg-cosmic-600 text-white h-8 w-8 p-0"
                   >
@@ -428,22 +458,28 @@ const PersonalUploader = () => {
               
               {/* PDF Preview */}
               {previewFile.file_type === "application/pdf" && (
-                <iframe
-                  src={getFileUrl(previewFile.file_path)}
-                  className="w-full h-[70vh] rounded-lg"
-                  title={previewFile.file_name}
-                />
+                <div className="space-y-4">
+                  <iframe
+                    src={getFileUrl(previewFile.file_path, false)}
+                    className="w-full h-[70vh] rounded-lg border border-cosmic-700"
+                    title={previewFile.file_name}
+                  />
+                  <p className="text-xs text-cosmic-400 text-center">
+                    Scroll to view all pages • Click download button below to save
+                  </p>
+                </div>
               )}
               
               {/* Document Preview (Word, etc) */}
               {(previewFile.file_type.includes("word") || 
                 previewFile.file_name.endsWith(".doc") || 
                 previewFile.file_name.endsWith(".docx")) && (
-                <div className="text-center py-12">
+                <div className="text-center py-12 space-y-4">
                   <FileText className="h-16 w-16 text-blue-400 mx-auto mb-4" />
-                  <p className="text-cosmic-300 mb-4">Document preview not available</p>
+                  <p className="text-cosmic-300 mb-2">Microsoft Word Document</p>
+                  <p className="text-cosmic-400 text-sm mb-4">Preview not available in browser</p>
                   <Button
-                    onClick={() => window.open(getFileUrl(previewFile.file_path), "_blank")}
+                    onClick={() => downloadFile(previewFile.file_path, previewFile.file_name)}
                     className="bg-cosmic-600 hover:bg-cosmic-500"
                   >
                     <Download className="h-4 w-4 mr-2" />
@@ -478,7 +514,7 @@ const PersonalUploader = () => {
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      window.open(getFileUrl(previewFile.file_path), "_blank");
+                      downloadFile(previewFile.file_path, previewFile.file_name);
                     }}
                     className="flex-1"
                   >
