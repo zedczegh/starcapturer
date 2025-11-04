@@ -24,12 +24,15 @@ export function useCertifiedLocationsFilter(
         community: 0,
         urban: 0,
         lodging: 0,
+        unesco: 0,
         other: 0
       };
       
       locations.forEach(loc => {
         const cert = (loc.certification || '').toLowerCase();
-        if (cert.includes('reserve') || Boolean(loc.isDarkSkyReserve)) {
+        if (loc.isUNESCO || cert.includes('unesco')) {
+          certTypes.unesco++;
+        } else if (cert.includes('reserve') || Boolean(loc.isDarkSkyReserve)) {
           certTypes.reserve++;
         } else if (cert.includes('park')) {
           certTypes.park++;
@@ -56,7 +59,7 @@ export function useCertifiedLocationsFilter(
     
     return locations.filter(location => {
       // Skip locations without any certification
-      if (!location.certification && !location.isDarkSkyReserve) {
+      if (!location.certification && !location.isDarkSkyReserve && !location.isUNESCO) {
         return false;
       }
       
@@ -77,6 +80,9 @@ export function useCertifiedLocationsFilter(
                  certification.includes('night sky place');
         case 'lodging':
           return certification.includes('lodging');
+        case 'unesco':
+          return certification.includes('unesco') ||
+                 Boolean(location.isUNESCO);
         default:
           return true;
       }

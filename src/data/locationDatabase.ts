@@ -24,6 +24,8 @@ export interface LocationEntry {
   radius: number; // km - the approximate radius this location's Bortle scale applies to
   type?: 'urban' | 'rural' | 'dark-site' | 'natural' | 'suburban';
   chineseName?: string; // Add optional chineseName field
+  certification?: string; // Add optional certification field for dark sky locations
+  isUNESCO?: boolean; // Add optional UNESCO designation field
 }
 
 // Combine all regional location databases

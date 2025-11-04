@@ -42,11 +42,16 @@ export const isWaterSpot = (location: SharedAstroSpot): boolean => {
  * @returns RGBA color string with transparency
  */
 export const getCertificationColor = (location: SharedAstroSpot): string => {
-  if (!location.isDarkSkyReserve && !location.certification) {
+  if (!location.isDarkSkyReserve && !location.certification && !location.isUNESCO) {
     return 'rgba(74, 222, 128, 0.85)'; // Default green with transparency
   }
   
   const certification = (location.certification || '').toLowerCase();
+  
+  // UNESCO locations get a distinctive purple color
+  if (location.isUNESCO || certification.includes('unesco')) {
+    return 'rgba(139, 92, 246, 0.85)'; // Purple for UNESCO #8b5cf6
+  }
   
   // Atlas Obscura locations get a distinctive cyan color
   if (certification.includes('atlas obscura')) {
@@ -152,6 +157,9 @@ export const getLocationMarker = (
   // Get the marker color based on location properties
   const color = getLocationColor(location);
   
+  // Check if this is a UNESCO location
+  const isUNESCO = location.isUNESCO || location.certification?.toLowerCase().includes('unesco');
+  
   // Check if this is an Atlas Obscura location
   const isObscura = location.certification?.toLowerCase().includes('atlas obscura');
   
@@ -165,7 +173,14 @@ export const getLocationMarker = (
   
   // Choose the appropriate icon
   let iconSvg = '';
-  if (isMountain) {
+  if (isUNESCO) {
+    // Globe icon for UNESCO locations
+    iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size * 0.6}" height="${size * 0.6}" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+      <path d="M2 12h20"/>
+    </svg>`;
+  } else if (isMountain) {
     // Mountain icon for natural mountain locations
     iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size * 0.6}" height="${size * 0.6}" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2">
       <path d="m8 3 4 8 5-5 5 15H2L8 3z"/>

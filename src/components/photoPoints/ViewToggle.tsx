@@ -9,6 +9,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export type PhotoPointsViewMode = 'certified' | 'calculated' | 'obscura' | 'mountains';
 
@@ -58,31 +64,41 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
   const ActiveIcon = activeViewData?.icon || Layers;
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild disabled={loading}>
-        <motion.button
-          className="relative flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary/15 to-accent/15 hover:from-primary/25 hover:to-accent/25 backdrop-blur-md border border-primary/40 shadow-md transition-all duration-300"
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.92 }}
-        >
-          {/* Pulsing animation ring */}
-          <motion.div
-            className="absolute inset-0 rounded-full bg-primary/15"
-            animate={{
-              scale: [1, 1.15, 1],
-              opacity: [0.4, 0, 0.4],
-            }}
-            transition={{
-              duration: 2.5,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          />
-          
-          {/* Icon */}
-          <ActiveIcon className="h-5 w-5 text-primary relative z-10" />
-        </motion.button>
-      </DropdownMenuTrigger>
+    <TooltipProvider>
+      <DropdownMenu>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild disabled={loading}>
+              <motion.button
+                className="relative flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary/15 to-accent/15 hover:from-primary/25 hover:to-accent/25 backdrop-blur-md border border-primary/40 shadow-md transition-all duration-300"
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.92 }}
+              >
+                {/* Pulsing animation ring */}
+                <motion.div
+                  className="absolute inset-0 rounded-full bg-primary/15"
+                  animate={{
+                    scale: [1, 1.15, 1],
+                    opacity: [0.4, 0, 0.4],
+                  }}
+                  transition={{
+                    duration: 2.5,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                />
+                
+                {/* Icon */}
+                <ActiveIcon className="h-5 w-5 text-primary relative z-10" />
+              </motion.button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="max-w-xs">
+            <p className="text-xs">
+              {t("Select map filter here", "在此选择地图过滤器")}
+            </p>
+          </TooltipContent>
+        </Tooltip>
       
       <DropdownMenuContent align="start" className="w-56 bg-cosmic-900/95 backdrop-blur-md border-cosmic-700/50 z-[9999]">
         {viewTypes.map(({ value, label, icon: Icon }) => (
@@ -99,7 +115,8 @@ const ViewToggle: React.FC<ViewToggleProps> = ({
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
-    </DropdownMenu>
+      </DropdownMenu>
+    </TooltipProvider>
   );
 };
 

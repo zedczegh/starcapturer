@@ -80,7 +80,7 @@ export const mergeLocations = (
  * @returns True if the location is certified, false otherwise
  */
 export const isCertifiedLocation = (location: SharedAstroSpot): boolean => {
-  return Boolean(location?.isDarkSkyReserve || location?.certification);
+  return Boolean(location?.isDarkSkyReserve || location?.isUNESCO || location?.certification);
 };
 
 /**

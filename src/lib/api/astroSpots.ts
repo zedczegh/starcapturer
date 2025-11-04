@@ -30,6 +30,7 @@ export interface SharedAstroSpot {
   date?: string | Date;
   timestamp: string;
   isDarkSkyReserve?: boolean;
+  isUNESCO?: boolean;
   certification?: string;
   photographer?: string;
   cloudCover?: number;

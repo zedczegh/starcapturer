@@ -39,6 +39,9 @@ export function matchesCertificationType(
              certification.includes('night sky place');
     case 'lodging':
       return certification.includes('lodging');
+    case 'unesco':
+      return certification.includes('unesco') ||
+             Boolean(location.isUNESCO);
     default:
       return false;
   }
@@ -56,6 +59,7 @@ export function sortCertifiedLocations(
     // First prioritize by certification type
     const getTypeOrder = (loc: SharedAstroSpot) => {
       const cert = (loc.certification || '').toLowerCase();
+      if (loc.isUNESCO || cert.includes('unesco')) return 0;
       if (loc.isDarkSkyReserve || cert.includes('reserve')) return 1;
       if (cert.includes('park')) return 2;
       if (cert.includes('community')) return 3;
@@ -91,6 +95,7 @@ export function getCertificationCounts(
     community: 0,
     urban: 0,
     lodging: 0,
+    unesco: 0,
     total: 0
   };
   
@@ -104,7 +109,9 @@ export function getCertificationCounts(
     counts.all++;
     
     const cert = (loc.certification || '').toLowerCase();
-    if (loc.isDarkSkyReserve || cert.includes('reserve') || cert.includes('sanctuary')) {
+    if (loc.isUNESCO || cert.includes('unesco')) {
+      counts.unesco++;
+    } else if (loc.isDarkSkyReserve || cert.includes('reserve') || cert.includes('sanctuary')) {
       counts.reserve++;
     } else if (cert.includes('park')) {
       counts.park++;

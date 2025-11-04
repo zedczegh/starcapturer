@@ -563,5 +563,91 @@ export const darkSkyLocations: (LocationEntry & {
       fall: { clearSkyRate: 85, averageTemperature: 18 },
       winter: { clearSkyRate: 90, averageTemperature: 8 }
     }
+  },
+  
+  // UNESCO Dark Sky Places
+  { 
+    name: "Teide National Park UNESCO", 
+    chineseName: "泰德国家公园联合国教科文组织",
+    coordinates: [28.2722, -16.6414], 
+    bortleScale: 1.5, 
+    radius: 35, 
+    type: 'dark-site',
+    certification: 'UNESCO Dark Sky Place',
+    isUNESCO: true,
+    clearSkyRate: 88,
+    clearestMonths: ['Jul', 'Aug', 'Sep'],
+    annualPrecipitationDays: 30,
+    visibility: 'excellent'
+  },
+  { 
+    name: "Pic du Midi UNESCO", 
+    chineseName: "比克杜米迪联合国教科文组织",
+    coordinates: [42.9367, 0.1425], 
+    bortleScale: 1.5, 
+    radius: 30, 
+    type: 'dark-site',
+    certification: 'UNESCO Dark Sky Place',
+    isUNESCO: true,
+    clearSkyRate: 75,
+    clearestMonths: ['Jul', 'Aug', 'Sep'],
+    annualPrecipitationDays: 120,
+    visibility: 'excellent'
+  },
+  { 
+    name: "Mont-Mégantic UNESCO", 
+    chineseName: "蒙特梅甘蒂克联合国教科文组织",
+    coordinates: [45.4553, -71.1528], 
+    bortleScale: 2.0, 
+    radius: 40, 
+    type: 'dark-site',
+    certification: 'UNESCO Dark Sky Place',
+    isUNESCO: true,
+    clearSkyRate: 65,
+    clearestMonths: ['Jun', 'Jul', 'Aug'],
+    annualPrecipitationDays: 140,
+    visibility: 'very good'
+  },
+  { 
+    name: "Zselic Starry Sky Park UNESCO", 
+    chineseName: "泽利克星空公园联合国教科文组织",
+    coordinates: [46.1794, 17.8472], 
+    bortleScale: 2.0, 
+    radius: 25, 
+    type: 'dark-site',
+    certification: 'UNESCO Dark Sky Place',
+    isUNESCO: true,
+    clearSkyRate: 68,
+    clearestMonths: ['Jun', 'Jul', 'Aug'],
+    annualPrecipitationDays: 110,
+    visibility: 'very good'
+  },
+  { 
+    name: "Westhavelland Nature Park UNESCO", 
+    chineseName: "西哈弗兰自然公园联合国教科文组织",
+    coordinates: [52.7319, 12.4906], 
+    bortleScale: 3.0, 
+    radius: 45, 
+    type: 'dark-site',
+    certification: 'UNESCO Dark Sky Place',
+    isUNESCO: true,
+    clearSkyRate: 62,
+    clearestMonths: ['May', 'Jun', 'Jul'],
+    annualPrecipitationDays: 135,
+    visibility: 'good'
+  },
+  { 
+    name: "Alqueva Dark Sky Reserve UNESCO", 
+    chineseName: "阿尔克瓦暗夜保护区联合国教科文组织",
+    coordinates: [38.2289, -7.5222], 
+    bortleScale: 1.5, 
+    radius: 50, 
+    type: 'dark-site',
+    certification: 'UNESCO Dark Sky Place',
+    isUNESCO: true,
+    clearSkyRate: 85,
+    clearestMonths: ['Jun', 'Jul', 'Aug'],
+    annualPrecipitationDays: 50,
+    visibility: 'excellent'
   }
 ];

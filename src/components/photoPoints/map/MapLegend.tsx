@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, ChevronLeft, Info, Star, Circle, Hotel, Eye } from 'lucide-react';
+import { AlertCircle, ChevronLeft, Info, Star, Circle, Hotel, Eye, Globe2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 
@@ -108,10 +108,15 @@ const MapLegend: React.FC<MapLegendProps> = ({
                       label={t("Dark Sky Lodging", "暗夜住宿")} 
                       type="hotel"
                     />
+                    <LegendItem 
+                      color="#8b5cf6" 
+                      label={t("UNESCO Dark Sky Place", "联合国教科文组织暗夜地点")} 
+                      type="unesco"
+                    />
                   </div>
                 )}
 
-                {/* Circle Legend */}
+                {/* Circle Legend - Updated SIQS Color Scheme */}
                 {displayCircleLegend && (
                   <div className="space-y-1.5 bg-muted/20 p-2 rounded-md border border-primary/10">
                     <h4 className="text-[10px] font-medium text-primary/90 flex items-center">
@@ -224,7 +229,7 @@ const MapLegend: React.FC<MapLegendProps> = ({
 interface LegendItemProps {
   color: string;
   label: string;
-  type: 'star' | 'circle' | 'hotel' | 'eye';
+  type: 'star' | 'circle' | 'hotel' | 'eye' | 'unesco';
 }
 
 const LegendItem: React.FC<LegendItemProps> = ({ color, label, type }) => {
@@ -252,6 +257,8 @@ const LegendItem: React.FC<LegendItemProps> = ({ color, label, type }) => {
           <Hotel className="h-3 w-3" style={{ color, fill: color }} />
         ) : type === 'eye' ? (
           <Eye className="h-3 w-3" style={{ color, fill: 'none', stroke: color, strokeWidth: 2 }} />
+        ) : type === 'unesco' ? (
+          <Globe2 className="h-3 w-3" style={{ color, fill: color }} />
         ) : (
           <Circle className="h-3 w-3" style={{ color, fill: `${color}30` }} />
         )}

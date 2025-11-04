@@ -2,9 +2,9 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Globe, Trees, Building2, MapPin, Hotel } from 'lucide-react';
+import { Globe, Trees, Building2, MapPin, Hotel, Globe2 } from 'lucide-react';
 
-export type CertificationType = 'reserve' | 'park' | 'community' | 'urban' | 'lodging' | 'all';
+export type CertificationType = 'reserve' | 'park' | 'community' | 'urban' | 'lodging' | 'unesco' | 'all';
 
 interface CertificationFilterProps {
   selectedType: CertificationType;
@@ -57,6 +57,12 @@ const CertificationFilter: React.FC<CertificationFilterProps> = ({
       id: 'lodging',
       label: t('Dark Sky Lodging', '暗夜住宿'),
       icon: Hotel,
+      color: 'text-primary border-primary/30 bg-primary/10 hover:bg-primary/20'
+    },
+    {
+      id: 'unesco',
+      label: t('UNESCO Dark Sky', '联合国教科文组织暗夜'),
+      icon: Globe2,
       color: 'text-primary border-primary/30 bg-primary/10 hover:bg-primary/20'
     }
   ];

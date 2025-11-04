@@ -35,6 +35,7 @@ export const getLocationId = (location: SharedAstroSpot): string => {
  */
 export const isCertifiedLocation = (location: SharedAstroSpot): boolean => {
   return location.isDarkSkyReserve === true || 
+    location.isUNESCO === true ||
     (location.certification && location.certification !== '');
 };
 

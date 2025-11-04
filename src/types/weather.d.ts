@@ -70,6 +70,7 @@ declare module "@/types/weather" {
     }>;
     certification?: string;
     isDarkSkyReserve?: boolean;
+    isUNESCO?: boolean;
     type?: string;
     preferenceScore?: number;
     clearSkyRate?: number;
