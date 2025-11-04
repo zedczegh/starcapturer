@@ -96,15 +96,6 @@ const PersonalUploader = () => {
       return;
     }
 
-    // Validate file size (max 20MB)
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error("File too large", {
-        description: "Maximum file size is 20MB",
-      });
-      event.target.value = "";
-      return;
-    }
-
     setUploading(true);
     console.log("Upload started, user:", user?.id);
 

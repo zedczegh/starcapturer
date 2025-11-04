@@ -23,7 +23,7 @@ export const CircularTabs: React.FC<CircularTabsProps> = ({
   className = ''
 }) => {
   return (
-    <div className={`flex gap-3 justify-center flex-wrap ${className}`}>
+    <div className={`flex gap-6 md:gap-8 justify-center flex-wrap ${className}`}>
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.value;
@@ -85,15 +85,6 @@ export const CircularTabs: React.FC<CircularTabsProps> = ({
                 </span>
               )}
             </div>
-            
-            {/* Bottom active indicator line */}
-            {isActive && (
-              <motion.div
-                layoutId="activeTabIndicator"
-                className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-full"
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              />
-            )}
           </motion.button>
         );
       })}
