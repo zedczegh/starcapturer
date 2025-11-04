@@ -104,6 +104,14 @@ const CommunityAstroSpots: React.FC = () => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
+  const handleRefreshMarkers = () => {
+    console.log('🔄 Refreshing markers via double-click on community page');
+    // Quick toggle to force marker refresh
+    const currentView = activeView;
+    setActiveView(currentView === 'certified' ? 'calculated' : 'certified');
+    setTimeout(() => setActiveView(currentView), 50);
+  };
+
   return (
     <PhotoPointsLayout pageTitle={t("Meteo Spots Community | Meteotinary", "趣小众社区 | 趣小众")}>
       <div className="max-w-5xl mx-auto pt-10 px-4 pb-14">
@@ -134,6 +142,7 @@ const CommunityAstroSpots: React.FC = () => {
           
           <motion.button
             onClick={() => setShowMap(!showMap)}
+            onDoubleClick={handleRefreshMarkers}
             className="relative flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary/15 to-accent/15 hover:from-primary/25 hover:to-accent/25 backdrop-blur-md border border-primary/40 shadow-md transition-all duration-300"
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.92 }}

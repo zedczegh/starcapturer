@@ -165,6 +165,15 @@ const PhotoPointsNearby: React.FC = () => {
       console.error("Error navigating to location details:", error, location);
     }
   }, [navigate]);
+
+  const handleRefreshMarkers = useCallback(() => {
+    console.log('🔄 Refreshing markers via double-click');
+    // Quick toggle to force marker refresh
+    const currentView = activeView;
+    handleViewChange(currentView === 'certified' ? 'calculated' : 'certified');
+    setTimeout(() => handleViewChange(currentView), 50);
+  }, [activeView, handleViewChange]);
+  
   
   return (
     <PhotoPointsLayout>
@@ -175,6 +184,7 @@ const PhotoPointsNearby: React.FC = () => {
         showMapToggle={true}
         showMap={showMap}
         toggleMapView={toggleMapView}
+        refreshMarkers={handleRefreshMarkers}
         viewToggle={
           <ViewToggle
             activeView={activeView}

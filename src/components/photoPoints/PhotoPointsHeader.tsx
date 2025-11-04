@@ -13,6 +13,7 @@ interface PhotoPointsHeaderProps {
   showMapToggle?: boolean;
   showMap?: boolean;
   toggleMapView?: () => void;
+  refreshMarkers?: () => void;
   viewToggle?: React.ReactNode;
 }
 
@@ -23,8 +24,15 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
   showMapToggle = false,
   showMap = true,
   toggleMapView,
+  refreshMarkers,
   viewToggle
 }) => {
+  const handleDoubleClick = () => {
+    if (refreshMarkers) {
+      console.log('🔄 Double-click detected - refreshing markers');
+      refreshMarkers();
+    }
+  };
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   
@@ -82,6 +90,7 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
           {showMapToggle && toggleMapView && (
           <motion.button
             onClick={toggleMapView}
+            onDoubleClick={handleDoubleClick}
             className="relative flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary/15 to-accent/15 hover:from-primary/25 hover:to-accent/25 backdrop-blur-md border border-primary/40 shadow-md transition-all duration-300"
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.92 }}
