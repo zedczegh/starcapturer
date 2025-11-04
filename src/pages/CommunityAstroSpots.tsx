@@ -12,7 +12,7 @@ import CommunitySpotsList from "@/components/community/CommunitySpotsList";
 import ViewToggle from "@/components/photoPoints/ViewToggle";
 import { PhotoPointsViewMode } from "@/components/photoPoints/ViewToggle";
 import { Button } from "@/components/ui/button";
-import { Map as MapIcon, List, Loader2, Info } from "lucide-react";
+import { Map as MapIcon, List, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import {
@@ -137,64 +137,58 @@ const CommunityAstroSpots: React.FC = () => {
             context="community"
           />
           
-          <div className="flex items-center gap-2">
-            {isLoading && (
-              <div className="flex items-center text-sm text-muted-foreground mr-4">
-                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                {t("Loading spots...", "正在加载地点...")}
-              </div>
-            )}
-            
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <motion.div className="flex items-center">
-                    <Info className="h-4 w-4 text-muted-foreground" />
-                  </motion.div>
-                </TooltipTrigger>
-                <TooltipContent side="left" className="max-w-xs">
-                  <p className="text-xs">
-                    {t(
-                      "Double-click the toggle button to refresh map markers",
-                      "双击切换按钮以刷新地图标记"
-                    )}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+          {isLoading && (
+            <div className="flex items-center text-sm text-muted-foreground mr-4">
+              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+              {t("Loading spots...", "正在加载地点...")}
+            </div>
+          )}
           
-          <motion.button
-            onClick={() => setShowMap(!showMap)}
-            onDoubleClick={handleRefreshMarkers}
-            className="relative flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary/15 to-accent/15 hover:from-primary/25 hover:to-accent/25 backdrop-blur-md border border-primary/40 shadow-md transition-all duration-300"
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.92 }}
-          >
-            <motion.div
-              className="absolute inset-0 rounded-full bg-primary/15"
-              animate={{
-                scale: [1, 1.15, 1],
-                opacity: [0.4, 0, 0.4],
-              }}
-              transition={{
-                duration: 2.5,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-            />
-            <motion.div
-              initial={false}
-              animate={{ rotate: showMap ? 0 : 180 }}
-              transition={{ duration: 0.3 }}
-            >
-              {showMap ? (
-                <List className="h-5 w-5 text-primary" />
-              ) : (
-                <MapIcon className="h-5 w-5 text-primary" />
-              )}
-            </motion.div>
-          </motion.button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <motion.button
+                  onClick={() => setShowMap(!showMap)}
+                  onDoubleClick={handleRefreshMarkers}
+                  className="relative flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary/15 to-accent/15 hover:from-primary/25 hover:to-accent/25 backdrop-blur-md border border-primary/40 shadow-md transition-all duration-300"
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.92 }}
+                >
+                  <motion.div
+                    className="absolute inset-0 rounded-full bg-primary/15"
+                    animate={{
+                      scale: [1, 1.15, 1],
+                      opacity: [0.4, 0, 0.4],
+                    }}
+                    transition={{
+                      duration: 2.5,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  />
+                  <motion.div
+                    initial={false}
+                    animate={{ rotate: showMap ? 0 : 180 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {showMap ? (
+                      <List className="h-5 w-5 text-primary" />
+                    ) : (
+                      <MapIcon className="h-5 w-5 text-primary" />
+                    )}
+                  </motion.div>
+                </motion.button>
+              </TooltipTrigger>
+              <TooltipContent side="left" className="max-w-xs">
+                <p className="text-xs">
+                  {t(
+                    "Double-click to refresh map markers",
+                    "双击以刷新地图标记"
+                  )}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         {/* Map Section */}

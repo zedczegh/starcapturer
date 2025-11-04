@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { MapPin, List, Map, Loader2, Info } from 'lucide-react';
+import { MapPin, List, Map, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -94,60 +94,54 @@ const PhotoPointsHeader: React.FC<PhotoPointsHeaderProps> = ({
         {/* Right side - Map Toggle */}
         <div className="flex items-center gap-2">
           {showMapToggle && toggleMapView && (
-          <>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <motion.div className="flex items-center">
-                    <Info className="h-4 w-4 text-muted-foreground" />
-                  </motion.div>
+                  <motion.button
+                    onClick={toggleMapView}
+                    onDoubleClick={handleDoubleClick}
+                    className="relative flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary/15 to-accent/15 hover:from-primary/25 hover:to-accent/25 backdrop-blur-md border border-primary/40 shadow-md transition-all duration-300"
+                    whileHover={{ scale: 1.08 }}
+                    whileTap={{ scale: 0.92 }}
+                  >
+                    {/* Pulsing animation ring */}
+                    <motion.div
+                      className="absolute inset-0 rounded-full bg-primary/15"
+                      animate={{
+                        scale: [1, 1.15, 1],
+                        opacity: [0.4, 0, 0.4],
+                      }}
+                      transition={{
+                        duration: 2.5,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                    />
+                    
+                    {/* Icon */}
+                    <motion.div
+                      initial={false}
+                      animate={{ rotate: showMap ? 0 : 180 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {showMap ? (
+                        <List className="h-5 w-5 text-primary" />
+                      ) : (
+                        <Map className="h-5 w-5 text-primary" />
+                      )}
+                    </motion.div>
+                  </motion.button>
                 </TooltipTrigger>
                 <TooltipContent side="left" className="max-w-xs">
                   <p className="text-xs">
                     {t(
-                      "Double-click the toggle button to refresh map markers",
-                      "双击切换按钮以刷新地图标记"
+                      "Double-click to refresh map markers",
+                      "双击以刷新地图标记"
                     )}
                   </p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            
-            <motion.button
-              onClick={toggleMapView}
-              onDoubleClick={handleDoubleClick}
-              className="relative flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary/15 to-accent/15 hover:from-primary/25 hover:to-accent/25 backdrop-blur-md border border-primary/40 shadow-md transition-all duration-300"
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.92 }}
-            >
-            {/* Pulsing animation ring */}
-            <motion.div
-              className="absolute inset-0 rounded-full bg-primary/15"
-              animate={{
-                scale: [1, 1.15, 1],
-                opacity: [0.4, 0, 0.4],
-              }}
-              transition={{
-                duration: 2.5,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-            />
-            
-            {/* Icon */}
-            <motion.div
-              initial={false}
-              animate={{ rotate: showMap ? 0 : 180 }}
-              transition={{ duration: 0.3 }}
-            >
-              {showMap ? (
-                <List className="h-5 w-5 text-primary" />
-              ) : (
-                <Map className="h-5 w-5 text-primary" />
-              )}
-            </motion.div>
-          </motion.button>
-          </>
           )}
         </div>
       </div>
