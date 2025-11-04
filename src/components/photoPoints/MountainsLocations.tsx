@@ -4,6 +4,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import PhotoLocationCard from './PhotoLocationCard';
 import { Loader2, Mountain } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { sortLocationsBySiqs } from '@/utils/siqsHelpers';
 
 interface MountainsLocationsProps {
   locations: SharedAstroSpot[];
@@ -25,19 +26,9 @@ const MountainsLocations: React.FC<MountainsLocationsProps> = ({
 }) => {
   const { t } = useLanguage();
 
-  // Sort locations by SIQS score (high to low)
+  // Sort locations by SIQS score (high to low) using utility that checks realTimeSiqs
   const sortedLocations = React.useMemo(() => {
-    // Clone to avoid mutating original array
-    const sorted = [...locations];
-    
-    // Sort by SIQS score (high to low)
-    sorted.sort((a, b) => {
-      const siqsA = typeof a.siqs === 'number' ? a.siqs : (a.siqs?.score || 0);
-      const siqsB = typeof b.siqs === 'number' ? b.siqs : (b.siqs?.score || 0);
-      return siqsB - siqsA; // Descending order
-    });
-
-    return sorted;
+    return sortLocationsBySiqs(locations);
   }, [locations]);
 
   if (loading && initialLoad) {
