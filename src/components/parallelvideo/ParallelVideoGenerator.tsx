@@ -108,7 +108,8 @@ const ParallelVideoGenerator: React.FC = () => {
     fieldOfView: 75,
     amplification: 150,
     spin: 0,
-    spinDirection: 'clockwise'
+    spinDirection: 'clockwise',
+    fadeOut: true
   });
 
   const [depthIntensity, setDepthIntensity] = useState<number>(200);
@@ -1923,7 +1924,8 @@ const ParallelVideoGenerator: React.FC = () => {
                       fieldOfView: 75,
                       amplification: 150,
                       spin: 0,
-                      spinDirection: 'clockwise'
+                      spinDirection: 'clockwise',
+                      fadeOut: true
                     });
                     setDepthIntensity(200);
                     setPreserveStarsIntensity(0);
@@ -1983,6 +1985,23 @@ const ParallelVideoGenerator: React.FC = () => {
                 <p className="text-xs text-cosmic-400">
                   {t('Higher amplification = faster motion through space', '更高的放大倍数 = 更快的空间移动速度')}
                 </p>
+                
+                {/* Fade-out toggle */}
+                <div className="flex items-center justify-between p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30 mt-3">
+                  <div className="flex-1">
+                    <Label className="text-cosmic-200 text-sm font-medium">
+                      {t('Nebula Fade-Out Effect', '星云淡出效果')}
+                    </Label>
+                    <p className="text-xs text-cosmic-400 mt-1">
+                      {t('Gradually fade nebula during video generation (recommended for immersive effect)', '在视频生成过程中逐渐淡出星云（推荐用于沉浸式效果）')}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={motionSettings.fadeOut}
+                    onCheckedChange={(checked) => setMotionSettings(prev => ({ ...prev, fadeOut: checked }))}
+                    className="ml-4"
+                  />
+                </div>
               </div>
 
               <div className="space-y-3">
