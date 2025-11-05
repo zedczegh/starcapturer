@@ -25,7 +25,6 @@ export interface MotionSettings {
   amplification: number;
   spin: number;
   spinDirection: 'clockwise' | 'counterclockwise';
-  fadeOut?: boolean;
 }
 
 export class VideoGenerationService {
