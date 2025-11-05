@@ -15,6 +15,7 @@ import CountdownOverlay from "@/components/bortleNow/CountdownOverlay";
 import BortleValidationDisplay from "@/components/bortleNow/BortleValidationDisplay";
 import { AnimatePresence } from "framer-motion";
 import BackButton from "@/components/navigation/BackButton";
+import { toast as sonnerToast } from "sonner";
 
 const BortleNow: React.FC = () => {
   const [latitude, setLatitude] = useState("");
@@ -111,12 +112,19 @@ const BortleNow: React.FC = () => {
   };
 
   const getCurrentLocation = useCallback(() => {
+    // Check if geolocation is available
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by your browser');
+      sonnerToast.error(t("Geolocation is not supported by your browser", "您的浏览器不支持地理定位"));
+      return;
+    }
+    
     setIsLoadingLocation(true);
     setError(null);
     
     const geolocationOptions: ExtendedGeolocationOptions = {
       enableHighAccuracy: true,
-      timeout: 10000,
+      timeout: 20000, // Increased timeout to 20 seconds
       maximumAge: 0,
       language: language
     };
@@ -126,22 +134,45 @@ const BortleNow: React.FC = () => {
         setIsLoadingLocation(false);
         onLocationChange(position.coords.latitude, position.coords.longitude);
         
-        fetch(`https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json&accept-language=${language}`)
-          .then(response => response.json())
+        // Fetch location name with better error handling
+        fetch(`https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json&accept-language=${language}`, {
+          headers: {
+            'User-Agent': 'StarCaptureApp/1.0',
+            'Accept': 'application/json'
+          }
+        })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+          })
           .then(data => {
             if (data.display_name) {
               setLocationName(data.display_name.split(',').slice(0, 2).join(','));
             }
           })
-          .catch(err => console.error("Error fetching location name:", err));
+          .catch(err => {
+            console.error("Error fetching location name:", err);
+            // Still allow the location to be set even if reverse geocoding fails
+            setLocationName(t('Unknown Location', '未知位置'));
+          });
       },
       (error) => {
         setIsLoadingLocation(false);
-        setError(error.message);
+        const errorMessage = error.code === 1 ? 
+          t("Location access denied. Please enable location permissions.", "位置访问被拒绝。请启用位置权限。") :
+          error.code === 2 ?
+          t("Location unavailable. Please check your connection.", "位置不可用。请检查您的连接。") :
+          error.code === 3 ?
+          t("Location request timed out. Please try again.", "位置请求超时。请重试。") :
+          error.message;
+        setError(errorMessage);
+        sonnerToast.error(errorMessage);
       },
       geolocationOptions
     );
-  }, [language, onLocationChange]);
+  }, [language, onLocationChange, t]);
 
   useEffect(() => {
     getCurrentLocation();

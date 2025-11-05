@@ -55,9 +55,14 @@ export function calculateMilkyWayVisibility(
   const LST_rise = calculateRiseSetLST(sagittariusDecl, latitude, sagittariusRA, true);
   const LST_set = calculateRiseSetLST(sagittariusDecl, latitude, sagittariusRA, false);
 
-  // Convert LST to local time for today
+  // Convert LST to local time for today with proper timezone handling
   const riseTime = lstToLocalTime(LST_rise, longitude, date);
   const setTime = lstToLocalTime(LST_set, longitude, date);
+  
+  // Adjust for day boundary - if set time is before rise time, it's on the next day
+  if (setTime.getTime() < riseTime.getTime()) {
+    setTime.setDate(setTime.getDate() + 1);
+  }
 
   // Format times
   const riseString = formatTimeString(riseTime);

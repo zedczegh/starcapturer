@@ -1156,7 +1156,7 @@ const StarFieldGenerator: React.FC = () => {
                         {t('Nebula Fade-Out Effect', '星云淡出效果')}
                       </Label>
                       <p className="text-xs text-cosmic-400 mt-1">
-                        {t('Gradually fade nebula as you fly through it (only works when amplification ≥ 220%)', '穿越时逐渐淡出星云（仅当放大倍数 ≥ 220% 时生效）')}
+                        {t('Gradually fade nebula during video generation (recommended for immersive effect)', '在视频生成过程中逐渐淡出星云（推荐用于沉浸式效果）')}
                       </p>
                     </div>
                     <Switch

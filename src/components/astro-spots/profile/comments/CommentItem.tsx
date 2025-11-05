@@ -174,6 +174,12 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
                   className="max-w-xs h-auto rounded-lg border border-border/30 cursor-pointer hover:opacity-90 transition-opacity"
                   style={{ maxHeight: '200px', objectFit: 'cover' }}
                   onClick={() => window.open(comment.image_url!, '_blank')}
+                  onError={(e) => {
+                    console.error('Failed to load comment image:', comment.image_url);
+                    e.currentTarget.style.display = 'none';
+                  }}
+                  loading="lazy"
+                  crossOrigin="anonymous"
                 />
               </div>
             )}
@@ -298,6 +304,12 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
                             className="max-w-32 h-auto rounded-md border border-border/30 cursor-pointer hover:opacity-90 transition-opacity"
                             style={{ maxHeight: '120px', objectFit: 'cover' }}
                             onClick={() => window.open(reply.image_url!, '_blank')}
+                            onError={(e) => {
+                              console.error('Failed to load reply image:', reply.image_url);
+                              e.currentTarget.style.display = 'none';
+                            }}
+                            loading="lazy"
+                            crossOrigin="anonymous"
                           />
                         </div>
                       )}

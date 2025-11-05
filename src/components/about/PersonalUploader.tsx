@@ -188,14 +188,17 @@ const PersonalUploader = () => {
   };
 
   const getFileUrl = (filePath: string, forDownload = false) => {
-    // Use edge function to serve files to avoid browser blocking
-    const supabaseUrl = supabase.storage.from('personal-uploads').getPublicUrl('').data.publicUrl.split('/object/public')[0];
-    const params = new URLSearchParams({
-      path: filePath,
-      bucket: 'personal-uploads',
-      download: forDownload.toString()
-    });
-    return `${supabaseUrl}/functions/v1/download-file?${params.toString()}`;
+    // Use Supabase public URL with proper project reference
+    const { data } = supabase.storage.from('personal-uploads').getPublicUrl(filePath);
+    
+    // If download is requested, add download parameter
+    if (forDownload && data?.publicUrl) {
+      const url = new URL(data.publicUrl);
+      url.searchParams.set('download', 'true');
+      return url.toString();
+    }
+    
+    return data?.publicUrl || '';
   };
 
   const downloadFile = async (filePath: string, fileName: string) => {

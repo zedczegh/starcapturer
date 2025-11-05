@@ -953,13 +953,34 @@ Spatial autocorr: ρ = ${spatialCorr.toFixed(4)}`,
     ctx.fillStyle = bgGradient;
     ctx.fillRect(0, 0, width, height);
 
-    // High-quality noise for astronomical authenticity
+    // Enhanced stellar field background with gradient colors
     const imageData = ctx.getImageData(0, 0, width, height);
     for (let i = 0; i < imageData.data.length; i += 4) {
-      const noise = (Math.random() - 0.5) * 8;
-      imageData.data[i] = Math.max(0, Math.min(255, imageData.data[i] + noise));
-      imageData.data[i + 1] = Math.max(0, Math.min(255, imageData.data[i + 1] + noise));
-      imageData.data[i + 2] = Math.max(0, Math.min(255, imageData.data[i + 2] + noise));
+      // Create cosmic dust effect with varied colors
+      if (Math.random() < 0.001) { // Sparse stellar dust
+        const brightness = Math.random() * 80 + 40;
+        const colorVariation = Math.random();
+        
+        if (colorVariation < 0.3) { // Blue-white stars
+          imageData.data[i] = brightness * 0.8;
+          imageData.data[i + 1] = brightness * 0.9;
+          imageData.data[i + 2] = brightness;
+        } else if (colorVariation < 0.6) { // Yellow-white stars
+          imageData.data[i] = brightness;
+          imageData.data[i + 1] = brightness * 0.95;
+          imageData.data[i + 2] = brightness * 0.7;
+        } else { // Red-orange stars
+          imageData.data[i] = brightness;
+          imageData.data[i + 1] = brightness * 0.6;
+          imageData.data[i + 2] = brightness * 0.4;
+        }
+      } else {
+        // Subtle background noise
+        const noise = (Math.random() - 0.5) * 4;
+        imageData.data[i] = Math.max(0, Math.min(255, imageData.data[i] + noise));
+        imageData.data[i + 1] = Math.max(0, Math.min(255, imageData.data[i + 1] + noise));
+        imageData.data[i + 2] = Math.max(0, Math.min(255, imageData.data[i + 2] + noise));
+      }
     }
     ctx.putImageData(imageData, 0, 0);
 
