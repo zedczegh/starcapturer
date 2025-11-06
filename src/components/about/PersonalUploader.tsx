@@ -288,9 +288,15 @@ const PersonalUploader = () => {
   console.log("Rendering PersonalUploader for authorized user");
 
   const renderPostsGrid = (category: Category) => {
-    const categoryFiles = files.filter(f => f.category === category);
+    // Filter files by category - handle both exact matches and null/undefined for backwards compatibility
+    const categoryFiles = files.filter(f => {
+      // If file has no category (old data), don't show it in any specific tab
+      if (!f.category) return false;
+      // Exact category match
+      return f.category === category;
+    });
     
-    console.log(`Rendering ${category} grid with ${categoryFiles.length} files`);
+    console.log(`Rendering ${category} grid with ${categoryFiles.length} files out of ${files.length} total`);
     
     if (loading) {
       return (

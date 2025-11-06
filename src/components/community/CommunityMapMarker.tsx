@@ -59,7 +59,8 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
   const [openPopup, setOpenPopup] = useState<boolean>(false);
   const [forceUpdate, setForceUpdate] = useState<boolean>(false);
   const markerRef = useRef<L.Marker>(null);
-  const [isMarkerVisible, setIsMarkerVisible] = useState<boolean>(false);
+  // Set marker visible immediately to load SIQS colors on page open
+  const [isMarkerVisible, setIsMarkerVisible] = useState<boolean>(true);
   
   // Stabilize SIQS score to prevent flicker
   const [stabilizedScore, setStabilizedScore] = useState<number | null>(null);
@@ -71,15 +72,6 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
       setStabilizedScore(initialSiqs);
       setRealTimeSiqs(initialSiqs);
     }
-  }, []);
-  
-  // Track marker visibility for lazy loading
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsMarkerVisible(true);
-    }, Math.random() * 500); // Stagger SIQS calculations
-    
-    return () => clearTimeout(timer);
   }, []);
   
   useEffect(() => {

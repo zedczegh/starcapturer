@@ -92,17 +92,22 @@ const CommunityAstroSpots: React.FC = () => {
     setTimeout(() => setShowMap(true), 50);
   }, []);
 
-  // Auto-toggle to refresh markers when page opens or tab changes
+  // Force marker refresh when activeView changes
+  useEffect(() => {
+    console.log('🔄 Community page activeView changed, refreshing markers');
+    // Force map remount to trigger SIQS recalculation
+    setShowMap(false);
+    setTimeout(() => setShowMap(true), 50);
+  }, [activeView]);
+  
+  // Auto-toggle to refresh markers when page opens
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('🔄 Community page visible - auto-toggling to refresh markers');
-        // Quick toggle to force marker refresh
-        setActiveView(prev => {
-          const temp = prev === 'certified' ? 'calculated' : 'certified';
-          setTimeout(() => setActiveView(prev), 10);
-          return prev;
-        });
+        console.log('🔄 Community page visible - refreshing markers');
+        // Force map refresh on visibility
+        setShowMap(false);
+        setTimeout(() => setShowMap(true), 50);
       }
     };
     

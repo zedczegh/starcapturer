@@ -61,6 +61,15 @@ const LocationMarker: React.FC<LocationMarkerProps> = ({
       return () => clearTimeout(timer);
     }
   }, [isCertified]);
+  
+  // Force SIQS refresh when activeView changes
+  useEffect(() => {
+    console.log(`LocationMarker: activeView changed to ${activeView}, forcing SIQS update`);
+    setForceUpdate(true);
+    setSiqsLoading(true);
+    const timer = setTimeout(() => setForceUpdate(false), 100);
+    return () => clearTimeout(timer);
+  }, [activeView]);
 
   if (!location.latitude || !location.longitude || 
       !isFinite(location.latitude) || !isFinite(location.longitude)) {
