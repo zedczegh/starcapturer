@@ -112,6 +112,7 @@ export const useMessageConversation = () => {
     }
     
     try {
+      // Send immediately without processing state for faster UX
       await sendMessage(activeConversation.id, text, imageFile, locationData);
     } catch (error) {
       console.error("Error sending message:", error);

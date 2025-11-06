@@ -13,20 +13,41 @@ export function useMessaging() {
     deleteConversation
   } = useMessageActions(fetchMessages, fetchConversations, setMessages);
 
-  // Wrap sendMessage to ensure it uses partnerId correctly
+  // Optimized sendMessage with optimistic updates
   const sendMessage = async (
     partnerId: string,
     text: string,
     imageFile?: File | null,
     locationData?: any
   ) => {
-    await sendMessageAction(partnerId, text, imageFile, locationData);
-    
-    // Immediately fetch messages after sending to ensure UI is updated
-    fetchMessages(partnerId);
-    
-    // Also refresh the conversations list
-    fetchConversations(true);
+    try {
+      // Optimistic update - add temporary message immediately
+      const tempMessage = {
+        id: `temp-${Date.now()}`,
+        sender_id: messages.length > 0 ? messages[0].sender_id : '',
+        receiver_id: partnerId,
+        message: text,
+        image_url: null,
+        created_at: new Date().toISOString(),
+        read: false,
+        sending: true
+      };
+      
+      setMessages(prev => [...prev, tempMessage]);
+      
+      // Send the actual message
+      await sendMessageAction(partnerId, text, imageFile, locationData);
+      
+      // Fetch fresh messages and conversations in parallel
+      await Promise.all([
+        fetchMessages(partnerId),
+        fetchConversations(true)
+      ]);
+    } catch (error) {
+      // Remove temp message on error
+      setMessages(prev => prev.filter(m => !m.id.startsWith('temp-')));
+      throw error;
+    }
   };
 
   return {

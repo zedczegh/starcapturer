@@ -44,10 +44,12 @@ const MessageContent = memo(({ user }: { user: any }) => {
     }
   }, [location.state, isAdmin]);
 
-  // Mark messages as viewed when the component mounts
+  // Mark messages as viewed when active conversation changes
   useEffect(() => {
-    markMessagesAsViewed();
-  }, [markMessagesAsViewed]);
+    if (activeConversation) {
+      markMessagesAsViewed();
+    }
+  }, [activeConversation, markMessagesAsViewed]);
 
   // Log conversation state for debugging
   useEffect(() => {

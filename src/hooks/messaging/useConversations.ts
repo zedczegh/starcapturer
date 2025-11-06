@@ -66,8 +66,8 @@ export const useConversations = () => {
   const fetchConversations = useCallback(async (forceFresh = false) => {
     if (!user) return;
     
-    // Only show loading indicator on initial load or forced refresh
-    if (conversations.length === 0 || forceFresh) {
+    // Only show loading on initial load
+    if (conversations.length === 0) {
       setLoading(true);
     }
 
@@ -82,13 +82,13 @@ export const useConversations = () => {
           setConversations(cachedConversations);
           setLoading(false);
           
-          // Start a background refresh after a delay to ensure we have fresh data eventually
+          // Background refresh without delay
           if (fetchTimeoutRef.current) {
             clearTimeout(fetchTimeoutRef.current);
           }
           fetchTimeoutRef.current = setTimeout(() => {
             fetchConversations(true);
-          }, 1000); // Refresh after 1 second in the background
+          }, 100);
           
           return;
         }

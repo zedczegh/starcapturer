@@ -18,7 +18,6 @@ export const useMessages = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
   const fetchInProgressRef = useRef<Record<string, boolean>>({});
-  const lastFetchTimeRef = useRef<Record<string, number>>({});
   const activePartnerRef = useRef<string | null>(null);
   
   // Cache the message parsing function
@@ -76,18 +75,6 @@ export const useMessages = () => {
     // Update active partner reference
     activePartnerRef.current = conversationPartnerId;
     
-    // Implement cache-based throttling to prevent excessive fetching
-    const now = Date.now();
-    const lastFetchTime = lastFetchTimeRef.current[conversationPartnerId] || 0;
-    const timeSinceLastFetch = now - lastFetchTime;
-    
-    // Only fetch if it's been more than 500ms since the last fetch for this conversation
-    // Unless it's the first fetch (lastFetchTime === 0)
-    if (lastFetchTime !== 0 && timeSinceLastFetch < 500) {
-      console.log(`Throttling message fetch for ${conversationPartnerId}, last fetch was ${timeSinceLastFetch}ms ago`);
-      return;
-    }
-    
     // Prevent duplicate requests for the same conversation
     if (fetchInProgressRef.current[conversationPartnerId]) {
       console.log("Fetch already in progress for this conversation, skipping");
@@ -95,21 +82,29 @@ export const useMessages = () => {
     }
     
     fetchInProgressRef.current[conversationPartnerId] = true;
-    setLoading(true);
-    
-    // Update last fetch time
-    lastFetchTimeRef.current[conversationPartnerId] = now;
     
     try {
       // Check cache first
       const cacheKey = `${MESSAGE_CACHE_KEY_PREFIX}${user.id}_${conversationPartnerId}`;
       const cachedMessages = optimizedCache.getCachedItem<any[]>(cacheKey);
       
-      if (cachedMessages) {
+      if (cachedMessages && cachedMessages.length > 0) {
         console.log("Using cached messages:", cachedMessages.length);
         setMessages(cachedMessages);
-        // Don't return early - still fetch fresh messages in the background
+        setLoading(false);
+        
+        // Background refresh - no delay
+        setTimeout(() => {
+          if (activePartnerRef.current === conversationPartnerId) {
+            fetchInProgressRef.current[conversationPartnerId] = false;
+            fetchMessages(conversationPartnerId);
+          }
+        }, 100);
+        return;
       }
+      
+      // Show loading only if no cache
+      setLoading(true);
       
       // Build query for messages between the two users
       const messagesData = await fetchFromSupabase(
