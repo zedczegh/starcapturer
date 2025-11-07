@@ -2,8 +2,11 @@
 /**
  * Milky Way visibility calculator
  * Estimates when the Milky Way core (Sagittarius region) is visible based on location and date
+ * Now properly integrated with astronomical night calculations
  * With performance optimization via caching
  */
+
+import { calculateAstronomicalNight } from '../astronomy/nightTimeCalculator';
 
 // Cache for Milky Way visibility calculations
 const milkyWayCache = new Map<string, {
@@ -56,42 +59,50 @@ export function calculateMilkyWayVisibility(
   const LST_set = calculateRiseSetLST(sagittariusDecl, latitude, sagittariusRA, false);
 
   // Convert LST to local time for today with proper timezone handling
-  const riseTime = lstToLocalTime(LST_rise, longitude, date);
-  const setTime = lstToLocalTime(LST_set, longitude, date);
+  const rawRiseTime = lstToLocalTime(LST_rise, longitude, date);
+  const rawSetTime = lstToLocalTime(LST_set, longitude, date);
   
   // Adjust for day boundary - if set time is before rise time, it's on the next day
-  if (setTime.getTime() < riseTime.getTime()) {
-    setTime.setDate(setTime.getDate() + 1);
+  if (rawSetTime.getTime() < rawRiseTime.getTime()) {
+    rawSetTime.setDate(rawSetTime.getDate() + 1);
   }
 
-  // Format times
-  const riseString = formatTimeString(riseTime);
-  const setString = formatTimeString(setTime);
+  // Get astronomical night boundaries
+  const { start: nightStart, end: nightEnd } = calculateAstronomicalNight(latitude, longitude, date);
+  
+  // Calculate the intersection of Sagittarius visibility and astronomical night
+  // Only times when BOTH conditions are met make sense
+  const visibleStart = new Date(Math.max(rawRiseTime.getTime(), nightStart.getTime()));
+  const visibleEnd = new Date(Math.min(rawSetTime.getTime(), nightEnd.getTime()));
+  
+  // Check if there's any overlap at all
+  const hasOverlap = visibleEnd.getTime() > visibleStart.getTime();
+  
+  // Calculate actual visible duration during dark sky
+  const visibleDurationMs = hasOverlap ? visibleEnd.getTime() - visibleStart.getTime() : 0;
+  const visibleDurationHours = visibleDurationMs / (1000 * 60 * 60);
+  
+  // Format times - use actual visible window
+  const riseString = hasOverlap ? formatTimeString(visibleStart) : '--:--';
+  const setString = hasOverlap ? formatTimeString(visibleEnd) : '--:--';
+  const bestViewing = hasOverlap ? formatTimeString(new Date((visibleStart.getTime() + visibleEnd.getTime()) / 2)) : '--:--';
 
-  // Calculate duration
-  let durationMs = setTime.getTime() - riseTime.getTime();
-  if (durationMs < 0) durationMs += 24 * 60 * 60 * 1000; // Add 24 hours if set is on next day
-  const durationHours = durationMs / (1000 * 60 * 60);
-
-  // Determine if Milky Way core is visible tonight
-  // Core is best visible during dark nights in summer months
+  // Determine if Milky Way core is actually visible
+  // Must have at least 1 hour of visibility during dark sky and be in the right season
   const month = date.getMonth();
   const isNorthern = latitude >= 0;
   
-  // Updated seasonal visibility logic based on hemisphere
+  // Core visibility is best during summer months when Sagittarius is high at night
   const isSummerMonths = isNorthern ? 
-    (month >= 3 && month <= 8) : // Apr-Sep for Northern Hemisphere
-    (month >= 9 || month <= 2);  // Oct-Mar for Southern Hemisphere
-
-  // Determine best viewing time - typically middle of the visibility window
-  const midPoint = new Date((riseTime.getTime() + setTime.getTime()) / 2);
-  const bestViewing = formatTimeString(midPoint);
-
-  // Enhanced visibility check for extreme latitudes
-  let isVisible = isSummerMonths;
+    (month >= 4 && month <= 8) : // May-Sep for Northern Hemisphere
+    (month >= 10 || month <= 2);  // Nov-Mar for Southern Hemisphere
   
-  // In polar regions during winter, the Milky Way core might not be visible at all
+  // Final visibility check: must have overlap AND reasonable duration AND be in season
+  let isVisible = hasOverlap && visibleDurationHours >= 1 && isSummerMonths;
+  
+  // Additional checks for specific conditions
   if (Math.abs(latitude) > 60) {
+    // At very high latitudes, core is rarely visible
     const isPolarWinter = (isNorthern && (month >= 10 || month <= 1)) || 
                          (!isNorthern && (month >= 4 && month <= 7));
     if (isPolarWinter) {
@@ -99,26 +110,16 @@ export function calculateMilkyWayVisibility(
     }
   }
   
-  // Near the equator, the Milky Way is visible year-round but at different times
-  if (Math.abs(latitude) < 30) {
-    isVisible = true;
-  }
-  
-  // For mid-latitude locations, check if the rise/set times make sense
-  // If the object never rises or sets (LST calculation returns default values),
-  // adjust visibility accordingly
-  if (LST_rise === 0 && LST_set === 12) {
-    if (latitude * sagittariusDecl > 0) { // Same hemisphere as Sagittarius
-      isVisible = latitude > 0 ? (month >= 3 && month <= 8) : (month >= 9 || month <= 2);
-    } else {
-      isVisible = false; // Opposite hemisphere during wrong season
-    }
+  // Check if Sagittarius declination makes it visible from this latitude
+  // If latitude + 60° < |declination|, it never gets high enough to see well
+  if (latitude < -60 || (isNorthern && latitude > 60)) {
+    isVisible = false;
   }
 
   const result = {
     rise: riseString,
     set: setString,
-    duration: formatDuration(durationHours),
+    duration: hasOverlap ? formatDuration(visibleDurationHours) : '0h 0m',
     bestViewing: bestViewing,
     isVisible: isVisible
   };
