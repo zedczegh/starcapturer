@@ -7,6 +7,8 @@ import { getWeatherData, getBortleScaleData } from "@/services/environmentalData
 import { v4 as uuidv4 } from "uuid";
 import { calculateNighttimeSIQS } from "@/utils/nighttimeSIQS";
 import { fetchForecastData } from "@/lib/api";
+import { logSiqsCalculation } from "@/services/siqs/siqsLogger";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Extract forecast fetching logic
 import { fetchForecastForLocation } from "./siqs/forecastFetcher";
@@ -19,6 +21,7 @@ export const useSIQSCalculation = (
   getCachedData: (key: string, maxAge?: number) => any
 ) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [isCalculating, setIsCalculating] = useState(false);
   const [weatherData, setWeatherData] = useState<any>(null);
   const [siqsScore, setSiqsScore] = useState<number | null>(null);
@@ -106,6 +109,27 @@ export const useSIQSCalculation = (
       
       // Ensure SIQS score is consistently on a 0-10 scale
       const normalizedScore = normalizeScore(siqsResult.score);
+      
+      // Log the SIQS calculation to database for analytics
+      try {
+        await logSiqsCalculation({
+          latitude: lat,
+          longitude: lng,
+          locationName: name,
+          siqsScore: normalizedScore,
+          astroNightCloudCover: forecastResult?.nighttimeCloudData?.average || null,
+          additionalMetadata: {
+            bortleScale: validBortleScale,
+            seeingConditions,
+            moonPhase: freshMoonPhase
+          },
+          userId: user?.id,
+          source: 'calculator'
+        });
+      } catch (logError) {
+        console.error('Failed to log SIQS calculation:', logError);
+        // Don't fail the whole operation if logging fails
+      }
       
       if (displayOnly) {
         // For consistency, always store the 0-10 scale value

@@ -548,6 +548,8 @@ export type Database = {
           location_name: string | null
           longitude: number | null
           siqs_score: number | null
+          source: string | null
+          spot_id: string | null
           user_id: string
         }
         Insert: {
@@ -559,6 +561,8 @@ export type Database = {
           location_name?: string | null
           longitude?: number | null
           siqs_score?: number | null
+          source?: string | null
+          spot_id?: string | null
           user_id: string
         }
         Update: {
@@ -570,9 +574,19 @@ export type Database = {
           location_name?: string | null
           longitude?: number | null
           siqs_score?: number | null
+          source?: string | null
+          spot_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "siqs_calculation_entries_spot_id_fkey"
+            columns: ["spot_id"]
+            isOneToOne: false
+            referencedRelation: "user_astro_spots"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_astro_spots: {
         Row: {
@@ -816,6 +830,21 @@ export type Database = {
         Args: { current_user_id: string; partner_id: string }
         Returns: undefined
       }
+      get_aggregated_siqs_locations: {
+        Args: { p_limit?: number; p_source?: string }
+        Returns: {
+          avg_siqs: number
+          calculation_count: number
+          last_calculated_at: string
+          latitude: number
+          location_name: string
+          longitude: number
+          max_siqs: number
+          min_siqs: number
+          source: string
+          spot_id: string
+        }[]
+      }
       get_or_create_wallet: {
         Args: { p_currency?: string; p_user_id: string }
         Returns: string
@@ -837,6 +866,19 @@ export type Database = {
         }[]
       }
       get_spot_type_color: { Args: { type_name: string }; Returns: string }
+      get_top_ranked_siqs_locations: {
+        Args: { p_limit?: number; p_min_calculations?: number }
+        Returns: {
+          avg_siqs: number
+          calculation_count: number
+          last_calculated_at: string
+          latitude: number
+          location_name: string
+          longitude: number
+          source: string
+          spot_id: string
+        }[]
+      }
       has_role: { Args: { required_role: string }; Returns: boolean }
       insert_astro_spot_reservation: {
         Args: { p_status?: string; p_timeslot_id: string; p_user_id: string }

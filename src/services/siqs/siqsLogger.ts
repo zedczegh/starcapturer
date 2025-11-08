@@ -18,7 +18,9 @@ export async function logSiqsCalculation({
   siqsScore,
   astroNightCloudCover,
   additionalMetadata,
-  userId
+  userId,
+  source = 'calculator',
+  spotId
 }: {
   latitude: number,
   longitude: number,
@@ -26,7 +28,9 @@ export async function logSiqsCalculation({
   siqsScore: number,
   astroNightCloudCover: number | null,
   additionalMetadata?: Record<string, any>,
-  userId?: string // for future, currently optional
+  userId?: string,
+  source?: 'calculator' | 'photopoint' | 'community' | 'search',
+  spotId?: string
 }) {
   try {
     const { error } = await supabase
@@ -40,6 +44,8 @@ export async function logSiqsCalculation({
           astro_night_cloud_cover: astroNightCloudCover,
           additional_metadata: additionalMetadata || null,
           user_id: userId || null,
+          source: source,
+          spot_id: spotId || null,
         },
       ]);
 

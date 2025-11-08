@@ -6,13 +6,16 @@ import SiqsSection from "@/components/about/SiqsSection";
 import AboutIntro from "@/components/about/AboutIntro";
 import PhotoPointsFeature from "@/components/about/PhotoPointsFeature";
 import AboutTeam from "@/components/about/AboutTeam";
+import SiqsAdminDashboard from "@/components/admin/SiqsAdminDashboard";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const SiqsPage = () => {
   const { t } = useLanguage();
+  const { isAdmin, loading: adminLoading } = useUserRole();
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -72,6 +75,14 @@ const SiqsPage = () => {
 
         <section id="siqs" className="mt-8 space-y-6">
           <SiqsSection />
+          
+          {/* Admin Analytics Dashboard */}
+          {!adminLoading && isAdmin && (
+            <div className="mt-8">
+              <SiqsAdminDashboard />
+            </div>
+          )}
+          
           <AboutIntro />
           <PhotoPointsFeature />
           <AboutTeam />

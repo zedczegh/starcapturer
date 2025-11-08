@@ -1,0 +1,238 @@
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { 
+  Database, 
+  MapPin, 
+  Users, 
+  TrendingUp, 
+  RefreshCw,
+  Filter,
+  ArrowUpDown
+} from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useSiqsAdminData } from '@/hooks/admin/useSiqsAdminData';
+import SiqsLocationCard from './SiqsLocationCard';
+import { motion } from 'framer-motion';
+
+const SiqsAdminDashboard: React.FC = () => {
+  const { t } = useLanguage();
+  const {
+    photopointLocations,
+    communityLocations,
+    topRankedLocations,
+    loading,
+    error,
+    refetch
+  } = useSiqsAdminData();
+
+  const [sortBy, setSortBy] = useState<'siqs' | 'count'>('siqs');
+
+  const sortLocations = (locations: any[]) => {
+    if (sortBy === 'siqs') {
+      return [...locations].sort((a, b) => b.avg_siqs - a.avg_siqs);
+    }
+    return [...locations].sort((a, b) => b.calculation_count - a.calculation_count);
+  };
+
+  const totalCalculations = 
+    photopointLocations.reduce((sum, loc) => sum + loc.calculation_count, 0) +
+    communityLocations.reduce((sum, loc) => sum + loc.calculation_count, 0);
+
+  if (error) {
+    return (
+      <Card className="bg-red-900/20 border-red-500/30">
+        <CardContent className="p-6">
+          <p className="text-red-400">{t('Error loading admin data', '加载管理员数据时出错')}: {error}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-6"
+    >
+      {/* Header */}
+      <Card className="bg-gradient-to-r from-purple-900/30 to-blue-900/30 border-purple-700/30">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-purple-500/20 p-2.5 rounded-lg">
+                <Database className="h-5 w-5 text-purple-400" />
+              </div>
+              <div>
+                <CardTitle className="text-lg text-cosmic-100">
+                  {t('SIQS Analytics Dashboard', 'SIQS分析仪表板')}
+                </CardTitle>
+                <p className="text-xs text-cosmic-400 mt-1">
+                  {t('Admin-only data analytics and location insights', '仅限管理员的数据分析和位置洞察')}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={refetch}
+              disabled={loading}
+              className="text-xs"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
+              {t('Refresh', '刷新')}
+            </Button>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-cosmic-800/40 border-cosmic-700/30">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-blue-500/20 p-2 rounded-lg">
+                <MapPin className="h-5 w-5 text-blue-400" />
+              </div>
+              <div>
+                <p className="text-xs text-cosmic-400">{t('Photopoints', '照片点')}</p>
+                <p className="text-2xl font-bold text-cosmic-100">{photopointLocations.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-cosmic-800/40 border-cosmic-700/30">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-green-500/20 p-2 rounded-lg">
+                <Users className="h-5 w-5 text-green-400" />
+              </div>
+              <div>
+                <p className="text-xs text-cosmic-400">{t('Community Spots', '社区点位')}</p>
+                <p className="text-2xl font-bold text-cosmic-100">{communityLocations.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-cosmic-800/40 border-cosmic-700/30">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-purple-500/20 p-2 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-purple-400" />
+              </div>
+              <div>
+                <p className="text-xs text-cosmic-400">{t('Total Calculations', '总计算次数')}</p>
+                <p className="text-2xl font-bold text-cosmic-100">{totalCalculations}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Sorting Control */}
+      <div className="flex items-center gap-2">
+        <Button
+          variant={sortBy === 'siqs' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setSortBy('siqs')}
+          className="text-xs"
+        >
+          <ArrowUpDown className="h-3 w-3 mr-1.5" />
+          {t('Sort by SIQS', '按SIQS排序')}
+        </Button>
+        <Button
+          variant={sortBy === 'count' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setSortBy('count')}
+          className="text-xs"
+        >
+          <Filter className="h-3 w-3 mr-1.5" />
+          {t('Sort by Count', '按次数排序')}
+        </Button>
+      </div>
+
+      {/* Locations Tabs */}
+      <Tabs defaultValue="ranked" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 bg-cosmic-800/40">
+          <TabsTrigger value="ranked" className="text-xs">
+            <TrendingUp className="h-3.5 w-3.5 mr-1.5" />
+            {t('Top Ranked', '排名最高')}
+          </TabsTrigger>
+          <TabsTrigger value="photopoints" className="text-xs">
+            <MapPin className="h-3.5 w-3.5 mr-1.5" />
+            {t('Photopoints', '照片点')}
+          </TabsTrigger>
+          <TabsTrigger value="community" className="text-xs">
+            <Users className="h-3.5 w-3.5 mr-1.5" />
+            {t('Community', '社区')}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="ranked" className="mt-4">
+          {loading ? (
+            <div className="text-center py-8 text-cosmic-400">
+              {t('Loading...', '加载中...')}
+            </div>
+          ) : topRankedLocations.length === 0 ? (
+            <Card className="bg-cosmic-800/40 border-cosmic-700/30">
+              <CardContent className="p-8 text-center">
+                <p className="text-cosmic-400">{t('No ranked locations found', '未找到排名位置')}</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sortLocations(topRankedLocations).map((location, index) => (
+                <SiqsLocationCard key={`${location.latitude}-${location.longitude}-${index}`} location={location} index={index} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="photopoints" className="mt-4">
+          {loading ? (
+            <div className="text-center py-8 text-cosmic-400">
+              {t('Loading...', '加载中...')}
+            </div>
+          ) : photopointLocations.length === 0 ? (
+            <Card className="bg-cosmic-800/40 border-cosmic-700/30">
+              <CardContent className="p-8 text-center">
+                <p className="text-cosmic-400">{t('No photopoint locations found', '未找到照片点位置')}</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sortLocations(photopointLocations).map((location, index) => (
+                <SiqsLocationCard key={`${location.latitude}-${location.longitude}-${index}`} location={location} index={index} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="community" className="mt-4">
+          {loading ? (
+            <div className="text-center py-8 text-cosmic-400">
+              {t('Loading...', '加载中...')}
+            </div>
+          ) : communityLocations.length === 0 ? (
+            <Card className="bg-cosmic-800/40 border-cosmic-700/30">
+              <CardContent className="p-8 text-center">
+                <p className="text-cosmic-400">{t('No community locations found', '未找到社区位置')}</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sortLocations(communityLocations).map((location, index) => (
+                <SiqsLocationCard key={`${location.latitude}-${location.longitude}-${index}`} location={location} index={index} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+    </motion.div>
+  );
+};
+
+export default SiqsAdminDashboard;

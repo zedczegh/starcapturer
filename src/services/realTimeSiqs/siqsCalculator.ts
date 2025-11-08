@@ -3,6 +3,8 @@ import { fetchForecastData, fetchWeatherData } from "@/lib/api";
 import { calculateSIQSWithWeatherData } from "@/hooks/siqs/siqsCalculationUtils";
 import { fetchLightPollutionData } from "@/lib/api/pollution";
 import { fetchClearSkyRate } from "@/lib/api/clearSkyRate";
+import { logSiqsCalculation } from "@/services/siqs/siqsLogger";
+import { supabase } from "@/integrations/supabase/client";
 import {
   hasCachedSiqs,
   getCachedSiqs,
@@ -262,6 +264,22 @@ export async function calculateRealTimeSiqs(
       result,
       timestamp: Date.now()
     });
+    
+    // Log to database for analytics (async, don't wait)
+    logSiqsCalculation({
+      latitude,
+      longitude,
+      locationName: enhancedLocation?.name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+      siqsScore: finalScore,
+      astroNightCloudCover: weatherDataWithClearSky.nighttimeCloudData?.average || null,
+      additionalMetadata: {
+        bortleScale: finalBortleScale,
+        terrainCorrected: !!terrainCorrectedScale,
+        singleHourSampling: useSingleHourSampling && forecastData?.hourly ? true : false
+      },
+      userId: (await supabase.auth.getUser()).data.user?.id,
+      source: 'search'
+    }).catch(err => console.warn('Failed to log SIQS calculation:', err));
     
     return result;
     

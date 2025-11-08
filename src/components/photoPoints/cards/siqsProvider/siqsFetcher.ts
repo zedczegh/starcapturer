@@ -5,6 +5,8 @@
 
 import { updateSiqsCache } from './cacheManager';
 import { calculateRealTimeSiqs } from '@/services/realTimeSiqs/siqsCalculator';
+import { logSiqsCalculation } from '@/services/siqs/siqsLogger';
+import { supabase } from '@/integrations/supabase/client';
 import { BatchJob } from './types';
 
 // Function to call the SIQS service
@@ -35,6 +37,7 @@ export const callSiqsService = async (
 // Batch process SIQS requests
 export const processSiqsBatch = async (jobs: BatchJob[]): Promise<Map<string, any>> => {
   const results = new Map<string, any>();
+  const userId = (await supabase.auth.getUser()).data.user?.id;
   
   // Process jobs sequentially to avoid overwhelming API
   for (const job of jobs) {
@@ -56,6 +59,21 @@ export const processSiqsBatch = async (jobs: BatchJob[]): Promise<Map<string, an
         if (job.cacheKey) {
           updateSiqsCache(job.cacheKey, result);
         }
+        
+        // Log to database for analytics (async, don't block)
+        logSiqsCalculation({
+          latitude: job.latitude,
+          longitude: job.longitude,
+          locationName: `Photopoint ${job.latitude.toFixed(4)}, ${job.longitude.toFixed(4)}`,
+          siqsScore: result.siqs || 0,
+          astroNightCloudCover: result.weatherData?.nighttimeCloudData?.average || null,
+          additionalMetadata: {
+            bortleScale: job.bortleScale || 5,
+            source: 'photopoint'
+          },
+          userId: userId,
+          source: 'photopoint'
+        }).catch(err => console.warn('Failed to log SIQS:', err));
       }
     } catch (error) {
       console.error(`Error processing job ${job.id}:`, error);
