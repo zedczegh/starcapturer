@@ -7,7 +7,7 @@ export const useUserRole = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const checkAdminStatus = useCallback(async (forceRefresh = false) => {
+  const checkAdminStatus = useCallback(async () => {
     if (!user) {
       console.log('[useUserRole] No user, setting isAdmin to false');
       setIsAdmin(false);
@@ -16,12 +16,6 @@ export const useUserRole = () => {
     }
 
     try {
-      // Force session refresh if requested (helps pick up new role assignments)
-      if (forceRefresh) {
-        console.log('[useUserRole] Forcing session refresh for user:', user.email);
-        await supabase.auth.refreshSession();
-      }
-
       console.log('[useUserRole] Checking admin status for user:', user.email);
       
       const { data, error } = await supabase
@@ -43,16 +37,8 @@ export const useUserRole = () => {
   }, [user]);
 
   useEffect(() => {
-    checkAdminStatus(true); // Force refresh on mount to ensure latest roles
+    checkAdminStatus();
   }, [checkAdminStatus]);
 
-  // Also check when session changes (e.g., after login/logout)
-  useEffect(() => {
-    if (session) {
-      console.log('[useUserRole] Session changed, rechecking admin status');
-      checkAdminStatus(false);
-    }
-  }, [session, checkAdminStatus]);
-
-  return { isAdmin, loading, refetchRole: () => checkAdminStatus(true) };
+  return { isAdmin, loading, refetchRole: checkAdminStatus };
 };
