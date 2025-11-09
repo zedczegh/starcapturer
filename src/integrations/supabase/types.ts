@@ -826,6 +826,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_admin: { Args: { user_email: string }; Returns: Json }
       delete_conversation: {
         Args: { current_user_id: string; partner_id: string }
         Returns: undefined
@@ -916,7 +917,16 @@ export type Database = {
         Args: { username_to_check: string }
         Returns: boolean
       }
+      list_admins: {
+        Args: never
+        Returns: {
+          email: string
+          granted_at: string
+          user_id: string
+        }[]
+      }
       ping_db: { Args: never; Returns: boolean }
+      remove_admin: { Args: { user_email: string }; Returns: Json }
       update_astro_spot_timeslot:
         | {
             Args: {
