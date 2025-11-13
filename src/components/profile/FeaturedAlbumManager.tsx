@@ -66,6 +66,15 @@ export const FeaturedAlbumManager: React.FC<FeaturedAlbumManagerProps> = ({
       return;
     }
 
+    // Check file size (20MB limit)
+    const maxSize = 20 * 1024 * 1024; // 20MB in bytes
+    for (const file of Array.from(files)) {
+      if (file.size > maxSize) {
+        toast.error(`File "${file.name}" exceeds 20MB limit`);
+        return;
+      }
+    }
+
     setUploading(true);
 
     try {
@@ -171,16 +180,16 @@ export const FeaturedAlbumManager: React.FC<FeaturedAlbumManagerProps> = ({
                   Select your best photos to showcase ({images.length}/9)
                 </p>
                 <div>
-                  <Label htmlFor="featured-file" className="text-foreground">Select Images</Label>
+                  <Label htmlFor="featured-file" className="text-foreground">Select Files (Max 20MB each)</Label>
                   <Input
                     id="featured-file"
                     type="file"
-                    accept="image/*"
                     multiple
                     onChange={handleUpload}
                     disabled={uploading}
                     className="bg-cosmic-800 border-cosmic-700 text-foreground"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">All file types supported</p>
                 </div>
                 {uploading && (
                   <div className="flex items-center gap-2 text-primary">
@@ -218,6 +227,17 @@ export const FeaturedAlbumManager: React.FC<FeaturedAlbumManagerProps> = ({
                   alt={`Featured ${index + 1}`}
                   className="w-full h-full object-cover"
                   loading="lazy"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      const fallback = document.createElement('div');
+                      fallback.className = 'w-full h-full flex flex-col items-center justify-center bg-cosmic-900';
+                      fallback.innerHTML = '<svg class="h-8 w-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>';
+                      parent.appendChild(fallback);
+                    }
+                  }}
                 />
                 
                 {/* Overlay on hover */}

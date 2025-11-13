@@ -70,6 +70,15 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({ userId, isOw
       return;
     }
 
+    // Check file size (20MB limit)
+    const maxSize = 20 * 1024 * 1024; // 20MB in bytes
+    for (const file of Array.from(files)) {
+      if (file.size > maxSize) {
+        toast.error(`File "${file.name}" exceeds 20MB limit`);
+        return;
+      }
+    }
+
     setUploading(true);
 
     try {
@@ -197,16 +206,16 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({ userId, isOw
                   />
                 </div>
                 <div>
-                  <Label htmlFor="file" className="text-foreground">Select Images</Label>
+                  <Label htmlFor="file" className="text-foreground">Select Files (Max 20MB each)</Label>
                   <Input
                     id="file"
                     type="file"
-                    accept="image/*"
                     multiple
                     onChange={handleUpload}
                     disabled={uploading}
                     className="bg-cosmic-800 border-cosmic-700 text-foreground"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">All file types supported</p>
                 </div>
                 {uploading && (
                   <div className="flex items-center gap-2 text-primary">
@@ -249,18 +258,23 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({ userId, isOw
                 whileHover={{ scale: 1.02 }}
                 className="relative aspect-square overflow-hidden rounded-sm border border-cosmic-700 hover:border-primary/50 transition-all bg-cosmic-950 group cursor-pointer"
               >
-                {post.file_type.startsWith('image/') ? (
-                  <OptimizedImage
-                    src={getFileUrl(post.file_path)}
-                    alt={post.description || post.file_name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-cosmic-900">
-                    <Image className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                )}
+                <OptimizedImage
+                  src={getFileUrl(post.file_path)}
+                  alt={post.description || post.file_name}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  loading="lazy"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      const fallback = document.createElement('div');
+                      fallback.className = 'w-full h-full flex flex-col items-center justify-center bg-cosmic-900 text-center p-2';
+                      fallback.innerHTML = `<svg class="h-8 w-8 text-muted-foreground mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg><span class="text-xs text-muted-foreground">${post.file_name}</span>`;
+                      parent.appendChild(fallback);
+                    }
+                  }}
+                />
                 
                 {/* Overlay on hover */}
                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
