@@ -18,6 +18,8 @@ import ProfileAstroSpots from "@/components/profile/mini/ProfileAstroSpots";
 import ProfileActions from "@/components/profile/mini/ProfileActions";
 import ProfileLoadingState from "@/components/profile/mini/ProfileLoadingState";
 import ProfileNotFound from "@/components/profile/mini/ProfileNotFound";
+import { UserPostsManager } from "@/components/profile/UserPostsManager";
+import { FeaturedAlbumManager } from "@/components/profile/FeaturedAlbumManager";
 
 const ProfileMini: React.FC = () => {
   const { id: profileId } = useParams();
@@ -154,23 +156,33 @@ const ProfileMini: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-cosmic-950">
-      <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 pt-20 pb-8">
-        <div className="glassmorphism rounded-xl shadow-glow overflow-hidden">
-          {/* Mobile-optimized header with better spacing */}
-          <div className="p-4 sm:p-6 md:p-8 border-b border-cosmic-700/30">
+    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-cosmic-950 to-slate-900">
+      <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 pt-20 pb-8">
+        <div className="glassmorphism rounded-2xl shadow-2xl shadow-primary/5 overflow-hidden border border-primary/10 hover:shadow-primary/10 transition-shadow duration-500">
+          {/* Enhanced header with gradient */}
+          <div className="p-5 sm:p-7 md:p-9 border-b border-primary/20 bg-gradient-to-br from-cosmic-900/50 to-cosmic-950/50">
             <ProfileHeader profile={profile} userId={profileId} />
           </div>
           
-          {/* Bio section with proper mobile padding */}
+          {/* Enhanced Bio section */}
           {profile.bio && (
-            <div className="p-4 sm:p-6 md:p-8 border-b border-cosmic-700/30">
+            <div className="p-5 sm:p-7 md:p-9 border-b border-primary/10 bg-cosmic-900/30">
               <ProfileBio bio={profile.bio} t={t} />
             </div>
           )}
+
+          {/* Featured Album with enhanced styling */}
+          <div className="p-5 sm:p-7 md:p-9 border-b border-primary/10 bg-gradient-to-br from-cosmic-900/20 to-transparent">
+            <FeaturedAlbumManager userId={profileId!} isOwnProfile={false} />
+          </div>
+
+          {/* Posts section with enhanced styling */}
+          <div className="p-5 sm:p-7 md:p-9 border-b border-primary/10">
+            <UserPostsManager userId={profileId!} isOwnProfile={false} />
+          </div>
           
-          {/* Spots section */}
-          <div className="p-4 sm:p-6 md:p-8">
+          {/* Spots section with enhanced styling */}
+          <div className="p-5 sm:p-7 md:p-9 bg-cosmic-900/30">
             <ProfileAstroSpots 
               sortedAstroSpots={sortedAstroSpots}
               loadingSpots={loadingSpots}
@@ -182,8 +194,8 @@ const ProfileMini: React.FC = () => {
             />
           </div>
           
-          {/* Actions section with sticky bottom on mobile */}
-          <div className="sticky bottom-0 p-4 sm:p-6 md:p-8 bg-cosmic-900/95 backdrop-blur-xl border-t border-cosmic-700/30">
+          {/* Enhanced Actions section with sticky bottom */}
+          <div className="sticky bottom-0 p-5 sm:p-7 md:p-9 bg-cosmic-900/98 backdrop-blur-2xl border-t border-primary/20 shadow-lg">
             <ProfileActions
               isFromMessages={isFromMessages}
               user={user}

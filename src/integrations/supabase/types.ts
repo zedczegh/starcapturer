@@ -639,6 +639,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_featured_album: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          file_path: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          file_path: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          file_path?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_messages: {
         Row: {
           created_at: string
@@ -709,6 +733,45 @@ export type Database = {
           last_four?: string | null
           payment_type?: string
           stripe_payment_method_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_posts: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          id?: string
           updated_at?: string
           user_id?: string
         }

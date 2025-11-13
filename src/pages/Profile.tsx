@@ -243,6 +243,11 @@ const Profile = () => {
     setAvatarFile(null);
   };
 
+  const handleAvatarSelectFromAlbum = (imageUrl: string) => {
+    setAvatarUrl(imageUrl);
+    setAvatarFile(null); // Clear file since we're using URL from album
+  };
+
   if (!authChecked || loading) return <ProfileLoader />;
   
   if (authError) {
@@ -286,6 +291,8 @@ const Profile = () => {
         tags={tags}
         setTags={setTags}
         bio={profile?.bio}
+        userId={user.id}
+        onAvatarSelectFromAlbum={handleAvatarSelectFromAlbum}
       />
     </div>
   );
