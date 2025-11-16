@@ -57,6 +57,7 @@ const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({
         longitude={spot.longitude}
         bortleScale={spot.bortlescale}
         siqs={spot.siqs}
+        spotId={spotId}
       />
       
       <SpotDetails

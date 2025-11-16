@@ -16,13 +16,15 @@ interface SpotAbstractDisplayProps {
   longitude: number;
   bortleScale?: number;
   siqs?: number | { score: number; isViable: boolean } | null;
+  spotId?: string;
 }
 
 const SpotAbstractDisplay: React.FC<SpotAbstractDisplayProps> = ({
   latitude,
   longitude,
   bortleScale = 5,
-  siqs
+  siqs,
+  spotId
 }) => {
   const { t } = useLanguage();
   const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
@@ -47,7 +49,10 @@ const SpotAbstractDisplay: React.FC<SpotAbstractDisplayProps> = ({
       setLoading(true);
       try {
         const effectiveBortleScale = bortleScale || 5; // Use default Bortle scale of 5 if null
-        const result = await calculateRealTimeSiqs(latitude, longitude, effectiveBortleScale);
+        const result = await calculateRealTimeSiqs(latitude, longitude, effectiveBortleScale, {
+          source: 'community',
+          spotId: spotId
+        });
         if (result?.siqs) {
           setRealTimeSiqs(normalizeToSiqsScale(result.siqs));
         } else {

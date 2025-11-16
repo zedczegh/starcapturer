@@ -109,6 +109,8 @@ const CommunitySpotsList: React.FC<CommunitySpotsListProps> = React.memo(({
                   }
                   priorityLevel={isMobile ? 'low' : 'medium'}
                   debugLabel={`community-card-${spot.id.substring(0, 6)}`}
+                  source="community"
+                  spotId={spot.id}
                 />
                 <div className="transition-shadow group-hover:shadow-xl group-hover:ring-2 group-hover:ring-primary rounded-xl">
                   <LocationCard

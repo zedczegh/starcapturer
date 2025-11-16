@@ -12,6 +12,8 @@ interface RealTimeSiqsFetcherProps {
   longitude?: number;
   bortleScale?: number;
   onSiqsCalculated: (siqs: number | null, loading: boolean) => void;
+  source?: 'calculator' | 'photopoint' | 'community' | 'search';
+  spotId?: string;
 }
 
 // In-memory cache across component instances
@@ -25,7 +27,9 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
   latitude,
   longitude,
   bortleScale = 5,
-  onSiqsCalculated
+  onSiqsCalculated,
+  source,
+  spotId
 }) => {
   const [loading, setLoading] = useState(false);
   const [lastFetchTimestamp, setLastFetchTimestamp] = useState<number>(0);
@@ -105,7 +109,9 @@ const RealTimeSiqsFetcher: React.FC<RealTimeSiqsFetcherProps> = ({
         {
           useSingleHourSampling: true,
           targetHour: 1,
-          cacheDurationMins: 5
+          cacheDurationMins: 5,
+          source: source,
+          spotId: spotId
         }
       ).then(result => {
         if (result && result.siqs > 0) {
