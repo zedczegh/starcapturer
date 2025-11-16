@@ -113,7 +113,8 @@ const SIQSCalculator: React.FC<SIQSCalculatorProps> = ({
         additionalMetadata: {
           language,
           source: "SIQSCalculator"
-        }
+        },
+        source: 'calculator'
       });
     }
   }, [

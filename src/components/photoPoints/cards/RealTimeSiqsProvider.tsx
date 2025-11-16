@@ -15,7 +15,9 @@ interface RealTimeSiqsProviderProps {
   onSiqsCalculated: (siqs: number | null, loading: boolean, confidence?: number) => void;
   priorityLevel?: 'high' | 'medium' | 'low';
   forceUpdate?: boolean;
-  debugLabel?: string;  // Added debugLabel as optional prop
+  debugLabel?: string;
+  source?: 'calculator' | 'photopoint' | 'community' | 'search';
+  spotId?: string;
 }
 
 const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
@@ -29,7 +31,9 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
   onSiqsCalculated,
   priorityLevel = 'low',
   forceUpdate = false,
-  debugLabel  // Make it available in the component
+  debugLabel,
+  source,
+  spotId
 }) => {
   const [initialized, setInitialized] = useState(false);
   
@@ -79,6 +83,8 @@ const RealTimeSiqsProvider: React.FC<RealTimeSiqsProviderProps> = ({
       longitude={longitude}
       bortleScale={bortleScale}
       onSiqsCalculated={onSiqsCalculated}
+      source={source}
+      spotId={spotId}
     />
   );
 };

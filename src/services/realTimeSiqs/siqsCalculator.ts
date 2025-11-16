@@ -71,6 +71,8 @@ export async function calculateRealTimeSiqs(
     targetHour?: number;
     cacheDurationMins?: number;
     priority?: 'high' | 'medium' | 'low';
+    source?: 'calculator' | 'photopoint' | 'community' | 'search';
+    spotId?: string;
   } = {}
 ): Promise<SiqsResult> {
   if (!isFinite(latitude) || !isFinite(longitude)) {
@@ -278,7 +280,8 @@ export async function calculateRealTimeSiqs(
         singleHourSampling: useSingleHourSampling && forecastData?.hourly ? true : false
       },
       userId: (await supabase.auth.getUser()).data.user?.id,
-      source: 'search'
+      source: options?.source || 'search',
+      spotId: options?.spotId
     }).catch(err => console.warn('Failed to log SIQS calculation:', err));
     
     return result;
