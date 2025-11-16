@@ -295,22 +295,9 @@ const BortleNow: React.FC = () => {
     requestCameraPermission("dark");
   };
 
-  const calculateBortleFromStars = (starCount: number, skyBrightness: number): number => {
-    const normalizedStarCount = Math.min(10, starCount / 10);
-    const normalizedBrightness = 10 - (skyBrightness / 25.5);
-    
-    const combinedMetric = (normalizedBrightness * 0.7) + (normalizedStarCount * 0.3);
-    
-    let bortle = 10 - combinedMetric;
-    
-    bortle = Math.max(1, Math.min(9, bortle));
-    
-    console.log(`Star count: ${starCount}, Brightness: ${skyBrightness}, Calculated Bortle: ${bortle.toFixed(1)}`);
-    
-    return bortle;
-  };
 
   const performLightFrameCapture = async () => {
+    let stream: MediaStream | null = null;
     try {
       setError(null);
       setCameraReadings(prev => ({ ...prev, lightFrame: false }));
@@ -323,38 +310,112 @@ const BortleNow: React.FC = () => {
       
       toast.info(
         t("Analyzing Sky Brightness", "分析天空亮度"),
-        t("Processing camera data and validating measurement...", "处理相机数据并验证测量...")
+        t("Capturing image from camera...", "从相机捕获图像...")
       );
       
-      // Simulate more realistic camera processing
-      await new Promise(resolve => setTimeout(resolve, 4000));
+      // Access the camera
+      stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        } 
+      });
       
-      // Get more sophisticated measurement
+      // Create video element to capture frame
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.play();
+      
+      // Wait for video to be ready
+      await new Promise((resolve) => {
+        video.onloadedmetadata = () => {
+          resolve(true);
+        };
+      });
+      
+      // Wait a bit for camera to adjust
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Create canvas and capture frame
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        throw new Error(t("Failed to create canvas context", "无法创建画布上下文"));
+      }
+      
+      ctx.drawImage(video, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      
+      // Stop camera stream
+      stream.getTracks().forEach(track => track.stop());
+      stream = null;
+      
+      toast.info(
+        t("Processing Image", "处理图像"),
+        t("Counting stars and analyzing brightness...", "计算星数并分析亮度...")
+      );
+      
+      // Import star analysis utilities
+      const { countStarsInImage, calculateBortleFromStars } = await import('@/utils/starCountUtils');
+      
+      // Count stars in the captured image
+      const detectedStarCount = countStarsInImage(imageData);
+      
+      // Calculate average sky brightness (excluding bright spots/stars)
+      let totalBrightness = 0;
+      let pixelCount = 0;
+      
+      for (let i = 0; i < imageData.data.length; i += 4) {
+        const brightness = (imageData.data[i] + imageData.data[i + 1] + imageData.data[i + 2]) / 3;
+        
+        // Only include darker pixels (exclude stars and bright objects)
+        if (brightness < 180) {
+          totalBrightness += brightness;
+          pixelCount++;
+        }
+      }
+      
+      const avgBrightness = pixelCount > 0 ? totalBrightness / pixelCount : 128;
+      
+      // Calculate Bortle scale from actual star count and brightness
+      const measuredBortle = calculateBortleFromStars(detectedStarCount, avgBrightness);
+      
       const currentLat = parseFloat(latitude);
       const currentLng = parseFloat(longitude);
       
-      // Use validation system for camera measurements too
+      // Validate with multiple sources for higher accuracy
       const { validateBortleScale } = await import('@/utils/advancedBortleValidation');
-      const validation = await validateBortleScale(currentLat, currentLng, locationName);
+      const validation = await validateBortleScale(currentLat, currentLng, locationName, measuredBortle);
       
-      // Simulate star count based on validated measurement
-      const simulatedStarCount = Math.max(0, Math.floor(120 * (1 - (validation.validatedScale - 1) / 8) + Math.random() * 25 - 12));
-      setStarCount(simulatedStarCount);
-      
+      setStarCount(detectedStarCount);
       setBortleScale(validation.validatedScale);
       setValidationResult(validation);
       setCameraReadings(prev => ({ ...prev, lightFrame: true }));
       
-      saveBortleMeasurement(currentLat, currentLng, validation.validatedScale, simulatedStarCount);
+      // Save measurement with actual star count
+      saveBortleMeasurement(currentLat, currentLng, validation.validatedScale, detectedStarCount);
+      
+      // Also save to star analysis cache
+      const { processStarMeasurement } = await import('@/utils/starAnalysis');
+      await processStarMeasurement(imageData, currentLat, currentLng);
       
       toast.success(
-        t("Measurement Validated", "测量已验证"),
+        t("Measurement Complete", "测量完成"),
         t(
-          `Advanced analysis complete. Stars detected: ${simulatedStarCount}. Validated Bortle: ${validation.validatedScale.toFixed(1)}`,
-          `高级分析完成。检测星数：${simulatedStarCount}。验证波特尔：${validation.validatedScale.toFixed(1)}`
+          `Stars detected: ${detectedStarCount}. Validated Bortle: ${validation.validatedScale.toFixed(1)}`,
+          `检测星数：${detectedStarCount}。验证波特尔：${validation.validatedScale.toFixed(1)}`
         )
       );
     } catch (error) {
+      // Clean up stream if error occurs
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+      
       setError((error as Error).message);
       toast.error(
         t("Error", "错误"),
