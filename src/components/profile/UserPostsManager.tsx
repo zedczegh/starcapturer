@@ -222,7 +222,7 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ delay: index * 0.05 }}
-                className="bg-cosmic-800/40 backdrop-blur-xl border border-primary/10 rounded-lg overflow-hidden"
+                className="bg-cosmic-800/40 backdrop-blur-xl border border-primary/10 rounded-lg overflow-hidden group"
               >
                 {/* Post Images Carousel */}
                 <div className="relative">
@@ -231,11 +231,12 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
                     alt={post.description || post.file_name}
                   />
                   {isOwnProfile && selectedTab === 'my-feeds' && (
-                    <div className="absolute top-2 right-2 flex gap-2 z-10">
+                    <div className="absolute top-2 right-2 flex gap-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                       <Button
                         variant="secondary"
                         size="sm"
                         onClick={() => setEditingPost(post)}
+                        className="backdrop-blur-md"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -243,6 +244,7 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
                         variant="destructive"
                         size="sm"
                         onClick={() => handleDelete(post.id, post.file_path)}
+                        className="backdrop-blur-md"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
