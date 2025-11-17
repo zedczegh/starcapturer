@@ -94,7 +94,7 @@ export const SharePostDialog: React.FC<SharePostDialogProps> = ({
 
       const senderUsername = profile?.username || 'Someone';
 
-      // Get the first image from images array or file_path
+      // Get the first image from images array or file_path and convert to full URL
       let imageUrl = '';
       if (post.images && Array.isArray(post.images) && post.images.length > 0) {
         const firstImage = post.images[0];
