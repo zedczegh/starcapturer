@@ -76,10 +76,10 @@ export const SharePostDialog: React.FC<SharePostDialogProps> = ({
   const handleShare = async (recipientId: string) => {
     setSending(true);
     try {
-      // Get post details
+      // Get post details with images array
       const { data: post, error: postError } = await supabase
         .from('user_posts')
-        .select('description, file_path')
+        .select('description, file_path, images, user_id')
         .eq('id', postId)
         .single();
 
@@ -94,6 +94,18 @@ export const SharePostDialog: React.FC<SharePostDialogProps> = ({
 
       const senderUsername = profile?.username || 'Someone';
 
+      // Get the first image from images array or file_path
+      let imageUrl = '';
+      if (post.images && Array.isArray(post.images) && post.images.length > 0) {
+        const firstImage = post.images[0];
+        imageUrl = typeof firstImage === 'string' ? firstImage : '';
+      } else if (post.file_path) {
+        const { data } = supabase.storage
+          .from('user-posts')
+          .getPublicUrl(post.file_path);
+        imageUrl = data.publicUrl;
+      }
+
       // Send message with post
       const { error: messageError } = await supabase
         .from('user_messages')
@@ -104,8 +116,9 @@ export const SharePostDialog: React.FC<SharePostDialogProps> = ({
           metadata: {
             type: 'shared_post',
             post_id: postId,
+            post_owner_id: post.user_id,
             post_description: post.description,
-            post_file_path: post.file_path
+            post_image_url: imageUrl
           }
         });
 
@@ -136,70 +149,81 @@ export const SharePostDialog: React.FC<SharePostDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-cosmic-900/95 backdrop-blur-xl border-primary/20 max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-xl bg-gradient-to-r from-white to-primary bg-clip-text text-transparent">
+      <DialogContent className="bg-gradient-to-br from-cosmic-900 via-cosmic-900/98 to-cosmic-950 backdrop-blur-2xl border border-primary/30 shadow-2xl max-w-md">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-white via-primary-foreground to-primary bg-clip-text text-transparent">
             {t('Share Post', '分享帖子')}
           </DialogTitle>
+          <p className="text-sm text-cosmic-300 mt-1">
+            {t('Send this post to your connections', '将此帖子发送给您的联系人')}
+          </p>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-3 mt-2">
           {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cosmic-400" />
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cosmic-400 group-focus-within:text-primary transition-colors" />
             <Input
               placeholder={t('Search users...', '搜索用户...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-cosmic-950/50 border-primary/20"
+              className="pl-10 bg-cosmic-800/30 border-cosmic-700/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 rounded-xl transition-all"
             />
           </div>
 
           {/* Users List */}
-          <div className="max-h-96 overflow-y-auto space-y-2">
+          <div className="max-h-[420px] overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
             {loading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm text-cosmic-400">{t('Loading users...', '加载用户中...')}</p>
               </div>
             ) : filteredUsers.length > 0 ? (
               filteredUsers.map((user) => (
                 <div
                   key={user.id}
-                  className="flex items-center justify-between p-3 bg-cosmic-800/40 rounded-lg hover:bg-cosmic-800/60 transition-colors"
+                  className="group flex items-center justify-between p-3 bg-cosmic-800/20 rounded-xl hover:bg-cosmic-800/40 border border-transparent hover:border-primary/20 transition-all duration-200"
                 >
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <Avatar className="h-11 w-11 ring-2 ring-cosmic-700/50 group-hover:ring-primary/40 transition-all">
                       {user.avatar_url ? (
                         <AvatarImage src={user.avatar_url} alt={user.username} />
                       ) : (
-                        <AvatarFallback className="bg-cosmic-700">
+                        <AvatarFallback className="bg-gradient-to-br from-cosmic-700 to-cosmic-800 text-primary">
                           <User className="h-5 w-5" />
                         </AvatarFallback>
                       )}
                     </Avatar>
-                    <span className="text-cosmic-100 font-medium">{user.username}</span>
+                    <span className="text-cosmic-50 font-medium truncate group-hover:text-white transition-colors">
+                      {user.username}
+                    </span>
                   </div>
                   <Button
                     size="sm"
                     onClick={() => handleShare(user.id)}
                     disabled={sending}
-                    className="gap-2"
+                    className="gap-2 rounded-full px-4 bg-primary/90 hover:bg-primary hover:scale-105 transition-all shadow-lg shadow-primary/20"
                   >
                     {sending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <>
-                        <Send className="h-4 w-4" />
-                        {t('Send', '发送')}
+                        <Send className="h-3.5 w-3.5" />
+                        <span className="text-sm font-medium">{t('Send', '发送')}</span>
                       </>
                     )}
                   </Button>
                 </div>
               ))
             ) : (
-              <p className="text-center text-cosmic-400 py-8">
-                {t('No users found', '未找到用户')}
-              </p>
+              <div className="flex flex-col items-center justify-center py-12 gap-2">
+                <div className="h-12 w-12 rounded-full bg-cosmic-800/40 flex items-center justify-center">
+                  <User className="h-6 w-6 text-cosmic-400" />
+                </div>
+                <p className="text-center text-cosmic-400">
+                  {t('No users found', '未找到用户')}
+                </p>
+              </div>
             )}
           </div>
         </div>
