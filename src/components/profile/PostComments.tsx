@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { MessageCircle, Send, User, Loader2, Smile, Image as ImageIcon, X } from 'lucide-react';
+import { MessageCircle, Send, User, Loader2, Smile, Image as ImageIcon, X, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatDistanceToNow } from 'date-fns';
@@ -21,6 +21,8 @@ interface Comment {
   image_url?: string | null;
   replies?: Comment[];
   replyCount?: number;
+  likeCount?: number;
+  isLikedByCurrentUser?: boolean;
 }
 
 interface PostCommentsProps {
@@ -71,12 +73,24 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
           .select('id, username, avatar_url')
           .in('id', userIds);
 
-        // Enrich comments with profile data
-        const enrichedComments = commentsData.map(comment => ({
-          ...comment,
-          username: profiles?.find(p => p.id === comment.user_id)?.username || 'User',
-          avatar_url: profiles?.find(p => p.id === comment.user_id)?.avatar_url || null
-        }));
+        // Get likes for all comments
+        const commentIds = commentsData.map(c => c.id);
+        const { data: likesData } = await supabase
+          .from('post_comment_likes')
+          .select('comment_id, user_id')
+          .in('comment_id', commentIds);
+
+        // Enrich comments with profile data and likes
+        const enrichedComments = commentsData.map(comment => {
+          const commentLikes = likesData?.filter(like => like.comment_id === comment.id) || [];
+          return {
+            ...comment,
+            username: profiles?.find(p => p.id === comment.user_id)?.username || 'User',
+            avatar_url: profiles?.find(p => p.id === comment.user_id)?.avatar_url || null,
+            likeCount: commentLikes.length,
+            isLikedByCurrentUser: currentUserId ? commentLikes.some(like => like.user_id === currentUserId) : false
+          };
+        });
 
         // Organize comments into parent-child structure
         const parentComments = enrichedComments.filter(c => !c.parent_comment_id);
@@ -213,6 +227,46 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
     });
   };
 
+  const handleLikeComment = async (commentId: string) => {
+    if (!currentUserId) {
+      toast.error(t('Please login to like', '请先登录'));
+      return;
+    }
+
+    try {
+      const comment = comments.find(c => 
+        c.id === commentId || c.replies?.some(r => r.id === commentId)
+      );
+      const targetComment = comment?.id === commentId 
+        ? comment 
+        : comment?.replies?.find(r => r.id === commentId);
+
+      if (!targetComment) return;
+
+      if (targetComment.isLikedByCurrentUser) {
+        // Unlike
+        await supabase
+          .from('post_comment_likes')
+          .delete()
+          .eq('comment_id', commentId)
+          .eq('user_id', currentUserId);
+      } else {
+        // Like
+        await supabase
+          .from('post_comment_likes')
+          .insert({
+            comment_id: commentId,
+            user_id: currentUserId
+          });
+      }
+
+      await loadComments();
+    } catch (error: any) {
+      console.error('Error toggling like:', error);
+      toast.error(t('Failed to like comment', '点赞失败'));
+    }
+  };
+
   return (
     <div className="w-full">
       <div className="px-4 py-3 space-y-3">
@@ -258,8 +312,19 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
                         )}
                       </div>
                       
-                      {/* Reply and View Replies Buttons */}
+                      {/* Reply, Like and View Replies Buttons */}
                       <div className="flex items-center gap-3 mt-1 ml-3">
+                        <button
+                          onClick={() => handleLikeComment(comment.id)}
+                          className={`flex items-center gap-1 text-xs font-semibold transition-colors ${
+                            comment.isLikedByCurrentUser 
+                              ? 'text-red-500 hover:text-red-600' 
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          <Heart className={`h-3 w-3 ${comment.isLikedByCurrentUser ? 'fill-current' : ''}`} />
+                          {comment.likeCount! > 0 && <span>{comment.likeCount}</span>}
+                        </button>
                         <button
                           onClick={() => setReplyingTo(comment.id)}
                           className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
@@ -400,6 +465,20 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
                                       className="mt-2 rounded-lg max-w-xs max-h-48 object-cover"
                                     />
                                   )}
+                                </div>
+                                {/* Reply Like Button */}
+                                <div className="mt-1 ml-3">
+                                  <button
+                                    onClick={() => handleLikeComment(reply.id)}
+                                    className={`flex items-center gap-1 text-xs font-semibold transition-colors ${
+                                      reply.isLikedByCurrentUser 
+                                        ? 'text-red-500 hover:text-red-600' 
+                                        : 'text-muted-foreground hover:text-foreground'
+                                    }`}
+                                  >
+                                    <Heart className={`h-3 w-3 ${reply.isLikedByCurrentUser ? 'fill-current' : ''}`} />
+                                    {reply.likeCount! > 0 && <span>{reply.likeCount}</span>}
+                                  </button>
                                 </div>
                               </div>
                             </div>
