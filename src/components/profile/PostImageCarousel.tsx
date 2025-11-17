@@ -66,11 +66,6 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
             <ChevronRight className="h-6 w-6" />
           </Button>
 
-          {/* Image Counter */}
-          <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm font-medium">
-            {currentIndex + 1} / {images.length}
-          </div>
-
           {/* Dot Indicators */}
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
             {images.map((_, index) => (

@@ -11,6 +11,10 @@ export {
 } from './profile/avatarUtils';
 
 export {
+  uploadBackground
+} from './profile/backgroundUtils';
+
+export {
   saveUserTags,
   fetchUserTags
 } from './profile/profileTagUtils';

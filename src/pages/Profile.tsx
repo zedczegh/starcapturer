@@ -10,7 +10,8 @@ import { useForm } from 'react-hook-form';
 import ProfileLoader from '@/components/profile/ProfileLoader';
 import ProfileMain from '@/components/profile/ProfileMainNew';
 import { 
-  uploadAvatar, 
+  uploadAvatar,
+  uploadBackground,
   upsertUserProfile, 
   saveUserTags, 
   fetchUserProfile, 
@@ -35,6 +36,9 @@ const Profile = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [backgroundFile, setBackgroundFile] = useState<File | null>(null);
+  const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
+  const [uploadingBackground, setUploadingBackground] = useState(false);
   const [randomTip, setRandomTip] = useState<[string, string] | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [postsRefreshKey, setPostsRefreshKey] = useState(0);
@@ -105,12 +109,14 @@ const Profile = () => {
         setValue('username', profileData.username || '');
         setValue('bio', profileData.bio || '');
         setAvatarUrl(profileData.avatar_url);
+        setBackgroundUrl(profileData.background_image_url);
         setTags(profileData.tags || []);
         
         // Update profile state
         setProfile({
           username: profileData.username,
           avatar_url: profileData.avatar_url,
+          background_image_url: profileData.background_image_url,
           bio: profileData.bio,
           date_of_birth: null,
           tags: profileData.tags || [],
@@ -164,6 +170,20 @@ const Profile = () => {
     }
   };
 
+  const handleBackgroundChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setBackgroundFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      setBackgroundUrl(previewUrl);
+    }
+  };
+
+  const handleRemoveBackground = () => {
+    setBackgroundFile(null);
+    setBackgroundUrl(null);
+  };
+
   const onSubmit = async (formData: ProfileFormValues) => {
     if (!user) {
       toast.error(t("Authentication required", "需要认证"));
@@ -196,11 +216,24 @@ const Profile = () => {
         }
       }
 
+      let newBackgroundUrl = backgroundUrl;
+      if (backgroundFile) {
+        setUploadingBackground(true);
+        newBackgroundUrl = await uploadBackground(user.id, backgroundFile);
+        setUploadingBackground(false);
+        
+        if (!newBackgroundUrl) {
+          toast.error(t("Background upload failed", "背景上传失败"));
+          // Continue anyway, we can update the other fields
+        }
+      }
+
       // First update the profile
-      console.log("Upserting profile with:", { username: formData.username, avatar_url: newAvatarUrl, bio: formData.bio });
+      console.log("Upserting profile with:", { username: formData.username, avatar_url: newAvatarUrl, background_image_url: newBackgroundUrl, bio: formData.bio });
       const profileSuccess = await upsertUserProfile(user.id, {
         username: formData.username,
         avatar_url: newAvatarUrl,
+        background_image_url: newBackgroundUrl,
         bio: formData.bio,
       });
 
@@ -280,9 +313,13 @@ const Profile = () => {
       <ProfileMain
         displayUsername={displayUsername}
         avatarUrl={avatarUrl}
+        backgroundUrl={backgroundUrl}
         onAvatarChange={handleAvatarChange}
+        onBackgroundChange={handleBackgroundChange}
         onRemoveAvatar={removeAvatar}
+        onRemoveBackground={handleRemoveBackground}
         uploadingAvatar={uploadingAvatar}
+        uploadingBackground={uploadingBackground}
         astronomyTip={randomTip}
         register={register}
         saving={saving}
