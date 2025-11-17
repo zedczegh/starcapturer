@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Trash2, Loader2, Image, Edit, Plus, Share2 } from 'lucide-react';
+import { Trash2, Loader2, Image, Edit, Plus, Share2, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OptimizedImage } from '@/components/ui/optimized-components';
 import { PostInteractions } from './PostInteractions';
@@ -256,6 +256,15 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />
+                  )}
+                  
+                  {/* Video indicator and hover overlay */}
+                  {isVideo && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="bg-black/60 rounded-full p-3">
+                        <Play className="h-8 w-8 text-white fill-white" />
+                      </div>
+                    </div>
                   )}
                   
                   {/* Hover overlay */}
