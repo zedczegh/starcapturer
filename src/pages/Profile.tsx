@@ -80,16 +80,13 @@ const Profile = () => {
 
         console.log("Session user ID:", session.user.id);
         
-        // Re-authenticate to refresh token if needed
-        const { error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError) {
-          console.warn('Session refresh error:', refreshError);
-        }
-        
         // Attempt to create profile if it doesn't exist
+        console.log("About to call ensureUserProfile for user:", session.user.id);
         const profileCreated = await ensureUserProfile(session.user.id);
+        console.log("ensureUserProfile returned:", profileCreated);
+        
         if (!profileCreated) {
-          console.error("Failed to ensure user profile exists");
+          console.error("Failed to ensure user profile exists - ensureUserProfile returned false");
           toast.error(t("Profile setup failed", "个人资料设置失败"), {
             description: t("There was an issue setting up your profile. Please try signing out and back in.", "设置您的个人资料时出现问题，请尝试退出并重新登录。")
           });
@@ -103,6 +100,8 @@ const Profile = () => {
           setLoading(false);
           return;
         }
+        
+        console.log("Profile ensured successfully, now fetching profile data...");
 
         // Fetch profile data with improved function
         const profileData = await fetchUserProfile(session.user.id);
@@ -152,9 +151,6 @@ const Profile = () => {
         console.log('Auth state changed:', event, session?.user?.id);
         if (event === 'SIGNED_OUT') {
           navigate('/photo-points');
-        } else if (event === 'SIGNED_IN' && session) {
-          // Allow the signed in event to complete before reloading the page
-          window.location.reload();
         }
       }
     );

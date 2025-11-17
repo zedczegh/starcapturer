@@ -45,8 +45,13 @@ export const ensureUserProfile = async (
       
     if (profileError) {
       console.error('Error checking profile:', profileError);
+      toast.error('Profile check failed', { 
+        description: `Database error: ${profileError.message}. Code: ${profileError.code}` 
+      });
       return false;
     }
+    
+    console.log('Profile check result:', profile ? 'Profile exists' : 'Profile not found');
     
     // If profile doesn't exist, create it
     if (!profile) {
