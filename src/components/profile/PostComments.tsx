@@ -115,26 +115,30 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
             </div>
           ) : comments.length > 0 ? (
-            <div className="space-y-3 max-h-64 overflow-y-auto">
+            <div className="space-y-3">
               {comments.map((comment) => (
-                <div key={comment.id} className="flex gap-2">
+                <div key={comment.id} className="flex gap-2 items-start">
                   <Avatar className="h-8 w-8 flex-shrink-0">
                     {comment.avatar_url ? (
                       <AvatarImage src={comment.avatar_url} alt={comment.username} />
                     ) : (
-                      <AvatarFallback className="bg-cosmic-800">
-                        <User className="h-4 w-4" />
+                      <AvatarFallback className="bg-primary/20 text-primary">
+                        {comment.username?.[0]?.toUpperCase() || 'U'}
                       </AvatarFallback>
                     )}
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <div className="bg-cosmic-800/40 rounded-lg p-2">
-                      <p className="text-xs font-semibold text-cosmic-200">{comment.username}</p>
-                      <p className="text-sm text-cosmic-100 break-words">{comment.content}</p>
+                    <div className="bg-muted/50 rounded-2xl px-4 py-2.5 inline-block">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-sm font-semibold text-foreground">
+                          {comment.username || 'User'}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                        </span>
+                      </div>
+                      <p className="text-sm text-foreground break-words">{comment.content}</p>
                     </div>
-                    <p className="text-xs text-cosmic-400 mt-1 px-2">
-                      {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
-                    </p>
                   </div>
                 </div>
               ))}
