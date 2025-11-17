@@ -84,8 +84,8 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
       video.currentTime = 0;
       video.load();
       
-      // Small delay to ensure video is ready
-      const playTimeout = setTimeout(() => {
+      // Attempt to play video
+      const attemptPlay = () => {
         video.play()
           .then(() => {
             setIsPlaying(true);
@@ -95,9 +95,16 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
             console.error('Video play error:', error);
             setIsLoading(false);
           });
-      }, 100);
+      };
+
+      // Try to play immediately and also on loadeddata event
+      video.addEventListener('loadeddata', attemptPlay);
+      const playTimeout = setTimeout(attemptPlay, 100);
       
-      return () => clearTimeout(playTimeout);
+      return () => {
+        video.removeEventListener('loadeddata', attemptPlay);
+        clearTimeout(playTimeout);
+      };
     }
   }, [currentIndex, currentIsVideo, images]);
 
