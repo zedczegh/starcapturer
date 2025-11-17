@@ -29,11 +29,11 @@ export const uploadCommentImage = async (
       return null;
     }
 
-    // Validate file size (50MB limit)
-    const maxSize = 50 * 1024 * 1024; // 50MB
+    // Validate file size (100MB limit)
+    const maxSize = 100 * 1024 * 1024; // 100MB
     if (imageFile.size > maxSize) {
       console.error("DEBUG: File too large:", imageFile.size);
-      toast.error(t("Image must be less than 50MB", "图片必须小于50MB"));
+      toast.error(t("Image must be less than 100MB", "图片必须小于100MB"));
       return null;
     }
 
