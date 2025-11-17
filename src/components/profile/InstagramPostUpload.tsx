@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -6,6 +6,8 @@ import { X, Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { FFmpeg } from '@ffmpeg/ffmpeg';
+import { fetchFile, toBlobURL } from '@ffmpeg/util';
 
 interface InstagramPostUploadProps {
   userId: string;
@@ -21,6 +23,104 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('general');
   const [uploading, setUploading] = useState(false);
+  const [transcodingProgress, setTranscodingProgress] = useState<number>(0);
+  const [transcodingStatus, setTranscodingStatus] = useState<string>('');
+  const ffmpegRef = useRef<FFmpeg | null>(null);
+  const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
+
+  const loadFFmpeg = async () => {
+    if (ffmpegRef.current || ffmpegLoaded) return;
+    
+    try {
+      const ffmpeg = new FFmpeg();
+      ffmpegRef.current = ffmpeg;
+      
+      ffmpeg.on('log', ({ message }) => {
+        console.log('FFmpeg:', message);
+      });
+      
+      ffmpeg.on('progress', ({ progress }) => {
+        setTranscodingProgress(Math.round(progress * 100));
+      });
+
+      const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+      await ffmpeg.load({
+        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+      });
+      
+      setFfmpegLoaded(true);
+      console.log('FFmpeg loaded successfully');
+    } catch (error) {
+      console.error('Failed to load FFmpeg:', error);
+      toast.error('Failed to load video processor');
+    }
+  };
+
+  const transcodeVideo = async (file: File): Promise<File> => {
+    if (!ffmpegRef.current) {
+      await loadFFmpeg();
+    }
+
+    if (!ffmpegRef.current) {
+      throw new Error('FFmpeg not loaded');
+    }
+
+    try {
+      const ffmpeg = ffmpegRef.current;
+      const inputName = 'input.mp4';
+      const outputName = 'output.mp4';
+
+      setTranscodingStatus(`Transcoding ${file.name}...`);
+      
+      // Write input file
+      await ffmpeg.writeFile(inputName, await fetchFile(file));
+
+      // Transcode to H.264 with web-compatible settings
+      await ffmpeg.exec([
+        '-i', inputName,
+        '-c:v', 'libx264',           // H.264 video codec
+        '-preset', 'fast',            // Fast encoding
+        '-crf', '23',                 // Quality (lower = better, 23 is good)
+        '-c:a', 'aac',                // AAC audio codec
+        '-b:a', '128k',               // Audio bitrate
+        '-movflags', '+faststart',    // Enable fast start for web
+        '-pix_fmt', 'yuv420p',        // Pixel format for compatibility
+        '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2', // Ensure even dimensions
+        outputName
+      ]);
+
+      // Read output file and convert to Blob
+      const data = await ffmpeg.readFile(outputName);
+      // Create a proper Uint8Array by copying the data
+      const buffer = new ArrayBuffer((data as Uint8Array).byteLength);
+      const uint8View = new Uint8Array(buffer);
+      uint8View.set(data as Uint8Array);
+      const transcodedBlob = new Blob([uint8View], { type: 'video/mp4' });
+      
+      // Create new file with original name but .mp4 extension
+      const originalNameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
+      const transcodedFile = new File(
+        [transcodedBlob], 
+        `${originalNameWithoutExt}.mp4`, 
+        { type: 'video/mp4' }
+      );
+
+      // Cleanup
+      await ffmpeg.deleteFile(inputName);
+      await ffmpeg.deleteFile(outputName);
+
+      setTranscodingStatus('');
+      setTranscodingProgress(0);
+      
+      return transcodedFile;
+    } catch (error) {
+      console.error('Transcoding error:', error);
+      setTranscodingStatus('');
+      setTranscodingProgress(0);
+      throw error;
+    }
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -83,9 +183,30 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
     setUploading(true);
 
     try {
+      // Transcode videos first
+      const processedFiles: File[] = [];
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        
+        if (file.type.startsWith('video/')) {
+          try {
+            toast.info(`Transcoding video ${i + 1}/${selectedFiles.length}...`);
+            const transcodedFile = await transcodeVideo(file);
+            processedFiles.push(transcodedFile);
+            toast.success(`Video ${i + 1} transcoded successfully`);
+          } catch (error) {
+            console.error('Transcoding failed, uploading original:', error);
+            toast.warning(`Using original video ${i + 1} (transcoding failed)`);
+            processedFiles.push(file);
+          }
+        } else {
+          processedFiles.push(file);
+        }
+      }
+
       // Upload all files
       const uploadedPaths: string[] = [];
-      for (const file of selectedFiles) {
+      for (const file of processedFiles) {
         const fileExt = file.name.split('.').pop();
         const fileName = `${userId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
@@ -102,10 +223,10 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
         .from('user_posts')
         .insert({
           user_id: userId,
-          file_name: selectedFiles[0].name,
+          file_name: processedFiles[0].name,
           file_path: uploadedPaths[0], // Primary file
-          file_type: selectedFiles[0].type,
-          file_size: selectedFiles.reduce((sum, f) => sum + f.size, 0),
+          file_type: processedFiles[0].type,
+          file_size: processedFiles.reduce((sum, f) => sum + f.size, 0),
           description: description.trim(),
           category: 'general',
           images: uploadedPaths // All files array
@@ -128,6 +249,8 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
       toast.error('Upload failed', { description: error.message });
     } finally {
       setUploading(false);
+      setTranscodingStatus('');
+      setTranscodingProgress(0);
     }
   };
 
