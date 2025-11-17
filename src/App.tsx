@@ -14,6 +14,7 @@ const LazyLocationDetails = lazy(() => import('@/pages/LocationDetails'));
 const LazyCommunityAstroSpots = lazy(() => import('@/pages/CommunityAstroSpots'));
 
 // Keep light components as regular imports
+import Feeds from './pages/Feeds';
 import NotFound from './pages/NotFound';
 import About from './pages/About';
 import UsefulLinks from './pages/UsefulLinks';
@@ -98,7 +99,8 @@ function AppContent() {
   
   return (
     <Routes>
-      <Route path="/" element={
+      <Route path="/" element={<Feeds />} />
+      <Route path="/community" element={
         <Suspense fallback={<SimpleLoadingFallback />}>
           <LazyCommunityAstroSpots />
         </Suspense>

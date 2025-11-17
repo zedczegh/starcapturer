@@ -28,8 +28,15 @@ const MobileNav: React.FC<MobileNavProps> = ({
         <MobileNavButton
           to="/"
           icon={<Users className="h-5 w-5 stroke-[1.5]" />}
-          label={t("Community", "社区")}
+          label={t("Feeds", "动态")}
           active={location.pathname === "/"}
+        />
+        
+        <MobileNavButton
+          to="/community"
+          icon={<Users className="h-5 w-5 stroke-[1.5]" />}
+          label={t("Community", "社区")}
+          active={location.pathname === "/community"}
         />
         
         <MobileNavButton 
