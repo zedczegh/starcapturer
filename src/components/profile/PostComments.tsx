@@ -243,7 +243,9 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
 
       if (!targetComment) return;
 
-      if (targetComment.isLikedByCurrentUser) {
+      const isUnliking = targetComment.isLikedByCurrentUser;
+
+      if (isUnliking) {
         // Unlike
         await supabase
           .from('post_comment_likes')
@@ -260,7 +262,34 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
           });
       }
 
-      await loadComments();
+      // Update local state instead of refreshing
+      setComments(prevComments => 
+        prevComments.map(comment => {
+          if (comment.id === commentId) {
+            return {
+              ...comment,
+              isLikedByCurrentUser: !isUnliking,
+              likeCount: (comment.likeCount || 0) + (isUnliking ? -1 : 1)
+            };
+          }
+          // Check if it's a reply
+          if (comment.replies) {
+            return {
+              ...comment,
+              replies: comment.replies.map(reply => 
+                reply.id === commentId
+                  ? {
+                      ...reply,
+                      isLikedByCurrentUser: !isUnliking,
+                      likeCount: (reply.likeCount || 0) + (isUnliking ? -1 : 1)
+                    }
+                  : reply
+              )
+            };
+          }
+          return comment;
+        })
+      );
     } catch (error: any) {
       console.error('Error toggling like:', error);
       toast.error(t('Failed to like comment', '点赞失败'));
