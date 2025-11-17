@@ -118,6 +118,7 @@ const Profile = () => {
           avatar_url: profileData.avatar_url,
           background_image_url: profileData.background_image_url,
           bio: profileData.bio,
+          motto: profileData.motto,
           date_of_birth: null,
           tags: profileData.tags || [],
         });
@@ -229,12 +230,19 @@ const Profile = () => {
       }
 
       // First update the profile
-      console.log("Upserting profile with:", { username: formData.username, avatar_url: newAvatarUrl, background_image_url: newBackgroundUrl, bio: formData.bio });
+      console.log("Upserting profile with:", { 
+        username: formData.username, 
+        avatar_url: newAvatarUrl, 
+        background_image_url: newBackgroundUrl, 
+        bio: formData.bio,
+        motto: profile?.motto 
+      });
       const profileSuccess = await upsertUserProfile(user.id, {
         username: formData.username,
         avatar_url: newAvatarUrl,
         background_image_url: newBackgroundUrl,
         bio: formData.bio,
+        motto: profile?.motto,
       });
 
       if (!profileSuccess) {
@@ -281,6 +289,27 @@ const Profile = () => {
     setPostsRefreshKey(prev => prev + 1);
   };
 
+  const handleMottoSave = async (newMotto: string) => {
+    if (!user) return;
+
+    try {
+      const success = await upsertUserProfile(user.id, {
+        motto: newMotto
+      });
+
+      if (success) {
+        setProfile((prev: any) => ({
+          ...prev,
+          motto: newMotto
+        }));
+        toast.success(t("Motto updated", "座右铭已更新"));
+      }
+    } catch (error) {
+      console.error("Error updating motto:", error);
+      toast.error(t("Failed to update motto", "更新座右铭失败"));
+    }
+  };
+
   if (!authChecked || loading) return <ProfileLoader />;
   
   if (authError) {
@@ -321,6 +350,8 @@ const Profile = () => {
         uploadingAvatar={uploadingAvatar}
         uploadingBackground={uploadingBackground}
         astronomyTip={randomTip}
+        motto={profile?.motto}
+        onMottoSave={handleMottoSave}
         register={register}
         saving={saving}
         handleSubmit={handleSubmit}

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import ProfileAvatar from './ProfileAvatar';
-import AstronomyTip from './AstronomyTip';
+import ProfileMotto from './ProfileMotto';
 import { AdminBadge } from './AdminBadge';
 import { UserPostsManager } from './UserPostsManager';
 import { InstagramPostUpload } from './InstagramPostUpload';
@@ -23,6 +23,8 @@ const ProfileMainNew = ({
   uploadingAvatar,
   uploadingBackground,
   astronomyTip,
+  motto,
+  onMottoSave,
   bio,
   userId,
   onPostsUpdate,
@@ -153,7 +155,11 @@ const ProfileMainNew = ({
                     {bio}
                   </p>
                 )}
-                <AstronomyTip tip={astronomyTip} />
+                <ProfileMotto 
+                  motto={motto}
+                  onSave={onMottoSave}
+                  isOwner={true}
+                />
               </div>
 
               {/* Action Buttons */}

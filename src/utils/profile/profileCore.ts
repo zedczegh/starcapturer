@@ -106,6 +106,7 @@ export const upsertUserProfile = async (
     avatar_url?: string | null;
     background_image_url?: string | null;
     bio?: string | null;
+    motto?: string | null;
   }
 ): Promise<boolean> => {
   try {
@@ -194,7 +195,7 @@ export const fetchUserProfile = async (userId: string) => {
     // Fetch the profile regardless of whether it's our own or another user's
     const { data, error } = await supabase
       .from('profiles')
-      .select('username, avatar_url, background_image_url, bio')
+      .select('username, avatar_url, background_image_url, bio, motto')
       .eq('id', userId)
       .maybeSingle();
       
@@ -205,6 +206,7 @@ export const fetchUserProfile = async (userId: string) => {
         avatar_url: null,
         background_image_url: null,
         bio: null,
+        motto: null,
         tags: []
       };
     }
@@ -219,6 +221,7 @@ export const fetchUserProfile = async (userId: string) => {
       avatar_url: data?.avatar_url || null,
       background_image_url: data?.background_image_url || null,
       bio: data?.bio || null,
+      motto: data?.motto || null,
       tags
     };
   } catch (error) {
@@ -228,6 +231,7 @@ export const fetchUserProfile = async (userId: string) => {
       avatar_url: null,
       background_image_url: null,
       bio: null,
+      motto: null,
       tags: []
     };
   }
@@ -238,5 +242,6 @@ export type ProfileData = {
   avatar_url: string | null;
   background_image_url?: string | null;
   bio?: string | null;
+  motto?: string | null;
   tags: string[];
 };
