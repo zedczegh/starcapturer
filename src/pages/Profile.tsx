@@ -200,46 +200,23 @@ const Profile = () => {
   };
 
   const handleBackgroundChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('=== handleBackgroundChange CALLED ===');
-    console.log('Event:', e);
-    console.log('Files:', e.target.files);
-    
     const file = e.target.files?.[0];
-    console.log('Selected file:', file);
-    console.log('User:', user);
-    
-    if (!file) {
-      console.log('No file selected, returning early');
-      return;
-    }
-    
-    if (!user) {
-      console.log('No user found, returning early');
-      return;
-    }
+    if (!file || !user) return;
     
     try {
-      console.log('Starting background upload process...');
       setUploadingBackground(true);
       
       // Upload immediately to get permanent URL
       const uploadedUrl = await uploadBackground(user.id, file);
-      console.log('Upload returned URL:', uploadedUrl);
       
       if (uploadedUrl) {
-        console.log('URL received, updating database...');
         // Update database
         const { error } = await supabase
           .from('profiles')
           .update({ background_image_url: uploadedUrl })
           .eq('id', user.id);
           
-        if (error) {
-          console.error('Database update error:', error);
-          throw error;
-        }
-        
-        console.log('Database updated successfully');
+        if (error) throw error;
         
         // Update state with permanent URL
         setBackgroundUrl(uploadedUrl);
@@ -249,17 +226,12 @@ const Profile = () => {
           background_image_url: uploadedUrl
         }));
         
-        console.log('State updated, showing success toast');
         toast.success(t("Background updated", "背景已更新"));
-      } else {
-        console.log('Upload returned null URL');
       }
     } catch (error: any) {
-      console.error('=== handleBackgroundChange ERROR ===');
       console.error('Error uploading background:', error);
       toast.error(t("Failed to upload background", "背景上传失败"));
     } finally {
-      console.log('=== handleBackgroundChange COMPLETE ===');
       setUploadingBackground(false);
     }
   };
