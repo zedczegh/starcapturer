@@ -110,7 +110,7 @@ const ProfileMainNew = ({
         <input
           id="background-upload-cover"
           type="file"
-          accept="image/*"
+          accept="image/*,image/heic,image/heif,image/webp,image/avif,image/tiff,image/bmp"
           onChange={onBackgroundChange}
           className="hidden"
           disabled={uploadingBackground}
