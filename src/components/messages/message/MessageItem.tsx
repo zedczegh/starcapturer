@@ -1,13 +1,16 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { formatRelative } from 'date-fns';
 import { zhCN, enUS } from 'date-fns/locale';
 import { useLanguage } from '@/contexts/LanguageContext';
 import EmojiRenderer from '../EmojiRenderer';
-import { MoreVertical, CheckCheck, Check } from 'lucide-react';
+import { MoreVertical, CheckCheck, Check, ThumbsUp, Heart, Bookmark } from 'lucide-react';
 import UnsendDialog from './UnsendDialog';
 import { Button } from '@/components/ui/button';
 import LocationShareCard from '../LocationShareCard';
+import { supabase } from '@/integrations/supabase/client';
+import { Card } from '@/components/ui/card';
 
 interface MessageItemProps {
   message: any;
@@ -23,7 +26,9 @@ const MessageItem: React.FC<MessageItemProps> = ({
   isProcessingAction = false
 }) => {
   const { language } = useLanguage();
+  const navigate = useNavigate();
   const [showUnsendDialog, setShowUnsendDialog] = useState(false);
+  const [postImageUrl, setPostImageUrl] = useState<string | null>(null);
   
   const locale = language === 'zh' ? zhCN : enUS;
   const messageDate = new Date(message.created_at);
@@ -32,7 +37,43 @@ const MessageItem: React.FC<MessageItemProps> = ({
     locale,
   });
 
-  const hasContent = message.text || message.image_url || message.location;
+  // Parse metadata if it exists
+  const metadata = message.metadata as any;
+  const isPostInteraction = metadata?.type === 'post_interaction';
+  const isSharedPost = metadata?.type === 'shared_post';
+
+  // Load post image for shared posts
+  React.useEffect(() => {
+    if (isSharedPost && metadata?.post_file_path) {
+      const { data } = supabase.storage
+        .from('user-posts')
+        .getPublicUrl(metadata.post_file_path);
+      setPostImageUrl(data.publicUrl);
+    }
+  }, [isSharedPost, metadata]);
+
+  const handlePostClick = () => {
+    if (metadata?.post_id) {
+      // Navigate to the post owner's profile (you could also create a dedicated post view)
+      navigate(`/profile/${message.sender_id}#post-${metadata.post_id}`);
+    }
+  };
+
+  const getInteractionIcon = () => {
+    if (!isPostInteraction) return null;
+    switch (metadata.interaction_type) {
+      case 'like':
+        return <ThumbsUp className="h-4 w-4 text-blue-400" />;
+      case 'heart':
+        return <Heart className="h-4 w-4 text-red-400 fill-current" />;
+      case 'collect':
+        return <Bookmark className="h-4 w-4 text-yellow-400 fill-current" />;
+      default:
+        return null;
+    }
+  };
+
+  const hasContent = message.text || message.image_url || message.location || isPostInteraction || isSharedPost;
   
   if (!hasContent) return null;
   
@@ -94,6 +135,40 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 userId={message.location.userId}
               />
             </div>
+          )}
+
+          {/* Post Interaction Notification */}
+          {isPostInteraction && (
+            <div 
+              className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={handlePostClick}
+            >
+              {getInteractionIcon()}
+              <span className="text-sm">Click to view post</span>
+            </div>
+          )}
+
+          {/* Shared Post Preview */}
+          {isSharedPost && (
+            <Card 
+              className="mt-2 overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform bg-cosmic-800/60"
+              onClick={handlePostClick}
+            >
+              {postImageUrl && (
+                <img
+                  src={postImageUrl}
+                  alt="Shared post"
+                  className="w-full h-32 object-cover"
+                />
+              )}
+              {metadata.post_description && (
+                <div className="p-2">
+                  <p className="text-xs text-cosmic-300 line-clamp-2">
+                    {metadata.post_description}
+                  </p>
+                </div>
+              )}
+            </Card>
           )}
         </div>
         

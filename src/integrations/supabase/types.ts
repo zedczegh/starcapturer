@@ -384,6 +384,51 @@ export type Database = {
         }
         Relationships: []
       }
+      post_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          parent_comment_id: string | null
+          post_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          parent_comment_id?: string | null
+          post_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          parent_comment_id?: string | null
+          post_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "post_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "user_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       post_interactions: {
         Row: {
           created_at: string
@@ -701,6 +746,7 @@ export type Database = {
           id: string
           image_url: string | null
           message: string
+          metadata: Json | null
           read: boolean
           receiver_id: string
           sender_id: string
@@ -711,6 +757,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           message: string
+          metadata?: Json | null
           read?: boolean
           receiver_id: string
           sender_id: string
@@ -721,6 +768,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           message?: string
+          metadata?: Json | null
           read?: boolean
           receiver_id?: string
           sender_id?: string

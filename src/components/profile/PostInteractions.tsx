@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ThumbsUp, Heart, Share2, Bookmark } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { SharePostDialog } from './SharePostDialog';
 
 interface PostInteractionsProps {
   postId: string;
@@ -42,6 +43,7 @@ export const PostInteractions: React.FC<PostInteractionsProps> = ({
     collected: false
   });
   const [loading, setLoading] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   useEffect(() => {
     loadInteractions();
@@ -148,34 +150,12 @@ export const PostInteractions: React.FC<PostInteractionsProps> = ({
     }
   };
 
-  const handleShare = async () => {
-    try {
-      const url = `${window.location.origin}/profile/${userId}`;
-      
-      if (navigator.share) {
-        await navigator.share({
-          title: 'Check out this post',
-          url: url
-        });
-      } else {
-        await navigator.clipboard.writeText(url);
-        toast.success(t('Link copied!', '链接已复制！'));
-      }
-
-      // Track share
-      if (currentUserId) {
-        await supabase
-          .from('post_interactions')
-          .insert({
-            user_id: currentUserId,
-            post_id: postId,
-            interaction_type: 'share'
-          });
-        setCounts(prev => ({ ...prev, shares: prev.shares + 1 }));
-      }
-    } catch (error: any) {
-      console.error('Share error:', error);
+  const handleShare = () => {
+    if (!currentUserId) {
+      toast.error(t('Please login to share', '请先登录'));
+      return;
     }
+    setShareDialogOpen(true);
   };
 
   return (
@@ -222,6 +202,16 @@ export const PostInteractions: React.FC<PostInteractionsProps> = ({
         <Bookmark className={`h-4 w-4 ${userInteractions.collected ? 'fill-current' : ''}`} />
         <span className="text-xs">{counts.collects}</span>
       </Button>
+
+      {currentUserId && (
+        <SharePostDialog
+          open={shareDialogOpen}
+          onOpenChange={setShareDialogOpen}
+          postId={postId}
+          postOwnerId={userId}
+          currentUserId={currentUserId}
+        />
+      )}
     </div>
   );
 };
