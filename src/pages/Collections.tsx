@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import NavBar from "@/components/NavBar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Moon, Mountain, Eye, Camera } from "lucide-react";
+import { Moon, Mountain, Eye, Camera, Heart } from 'lucide-react';
 import { CircularTabs } from "@/components/ui/circular-tabs";
 import { prepareLocationForNavigation } from "@/utils/locationNavigation";
 import { sortLocationsBySiqs } from "./collections/sortLocationsBySiqs";
@@ -16,10 +16,12 @@ import PageLoader from "@/components/loaders/PageLoader";
 import LocationStatusMessage from "@/components/location/LocationStatusMessage";
 import { useUserCollections } from "@/hooks/collections/useUserCollections";
 import { useUserAstroSpotCollections } from "@/hooks/collections/useUserAstroSpotCollections";
+import { useCollectedPosts } from "@/hooks/collections/useCollectedPosts";
 import CollectionsLoadingSkeleton from "@/components/collections/CollectionsLoadingSkeleton";
 import CollectionHeader from "@/components/collections/CollectionHeader";
 import CollectionGrid from "@/components/collections/CollectionGrid";
 import AstroSpotCollectionGrid from "@/components/collections/AstroSpotCollectionGrid";
+import { CollectedPostsGrid } from "@/components/collections/CollectedPostsGrid";
 import EmptyCollections from "@/components/collections/EmptyCollections";
 import { useCollectionActions } from "@/hooks/collections/useCollectionActions";
 import { useAstroSpotCollectionActions } from "@/hooks/collections/useAstroSpotCollectionActions";
@@ -51,6 +53,14 @@ const Collections = () => {
     forceReload: reloadSpots,
   } = useUserAstroSpotCollections();
 
+  // Collected posts
+  const {
+    posts: collectedPosts,
+    loading: postsLoading,
+    authChecked: postsAuthChecked,
+    error: postsError,
+  } = useCollectedPosts();
+
   // Location collection actions
   const {
     editingNames: editingLocationNames,
@@ -80,9 +90,9 @@ const Collections = () => {
     navigate(`/astro-spot/${spot.spot_id}`);
   };
 
-  const authChecked = locationsAuthChecked && spotsAuthChecked;
-  const loading = locationsLoading || spotsLoading;
-  const hasError = locationsError || spotsError;
+  const authChecked = locationsAuthChecked && spotsAuthChecked && postsAuthChecked;
+  const loading = locationsLoading || spotsLoading || postsLoading;
+  const hasError = locationsError || spotsError || postsError;
 
   if (!authChecked) return <PageLoader />;
 
@@ -105,7 +115,8 @@ const Collections = () => {
   const safeSpots = Array.isArray(spots) ? spots : [];
   
   const sortedLocations = sortLocationsBySiqs(safeLocations);
-  const totalItems = safeLocations.length + safeSpots.length;
+  const safePosts = Array.isArray(collectedPosts) ? collectedPosts : [];
+  const totalItems = safeLocations.length + safeSpots.length + safePosts.length;
   
   // Sort function for spots by SIQS (high to low)
   const sortSpotsBySiqs = (spots: any[]) => {
@@ -123,6 +134,7 @@ const Collections = () => {
 
   const collectionTabs = [
     { value: 'locations', label: t('Photo Locations', '拍摄地点'), icon: Camera, count: safeLocations.length },
+    { value: 'posts', label: t('Collected Posts', '收藏帖子'), icon: Heart, count: safePosts.length },
     { value: 'nightscape', label: t('Nightscape', '夜景地点'), icon: Moon, count: nightscapeSpots.length },
     { value: 'natural', label: t('Natural', '自然风光'), icon: Mountain, count: naturalSpots.length },
     { value: 'obscura', label: t('Obscura', '探索奇观'), icon: Eye, count: obscuraSpots.length },
@@ -202,10 +214,31 @@ const Collections = () => {
                   onDelete={handleLocationDelete}
                   onViewDetails={handleViewLocationDetails}
                 />
-              )}
-            </TabsContent>
+            )}
+          </TabsContent>
 
-            <TabsContent value="nightscape" className="space-y-4">
+          <TabsContent value="posts" className="space-y-4 mt-0">
+            {loading && !safePosts.length ? (
+              <CollectionsLoadingSkeleton />
+            ) : safePosts.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-cosmic-400 mb-4">
+                  {t("No collected posts yet", "还没有收藏任何帖子")}
+                </div>
+                <Button 
+                  onClick={() => navigate('/community')}
+                  variant="outline"
+                  className="bg-cosmic-800/30 border-cosmic-700/50 hover:bg-cosmic-700/50"
+                >
+                  {t("Explore Community", "浏览社区")}
+                </Button>
+              </div>
+            ) : (
+              <CollectedPostsGrid posts={safePosts} />
+            )}
+          </TabsContent>
+
+          <TabsContent value="nightscape" className="space-y-4">
               {loading && !nightscapeSpots.length ? (
                 <CollectionsLoadingSkeleton />
               ) : nightscapeSpots.length === 0 ? (

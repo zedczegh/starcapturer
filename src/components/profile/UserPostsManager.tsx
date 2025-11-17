@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Trash2, Loader2, Image, Edit, Plus, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OptimizedImage } from '@/components/ui/optimized-components';
@@ -45,9 +44,7 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
 }) => {
   const { t } = useLanguage();
   const [posts, setPosts] = useState<UserPost[]>([]);
-  const [collectedPosts, setCollectedPosts] = useState<UserPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTab, setSelectedTab] = useState<string>('my-feeds');
   const [editingPost, setEditingPost] = useState<UserPost | null>(null);
   const [username, setUsername] = useState<string>('user');
   const [openComments, setOpenComments] = useState<Set<string>>(new Set());
@@ -55,10 +52,7 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
   useEffect(() => {
     loadPosts();
     loadUsername();
-    if (currentUserId) {
-      loadCollectedPosts();
-    }
-  }, [userId, currentUserId]);
+  }, [userId]);
 
   const loadUsername = async () => {
     try {
@@ -108,48 +102,6 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
     }
   };
 
-  const loadCollectedPosts = async () => {
-    if (!currentUserId) return;
-    
-    try {
-      const { data: interactions, error: intError } = await supabase
-        .from('post_interactions')
-        .select('post_id')
-        .eq('user_id', currentUserId)
-        .eq('interaction_type', 'collect');
-
-      if (intError) throw intError;
-
-      if (interactions && interactions.length > 0) {
-        const postIds = interactions.map(i => i.post_id);
-        const { data: postsData, error: postsError } = await supabase
-          .from('user_posts')
-          .select('*')
-          .in('id', postIds)
-          .order('created_at', { ascending: false });
-
-        if (postsError) throw postsError;
-        
-        // Fetch user profiles for all collected posts
-        if (postsData && postsData.length > 0) {
-          const userIds = [...new Set(postsData.map(p => p.user_id))];
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, username, avatar_url')
-            .in('id', userIds);
-          
-          setCollectedPosts((postsData || []).map(post => ({
-            ...post,
-            images: Array.isArray(post.images) ? post.images as string[] : [],
-            username: profiles?.find(p => p.id === post.user_id)?.username || 'User',
-            avatar_url: profiles?.find(p => p.id === post.user_id)?.avatar_url || null
-          })));
-        }
-      }
-    } catch (error: any) {
-      console.error('Error loading collected posts:', error);
-    }
-  };
 
   const handleDelete = async (postId: string, filePath: string) => {
     try {
@@ -207,7 +159,7 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
     });
   };
 
-  const displayedPosts = selectedTab === 'my-feeds' ? posts : collectedPosts;
+  
 
   if (loading) {
     return (
@@ -236,31 +188,18 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
         )}
       </div>
 
-      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="mb-4">
-        <TabsList className="bg-cosmic-800/40 border-primary/20">
-          <TabsTrigger value="my-feeds">
-            {t('My Feeds', '我的动态')}
-          </TabsTrigger>
-          {isOwnProfile && (
-            <TabsTrigger value="collected">
-              {t('My Collected Feeds', '我的收藏')}
-            </TabsTrigger>
-          )}
-        </TabsList>
-      </Tabs>
-
-      {displayedPosts.length === 0 ? (
+      {posts.length === 0 ? (
         <div className="text-center py-16 text-cosmic-400">
           <Image className="h-12 w-12 mx-auto mb-4 opacity-50" />
           <p className="text-lg">{t('No posts yet', '暂无帖子')}</p>
-          {isOwnProfile && selectedTab === 'my-feeds' && (
+          {isOwnProfile && (
             <p className="text-sm mt-2">{t('Share your first post above!', '发布你的第一条动态！')}</p>
           )}
         </div>
       ) : (
         <div className="space-y-4">
           <AnimatePresence mode="popLayout">
-            {displayedPosts.map((post, index) => (
+            {posts.map((post, index) => (
               <motion.div
                 key={post.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -275,7 +214,7 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
                     images={getPostImages(post)}
                     alt={post.description || post.file_name}
                   />
-                  {isOwnProfile && selectedTab === 'my-feeds' && (
+                  {isOwnProfile && (
                     <div className="absolute top-2 right-2 flex gap-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                       <Button
                         variant="secondary"
