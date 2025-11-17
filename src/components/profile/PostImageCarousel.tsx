@@ -20,14 +20,17 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
 
   // Check if current item is a video based on file extension or URL pattern
   const isVideo = (url: string) => {
+    if (!url) return false;
     const videoExtensions = [
       '.mp4', '.webm', '.ogg', '.ogv', '.mov', '.avi', '.mkv', '.m4v',
       '.flv', '.wmv', '.3gp', '.mpeg', '.mpg', '.m2v'
     ];
     const lowerUrl = url.toLowerCase();
-    return videoExtensions.some(ext => lowerUrl.includes(ext)) || 
+    const isVid = videoExtensions.some(ext => lowerUrl.includes(ext)) || 
            lowerUrl.includes('video') ||
            url.includes('/video/');
+    console.log('Checking if video:', url, 'Result:', isVid);
+    return isVid;
   };
 
   // Get MIME type from URL
@@ -66,13 +69,18 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
   };
 
   useEffect(() => {
+    console.log('Carousel: currentIndex changed to', currentIndex, 'URL:', images[currentIndex], 'isVideo:', currentIsVideo);
     setIsPlaying(false);
     setIsLoading(currentIsVideo);
     if (videoRef.current && currentIsVideo) {
+      console.log('Attempting to play video:', images[currentIndex]);
+      videoRef.current.load(); // Force reload
       videoRef.current.play().then(() => {
+        console.log('Video playing successfully');
         setIsPlaying(true);
         setIsLoading(false);
-      }).catch(() => {
+      }).catch((error) => {
+        console.error('Video play error:', error);
         setIsLoading(false);
       });
     }
@@ -100,10 +108,26 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
                 muted={isMuted}
                 autoPlay
                 preload="auto"
-                onLoadStart={() => setIsLoading(true)}
-                onLoadedData={() => setIsLoading(false)}
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
+                onLoadStart={() => {
+                  console.log('Video load started');
+                  setIsLoading(true);
+                }}
+                onLoadedData={() => {
+                  console.log('Video data loaded');
+                  setIsLoading(false);
+                }}
+                onError={(e) => {
+                  console.error('Video error:', e, 'Source:', images[currentIndex]);
+                  setIsLoading(false);
+                }}
+                onPlay={() => {
+                  console.log('Video playing');
+                  setIsPlaying(true);
+                }}
+                onPause={() => {
+                  console.log('Video paused');
+                  setIsPlaying(false);
+                }}
                 key={images[currentIndex]}
               >
                 <source src={images[currentIndex]} type={getVideoMimeType(images[currentIndex])} />
