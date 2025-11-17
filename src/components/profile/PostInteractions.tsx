@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ThumbsUp, Heart, Share2, Bookmark } from 'lucide-react';
+import { ThumbsUp, Heart, Share2, Bookmark, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharePostDialog } from './SharePostDialog';
@@ -10,6 +10,8 @@ interface PostInteractionsProps {
   postId: string;
   userId: string;
   currentUserId?: string;
+  onCommentClick: () => void;
+  showComments: boolean;
 }
 
 interface InteractionCounts {
@@ -28,7 +30,9 @@ interface UserInteractions {
 export const PostInteractions: React.FC<PostInteractionsProps> = ({ 
   postId, 
   userId,
-  currentUserId 
+  currentUserId,
+  onCommentClick,
+  showComments
 }) => {
   const { t } = useLanguage();
   const [counts, setCounts] = useState<InteractionCounts>({
@@ -44,9 +48,11 @@ export const PostInteractions: React.FC<PostInteractionsProps> = ({
   });
   const [loading, setLoading] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
 
   useEffect(() => {
     loadInteractions();
+    loadCommentCount();
   }, [postId, currentUserId]);
 
   const loadInteractions = async () => {
@@ -85,6 +91,20 @@ export const PostInteractions: React.FC<PostInteractionsProps> = ({
       }
     } catch (error: any) {
       console.error('Error loading interactions:', error);
+    }
+  };
+
+  const loadCommentCount = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('post_comments')
+        .select('*', { count: 'exact', head: true })
+        .eq('post_id', postId);
+      
+      if (error) throw error;
+      setCommentCount(count || 0);
+    } catch (error: any) {
+      console.error('Error loading comment count:', error);
     }
   };
 
@@ -159,49 +179,62 @@ export const PostInteractions: React.FC<PostInteractionsProps> = ({
   };
 
   return (
-    <div className="flex items-center gap-4 px-2">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => handleInteraction('like')}
-        disabled={loading}
-        className={`gap-1 ${userInteractions.liked ? 'text-blue-400' : 'text-cosmic-300'}`}
-      >
-        <ThumbsUp className={`h-4 w-4 ${userInteractions.liked ? 'fill-current' : ''}`} />
-        <span className="text-xs">{counts.likes}</span>
-      </Button>
+    <>
+      <div className="flex items-center gap-1 w-full justify-around">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleInteraction('like')}
+          disabled={loading}
+          className={`gap-1 hover:text-primary transition-colors flex-1 ${userInteractions.liked ? 'text-primary' : 'text-cosmic-300'}`}
+        >
+          <ThumbsUp className={`h-4 w-4 ${userInteractions.liked ? 'fill-current' : ''}`} />
+          <span className="text-xs">{counts.likes}</span>
+        </Button>
 
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => handleInteraction('heart')}
-        disabled={loading}
-        className={`gap-1 ${userInteractions.hearted ? 'text-red-400' : 'text-cosmic-300'}`}
-      >
-        <Heart className={`h-4 w-4 ${userInteractions.hearted ? 'fill-current' : ''}`} />
-        <span className="text-xs">{counts.hearts}</span>
-      </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleInteraction('heart')}
+          disabled={loading}
+          className={`gap-1 hover:text-red-500 transition-colors flex-1 ${userInteractions.hearted ? 'text-red-500' : 'text-cosmic-300'}`}
+        >
+          <Heart className={`h-4 w-4 ${userInteractions.hearted ? 'fill-current' : ''}`} />
+          <span className="text-xs">{counts.hearts}</span>
+        </Button>
 
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleShare}
-        className="gap-1 text-cosmic-300"
-      >
-        <Share2 className="h-4 w-4" />
-        <span className="text-xs">{counts.shares}</span>
-      </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleShare}
+          disabled={loading}
+          className="gap-1 text-cosmic-300 hover:text-primary transition-colors flex-1"
+        >
+          <Share2 className="h-4 w-4" />
+          <span className="text-xs">{counts.shares}</span>
+        </Button>
 
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => handleInteraction('collect')}
-        disabled={loading}
-        className={`gap-1 ${userInteractions.collected ? 'text-yellow-400' : 'text-cosmic-300'}`}
-      >
-        <Bookmark className={`h-4 w-4 ${userInteractions.collected ? 'fill-current' : ''}`} />
-        <span className="text-xs">{counts.collects}</span>
-      </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleInteraction('collect')}
+          disabled={loading}
+          className={`gap-1 hover:text-yellow-500 transition-colors flex-1 ${userInteractions.collected ? 'text-yellow-500' : 'text-cosmic-300'}`}
+        >
+          <Bookmark className={`h-4 w-4 ${userInteractions.collected ? 'fill-current' : ''}`} />
+          <span className="text-xs">{counts.collects}</span>
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onCommentClick}
+          className={`gap-1 transition-colors flex-1 ${showComments ? 'text-primary' : 'text-cosmic-300 hover:text-primary'}`}
+        >
+          <MessageCircle className="h-4 w-4" />
+          <span className="text-xs">{commentCount}</span>
+        </Button>
+      </div>
 
       {currentUserId && (
         <SharePostDialog
@@ -212,6 +245,6 @@ export const PostInteractions: React.FC<PostInteractionsProps> = ({
           currentUserId={currentUserId}
         />
       )}
-    </div>
+    </>
   );
 };
