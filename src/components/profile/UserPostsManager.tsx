@@ -149,35 +149,24 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
   };
 
   const getFileUrl = (filePath: string) => {
-    if (!filePath) {
-      console.error('Empty file path provided');
-      return '';
-    }
+    if (!filePath) return '';
     
     // Check if it's already a full URL
     if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
-      console.log('Path is already a URL:', filePath);
       return filePath;
     }
     
     const { data } = supabase.storage.from('user-posts').getPublicUrl(filePath);
-    const url = data?.publicUrl || '';
-    console.log('Generated URL for path:', filePath, 'URL:', url);
-    return url;
+    return data?.publicUrl || '';
   };
 
   const getPostImages = (post: UserPost): string[] => {
-    console.log('Getting images for post:', post.id, 'file_type:', post.file_type);
     // Check if post has images array (new format)
     if (post.images && Array.isArray(post.images) && post.images.length > 0) {
-      const urls = post.images.map(path => getFileUrl(path));
-      console.log('Post images URLs:', urls);
-      return urls;
+      return post.images.map(path => getFileUrl(path));
     }
     // Fallback to single file_path (old format)
-    const url = getFileUrl(post.file_path);
-    console.log('Post single URL:', url);
-    return [url];
+    return [getFileUrl(post.file_path)];
   };
 
   const displayedPosts = selectedTab === 'my-feeds' ? posts : collectedPosts;
@@ -245,7 +234,7 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
                 {/* Post Images Carousel */}
                 <div className="relative">
                   <PostImageCarousel 
-                    images={getPostImages(post).map(img => getFileUrl(img))}
+                    images={getPostImages(post)}
                     alt={post.description || post.file_name}
                   />
                   {isOwnProfile && selectedTab === 'my-feeds' && (
