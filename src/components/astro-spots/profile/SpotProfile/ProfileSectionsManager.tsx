@@ -8,7 +8,6 @@ import SpotComments from '@/components/astro-spots/profile/SpotComments';
 import SpotAbstractDisplay from '@/components/astro-spots/profile/SpotAbstractDisplay';
 import LiveStreamManager from '@/components/astro-spots/profile/LiveStreamManager';
 import LiveStreamViewer from '@/components/astro-spots/profile/LiveStreamViewer';
-import { Comment } from '../types/comments';
 
 interface ProfileSectionsManagerProps {
   spotId: string;
@@ -17,14 +16,9 @@ interface ProfileSectionsManagerProps {
   loadingImages: boolean;
   user: boolean;
   isCreator: boolean;
-  comments: Comment[];
-  commentSending: boolean;
+  currentUserId?: string;
   verificationStatus: 'unverified' | 'pending' | 'verified' | 'rejected';
   onImagesUpdate: () => void;
-  onCommentsUpdate: () => void;
-  onCommentSubmit: (content: string, imageFile?: File | null, parentId?: string | null) => Promise<void>;
-  onCommentDelete?: (commentId: string) => Promise<void>;
-  onCommentLike?: (commentId: string) => Promise<void>;
 }
 
 const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({
@@ -34,16 +28,10 @@ const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({
   loadingImages,
   user,
   isCreator,
-  comments,
-  commentSending,
+  currentUserId,
   verificationStatus,
-  onImagesUpdate,
-  onCommentsUpdate,
-  onCommentSubmit,
-  onCommentDelete,
-  onCommentLike
+  onImagesUpdate
 }) => {
-  console.log(`ProfileSectionsManager received ${comments.length} comments`);
   const [streamRefreshKey, setStreamRefreshKey] = useState(0);
   
   const handleStreamUpdate = () => {
@@ -110,13 +98,7 @@ const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({
       
       <SpotComments
         spotId={spotId}
-        comments={comments}
-        user={user}
-        onCommentsUpdate={onCommentsUpdate}
-        onSubmit={onCommentSubmit}
-        onDelete={onCommentDelete}
-        onLike={onCommentLike}
-        sending={commentSending}
+        currentUserId={currentUserId}
       />
     </div>
   );
