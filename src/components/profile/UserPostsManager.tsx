@@ -4,11 +4,12 @@ import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Trash2, Loader2, Image } from 'lucide-react';
+import { Trash2, Loader2, Image, Edit } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OptimizedImage } from '@/components/ui/optimized-components';
 import { PostInteractions } from './PostInteractions';
 import { PostComments } from './PostComments';
+import { EditPostDialog } from './EditPostDialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface UserPost {
@@ -21,6 +22,7 @@ interface UserPost {
   description: string | null;
   category: string;
   created_at: string;
+  images?: string[];
 }
 
 interface UserPostsManagerProps {
@@ -39,6 +41,7 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
   const [collectedPosts, setCollectedPosts] = useState<UserPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState<string>('my-feeds');
+  const [editingPost, setEditingPost] = useState<UserPost | null>(null);
 
   useEffect(() => {
     loadPosts();
@@ -56,7 +59,10 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setPosts(data || []);
+      setPosts((data || []).map(post => ({
+        ...post,
+        images: Array.isArray(post.images) ? post.images as string[] : []
+      })));
     } catch (error: any) {
       console.error('Error loading posts:', error);
       toast.error('Failed to load posts');
@@ -86,7 +92,10 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
           .order('created_at', { ascending: false });
 
         if (postsError) throw postsError;
-        setCollectedPosts(postsData || []);
+        setCollectedPosts((postsData || []).map(post => ({
+          ...post,
+          images: Array.isArray(post.images) ? post.images as string[] : []
+        })));
       }
     } catch (error: any) {
       console.error('Error loading collected posts:', error);
@@ -119,6 +128,15 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
   const getFileUrl = (filePath: string) => {
     const { data } = supabase.storage.from('user-posts').getPublicUrl(filePath);
     return data?.publicUrl || '';
+  };
+
+  const getPostImages = (post: UserPost): string[] => {
+    // Check if post has images array (new format)
+    if (post.images && Array.isArray(post.images) && post.images.length > 0) {
+      return post.images;
+    }
+    // Fallback to single file_path (old format)
+    return [post.file_path];
   };
 
   const displayedPosts = selectedTab === 'my-feeds' ? posts : collectedPosts;
@@ -192,14 +210,22 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
                     }}
                   />
                   {isOwnProfile && selectedTab === 'my-feeds' && (
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDelete(post.id, post.file_path)}
-                      className="absolute top-2 right-2 opacity-0 hover:opacity-100 transition-opacity"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="absolute top-2 right-2 flex gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setEditingPost(post)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(post.id, post.file_path)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   )}
                 </div>
 

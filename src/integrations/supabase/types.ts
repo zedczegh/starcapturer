@@ -828,6 +828,7 @@ export type Database = {
           file_size: number
           file_type: string
           id: string
+          images: Json | null
           updated_at: string
           user_id: string
         }
@@ -840,6 +841,7 @@ export type Database = {
           file_size: number
           file_type: string
           id?: string
+          images?: Json | null
           updated_at?: string
           user_id: string
         }
@@ -852,6 +854,7 @@ export type Database = {
           file_size?: number
           file_type?: string
           id?: string
+          images?: Json | null
           updated_at?: string
           user_id?: string
         }
