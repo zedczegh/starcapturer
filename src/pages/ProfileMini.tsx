@@ -173,12 +173,12 @@ const ProfileMini: React.FC = () => {
 
           {/* Featured Album with enhanced styling */}
           <div className="p-5 sm:p-7 md:p-9 border-b border-primary/10 bg-gradient-to-br from-cosmic-900/20 to-transparent">
-            <FeaturedAlbumManager userId={profileId!} isOwnProfile={false} />
+            <FeaturedAlbumManager userId={profileId!} isOwnProfile={user?.id === profileId} />
           </div>
 
           {/* Posts section with enhanced styling */}
           <div className="p-5 sm:p-7 md:p-9 border-b border-primary/10">
-            <UserPostsManager userId={profileId!} isOwnProfile={false} />
+            <UserPostsManager userId={profileId!} isOwnProfile={user?.id === profileId} />
           </div>
           
           {/* Spots section with enhanced styling */}
