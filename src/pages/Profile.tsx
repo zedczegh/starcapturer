@@ -164,10 +164,38 @@ const Profile = () => {
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setAvatarFile(file);
-      const previewUrl = URL.createObjectURL(file);
-      setAvatarUrl(previewUrl);
+    if (!file || !user) return;
+    
+    try {
+      setUploadingAvatar(true);
+      
+      // Upload immediately to get permanent URL
+      const uploadedUrl = await uploadAvatar(user.id, file);
+      
+      if (uploadedUrl) {
+        // Update database
+        const { error } = await supabase
+          .from('profiles')
+          .update({ avatar_url: uploadedUrl })
+          .eq('id', user.id);
+          
+        if (error) throw error;
+        
+        // Update state with permanent URL
+        setAvatarUrl(uploadedUrl);
+        setAvatarFile(null);
+        setProfile(prev => ({
+          ...prev,
+          avatar_url: uploadedUrl
+        }));
+        
+        toast.success(t("Avatar updated", "头像已更新"));
+      }
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error);
+      toast.error(t("Failed to upload avatar", "头像上传失败"));
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -255,34 +283,17 @@ const Profile = () => {
         return;
       }
 
-      let newAvatarUrl = avatarUrl;
-      if (avatarFile) {
-        setUploadingAvatar(true);
-        newAvatarUrl = await uploadAvatar(user.id, avatarFile);
-        setUploadingAvatar(false);
-        
-        if (!newAvatarUrl) {
-          toast.error(t("Avatar upload failed", "头像上传失败"));
-          // Continue anyway, we can update the other fields
-        }
-      }
+      // Avatar and background are already uploaded immediately on selection
+      // This just handles username, bio, and tags updates
 
-      // Background is already uploaded immediately on selection
-      // So we just use the current backgroundUrl state
-      const newBackgroundUrl = backgroundUrl;
-
-      // First update the profile
+      // Update the profile with username and bio
       console.log("Upserting profile with:", { 
         username: formData.username, 
-        avatar_url: newAvatarUrl, 
-        background_image_url: newBackgroundUrl, 
         bio: formData.bio,
         motto: profile?.motto 
       });
       const profileSuccess = await upsertUserProfile(user.id, {
         username: formData.username,
-        avatar_url: newAvatarUrl,
-        background_image_url: newBackgroundUrl,
         bio: formData.bio,
         motto: profile?.motto,
       });
@@ -308,15 +319,15 @@ const Profile = () => {
       setProfile(prev => ({
         ...prev,
         username: formData.username,
-        avatar_url: newAvatarUrl,
-        background_image_url: newBackgroundUrl,
+        avatar_url: avatarUrl,
+        background_image_url: backgroundUrl,
         bio: formData.bio,
         tags,
       }));
       
-      // Update the background URL state to reflect the saved URL
-      setBackgroundUrl(newBackgroundUrl);
+      // Clear temp file state
       setBackgroundFile(null);
+      setAvatarFile(null);
       
       toast.success(t("Profile updated successfully", "个人资料更新成功"));
     } catch (error: any) {
