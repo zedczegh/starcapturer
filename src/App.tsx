@@ -20,6 +20,7 @@ import UsefulLinks from './pages/UsefulLinks';
 import ShareLocation from './pages/ShareLocation';
 import Collections from './pages/Collections';
 import Profile from './pages/Profile';
+import UserProfile from './pages/UserProfile';
 import ProfileSettings from './pages/ProfileSettings';
 import WalletSettings from './pages/WalletSettings';
 import PreferencesPage from './pages/Preferences';
@@ -133,6 +134,7 @@ function AppContent() {
       <Route path="/share" element={<ShareLocation />} />
       <Route path="/collections" element={<Collections />} />
       <Route path="/profile" element={<Profile />} />
+      <Route path="/user/:userId" element={<UserProfile />} />
       <Route path="/profile/settings" element={<ProfileSettings />} />
       <Route path="/profile/wallet" element={<WalletSettings />} />
       <Route path="/profile/:id" element={<ProfileMini />} />
