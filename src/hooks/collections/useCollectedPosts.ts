@@ -111,14 +111,38 @@ export const useCollectedPosts = () => {
             .select('id, username, avatar_url')
             .in('id', userIds);
 
-          const enrichedPosts = postsData.map(post => ({
-            ...post,
-            images: Array.isArray(post.images) ? post.images as string[] : [],
-            username: profiles?.find(p => p.id === post.user_id)?.username || 'User',
-            avatar_url: profiles?.find(p => p.id === post.user_id)?.avatar_url || null
-          }));
+          const enrichedPosts = postsData.map(post => {
+            // Convert image storage paths to full public URLs
+            let imageUrls: string[] = [];
+            if (Array.isArray(post.images) && post.images.length > 0) {
+              imageUrls = post.images.map((imagePath: string) => {
+                // Check if it's already a full URL
+                if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+                  return imagePath;
+                }
+                // Convert storage path to public URL
+                const { data } = supabase.storage.from('user-posts').getPublicUrl(imagePath);
+                return data.publicUrl;
+              });
+            } else if (post.file_path) {
+              // Fallback to file_path if no images array
+              if (post.file_path.startsWith('http://') || post.file_path.startsWith('https://')) {
+                imageUrls = [post.file_path];
+              } else {
+                const { data } = supabase.storage.from('user-posts').getPublicUrl(post.file_path);
+                imageUrls = [data.publicUrl];
+              }
+            }
 
-          console.log('[Collected Posts] Enriched posts:', enrichedPosts.length);
+            return {
+              ...post,
+              images: imageUrls,
+              username: profiles?.find(p => p.id === post.user_id)?.username || 'User',
+              avatar_url: profiles?.find(p => p.id === post.user_id)?.avatar_url || null
+            };
+          });
+
+          console.log('[Collected Posts] Enriched posts with URLs:', enrichedPosts.length, enrichedPosts[0]?.images);
           setPosts(enrichedPosts);
           saveCache(enrichedPosts);
         } else {

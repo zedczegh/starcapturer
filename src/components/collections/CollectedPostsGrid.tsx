@@ -45,13 +45,19 @@ export const CollectedPostsGrid: React.FC<CollectedPostsGridProps> = ({ posts })
   };
 
   const getFirstImage = (post: CollectedPost): string => {
-    console.log('[CollectedPostsGrid] Post images:', post.images, 'File path:', post.file_path);
+    console.log('[CollectedPostsGrid] Post images:', post.images, 'File path:', post.file_path, 'File type:', post.file_type);
     
     // Check if images array exists and has items
     if (post.images && Array.isArray(post.images) && post.images.length > 0) {
       const firstImage = post.images[0];
+      
+      // Check if it's a video file
+      if (firstImage.includes('.webm') || firstImage.includes('.mp4') || firstImage.includes('.mov')) {
+        console.log('[CollectedPostsGrid] Video detected, returning empty for now');
+        return ''; // Return empty for videos - we'll handle with video element
+      }
+      
       console.log('[CollectedPostsGrid] Using first image from array:', firstImage);
-      // Images in the array are already full URLs
       return firstImage;
     }
     
@@ -59,6 +65,11 @@ export const CollectedPostsGrid: React.FC<CollectedPostsGridProps> = ({ posts })
     const url = getFileUrl(post.file_path);
     console.log('[CollectedPostsGrid] Using file_path URL:', url);
     return url;
+  };
+
+  const isVideo = (post: CollectedPost): boolean => {
+    const firstItem = post.images?.[0] || post.file_path;
+    return firstItem?.includes('.webm') || firstItem?.includes('.mp4') || firstItem?.includes('.mov') || false;
   };
 
   const handlePostClick = (post: CollectedPost) => {
@@ -85,25 +96,51 @@ export const CollectedPostsGrid: React.FC<CollectedPostsGridProps> = ({ posts })
           >
             {/* Thumbnail Image */}
             <div className="relative aspect-square overflow-hidden bg-cosmic-900">
-              <img 
-                src={getFirstImage(post)}
-                alt={post.description || post.file_name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                onError={(e) => {
-                  console.error('[CollectedPostsGrid] Image failed to load:', getFirstImage(post));
-                  e.currentTarget.style.display = 'none';
-                  const parent = e.currentTarget.parentElement;
-                  if (parent) {
-                    const fallback = document.createElement('div');
-                    fallback.className = 'w-full h-full flex items-center justify-center';
-                    fallback.innerHTML = '<svg class="w-12 h-12 text-cosmic-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
-                    parent.appendChild(fallback);
-                  }
-                }}
-              />
+              {isVideo(post) ? (
+                <video 
+                  src={post.images?.[0] || getFileUrl(post.file_path)}
+                  className="w-full h-full object-cover"
+                  muted
+                  playsInline
+                  onLoadedData={(e) => {
+                    // Seek to 1 second to get a frame
+                    const video = e.currentTarget;
+                    video.currentTime = 1;
+                  }}
+                />
+              ) : (
+                <img 
+                  src={getFirstImage(post)}
+                  alt={post.description || post.file_name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                  onError={(e) => {
+                    console.error('[CollectedPostsGrid] Image failed to load:', getFirstImage(post));
+                    e.currentTarget.style.display = 'none';
+                    const parent = e.currentTarget.parentElement;
+                    if (parent) {
+                      const fallback = document.createElement('div');
+                      fallback.className = 'w-full h-full flex items-center justify-center';
+                      fallback.innerHTML = '<svg class="w-12 h-12 text-cosmic-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
+                      parent.appendChild(fallback);
+                    }
+                  }}
+                />
+              )}
+              
+              {/* Video play icon overlay */}
+              {isVideo(post) && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="bg-black/60 backdrop-blur-sm rounded-full p-3">
+                    <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                  </div>
+                </div>
+              )}
               
               {/* Image count badge if multiple images */}
-              {post.images && post.images.length > 1 && (
+              {post.images && post.images.length > 1 && !isVideo(post) && (
                 <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-full text-xs text-white flex items-center gap-1">
                   <ImageIcon className="w-3 h-3" />
                   {post.images.length}
