@@ -13,7 +13,8 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSiqsAdminData } from '@/hooks/admin/useSiqsAdminData';
-import SiqsLocationCard from './SiqsLocationCard';
+import { useCountyGroupedSiqs } from '@/hooks/admin/useCountyGroupedSiqs';
+import CountyGroupCard from './CountyGroupCard';
 import { motion } from 'framer-motion';
 
 const SiqsAdminDashboard: React.FC = () => {
@@ -29,12 +30,19 @@ const SiqsAdminDashboard: React.FC = () => {
 
   const [sortBy, setSortBy] = useState<'siqs' | 'count'>('siqs');
 
-  const sortLocations = (locations: any[]) => {
+  // Group locations by county
+  const { countyGroups: photopointCounties, loading: photopointGrouping } = useCountyGroupedSiqs(photopointLocations);
+  const { countyGroups: communityCounties, loading: communityGrouping } = useCountyGroupedSiqs(communityLocations);
+  const { countyGroups: topRankedCounties, loading: topRankedGrouping } = useCountyGroupedSiqs(topRankedLocations);
+
+  const sortCountyGroups = (groups: any[]) => {
     if (sortBy === 'siqs') {
-      return [...locations].sort((a, b) => b.avg_siqs - a.avg_siqs);
+      return [...groups].sort((a, b) => b.avgSiqs - a.avgSiqs);
     }
-    return [...locations].sort((a, b) => b.calculation_count - a.calculation_count);
+    return [...groups].sort((a, b) => b.totalCalculations - a.totalCalculations);
   };
+
+  const isGroupLoading = loading || photopointGrouping || communityGrouping || topRankedGrouping;
 
   const totalCalculations = 
     photopointLocations.reduce((sum, loc) => sum + loc.calculation_count, 0) +
@@ -96,8 +104,9 @@ const SiqsAdminDashboard: React.FC = () => {
                 <MapPin className="h-5 w-5 text-blue-400" />
               </div>
               <div>
-                <p className="text-xs text-cosmic-400">{t('Photopoints', '照片点')}</p>
-                <p className="text-2xl font-bold text-cosmic-100">{photopointLocations.length}</p>
+                <p className="text-xs text-cosmic-400">{t('Photopoint Regions', '照片点区域')}</p>
+                <p className="text-2xl font-bold text-cosmic-100">{photopointCounties.length}</p>
+                <p className="text-xs text-cosmic-500 mt-0.5">{photopointLocations.length} {t('locations', '位置')}</p>
               </div>
             </div>
           </CardContent>
@@ -110,8 +119,9 @@ const SiqsAdminDashboard: React.FC = () => {
                 <Users className="h-5 w-5 text-green-400" />
               </div>
               <div>
-                <p className="text-xs text-cosmic-400">{t('Community Spots', '社区点位')}</p>
-                <p className="text-2xl font-bold text-cosmic-100">{communityLocations.length}</p>
+                <p className="text-xs text-cosmic-400">{t('Community Regions', '社区区域')}</p>
+                <p className="text-2xl font-bold text-cosmic-100">{communityCounties.length}</p>
+                <p className="text-xs text-cosmic-500 mt-0.5">{communityLocations.length} {t('locations', '位置')}</p>
               </div>
             </div>
           </CardContent>
@@ -171,61 +181,127 @@ const SiqsAdminDashboard: React.FC = () => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="ranked" className="mt-4">
-          {loading ? (
-            <div className="text-center py-8 text-cosmic-400">
-              {t('Loading...', '加载中...')}
+        {/* Top Ranked Tab */}
+        <TabsContent value="ranked" className="space-y-4 mt-4">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-cosmic-400">
+              {t('Showing top', '显示顶部')} {topRankedCounties.length} {t('regions with', '区域')} {topRankedLocations.length} {t('locations', '位置')}
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSortBy(sortBy === 'siqs' ? 'count' : 'siqs')}
+              className="text-xs"
+            >
+              <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
+              {t('Sort by', '排序')} {sortBy === 'siqs' ? t('Calculations', '计算次数') : 'SIQS'}
+            </Button>
+          </div>
+
+          {isGroupLoading ? (
+            <div className="text-center py-12 text-cosmic-400">
+              <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
+              <p>{t('Loading data...', '加载数据中...')}</p>
             </div>
-          ) : topRankedLocations.length === 0 ? (
+          ) : topRankedCounties.length === 0 ? (
             <Card className="bg-cosmic-800/40 border-cosmic-700/30">
-              <CardContent className="p-8 text-center">
-                <p className="text-cosmic-400">{t('No ranked locations found', '未找到排名位置')}</p>
+              <CardContent className="p-8 text-center text-cosmic-400">
+                <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-40" />
+                <p>{t('No ranked data available', '没有排名数据')}</p>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sortLocations(topRankedLocations).map((location, index) => (
-                <SiqsLocationCard key={`${location.latitude}-${location.longitude}-${index}`} location={location} index={index} />
+            <div className="space-y-4">
+              {sortCountyGroups(topRankedCounties).map((group, index) => (
+                <CountyGroupCard
+                  key={group.county}
+                  group={group}
+                  index={index}
+                />
               ))}
             </div>
           )}
         </TabsContent>
 
-        <TabsContent value="photopoints" className="mt-4">
-          {loading ? (
-            <div className="text-center py-8 text-cosmic-400">
-              {t('Loading...', '加载中...')}
+        {/* Photopoints Tab */}
+        <TabsContent value="photopoints" className="space-y-4 mt-4">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-cosmic-400">
+              {t('Showing', '显示')} {photopointCounties.length} {t('regions with', '区域')} {photopointLocations.length} {t('locations', '位置')}
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSortBy(sortBy === 'siqs' ? 'count' : 'siqs')}
+              className="text-xs"
+            >
+              <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
+              {t('Sort by', '排序')} {sortBy === 'siqs' ? t('Calculations', '计算次数') : 'SIQS'}
+            </Button>
+          </div>
+
+          {isGroupLoading ? (
+            <div className="text-center py-12 text-cosmic-400">
+              <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
+              <p>{t('Loading data...', '加载数据中...')}</p>
             </div>
-          ) : photopointLocations.length === 0 ? (
+          ) : photopointCounties.length === 0 ? (
             <Card className="bg-cosmic-800/40 border-cosmic-700/30">
-              <CardContent className="p-8 text-center">
-                <p className="text-cosmic-400">{t('No photopoint locations found', '未找到照片点位置')}</p>
+              <CardContent className="p-8 text-center text-cosmic-400">
+                <MapPin className="h-12 w-12 mx-auto mb-3 opacity-40" />
+                <p>{t('No photopoint data available', '没有照片点数据')}</p>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sortLocations(photopointLocations).map((location, index) => (
-                <SiqsLocationCard key={`${location.latitude}-${location.longitude}-${index}`} location={location} index={index} />
+            <div className="space-y-4">
+              {sortCountyGroups(photopointCounties).map((group, index) => (
+                <CountyGroupCard
+                  key={group.county}
+                  group={group}
+                  index={index}
+                />
               ))}
             </div>
           )}
         </TabsContent>
 
-        <TabsContent value="community" className="mt-4">
-          {loading ? (
-            <div className="text-center py-8 text-cosmic-400">
-              {t('Loading...', '加载中...')}
+        {/* Community Tab */}
+        <TabsContent value="community" className="space-y-4 mt-4">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-cosmic-400">
+              {t('Showing', '显示')} {communityCounties.length} {t('regions with', '区域')} {communityLocations.length} {t('locations', '位置')}
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSortBy(sortBy === 'siqs' ? 'count' : 'siqs')}
+              className="text-xs"
+            >
+              <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
+              {t('Sort by', '排序')} {sortBy === 'siqs' ? t('Calculations', '计算次数') : 'SIQS'}
+            </Button>
+          </div>
+
+          {isGroupLoading ? (
+            <div className="text-center py-12 text-cosmic-400">
+              <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
+              <p>{t('Loading data...', '加载数据中...')}</p>
             </div>
-          ) : communityLocations.length === 0 ? (
+          ) : communityCounties.length === 0 ? (
             <Card className="bg-cosmic-800/40 border-cosmic-700/30">
-              <CardContent className="p-8 text-center">
-                <p className="text-cosmic-400">{t('No community locations found', '未找到社区位置')}</p>
+              <CardContent className="p-8 text-center text-cosmic-400">
+                <Users className="h-12 w-12 mx-auto mb-3 opacity-40" />
+                <p>{t('No community data available', '没有社区数据')}</p>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sortLocations(communityLocations).map((location, index) => (
-                <SiqsLocationCard key={`${location.latitude}-${location.longitude}-${index}`} location={location} index={index} />
+            <div className="space-y-4">
+              {sortCountyGroups(communityCounties).map((group, index) => (
+                <CountyGroupCard
+                  key={group.county}
+                  group={group}
+                  index={index}
+                />
               ))}
             </div>
           )}
