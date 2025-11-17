@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
 import ProfileAvatar from './ProfileAvatar';
 import ProfileMotto from './ProfileMotto';
 import { AdminBadge } from './AdminBadge';
@@ -21,7 +22,9 @@ const ProfileMainNew = ({
   onRemoveAvatar,
   onRemoveBackground,
   uploadingAvatar,
+  avatarUploadProgress = 0,
   uploadingBackground,
+  backgroundUploadProgress = 0,
   astronomyTip,
   motto,
   onMottoSave,
@@ -116,6 +119,19 @@ const ProfileMainNew = ({
           disabled={uploadingBackground}
         />
         
+        {/* Upload Progress Bar */}
+        {uploadingBackground && backgroundUploadProgress > 0 && (
+          <div className="absolute inset-x-0 bottom-0 p-4">
+            <div className="max-w-md mx-auto bg-cosmic-900/90 backdrop-blur-sm rounded-lg p-3 border border-primary/20">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-cosmic-200">{t("Uploading background...", "上传背景中...")}</span>
+                <span className="text-sm font-medium text-primary">{backgroundUploadProgress}%</span>
+              </div>
+              <Progress value={backgroundUploadProgress} className="h-2" />
+            </div>
+          </div>
+        )}
+        
         {/* Animated stars overlay */}
         <div className="absolute inset-0 opacity-20 pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-1 h-1 bg-white rounded-full animate-pulse"></div>
@@ -161,6 +177,7 @@ const ProfileMainNew = ({
                       onAvatarChange={onAvatarChange}
                       onRemoveAvatar={onRemoveAvatar}
                       uploadingAvatar={uploadingAvatar}
+                      avatarUploadProgress={avatarUploadProgress}
                     />
                   </div>
                 </div>

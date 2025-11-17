@@ -36,9 +36,11 @@ const Profile = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarUploadProgress, setAvatarUploadProgress] = useState(0);
   const [backgroundFile, setBackgroundFile] = useState<File | null>(null);
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
   const [uploadingBackground, setUploadingBackground] = useState(false);
+  const [backgroundUploadProgress, setBackgroundUploadProgress] = useState(0);
   const [randomTip, setRandomTip] = useState<[string, string] | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [postsRefreshKey, setPostsRefreshKey] = useState(0);
@@ -168,9 +170,18 @@ const Profile = () => {
     
     try {
       setUploadingAvatar(true);
+      setAvatarUploadProgress(10);
+      
+      // Simulate progress during upload
+      const progressInterval = setInterval(() => {
+        setAvatarUploadProgress(prev => Math.min(prev + 10, 90));
+      }, 200);
       
       // Upload immediately to get permanent URL
       const uploadedUrl = await uploadAvatar(user.id, file);
+      
+      clearInterval(progressInterval);
+      setAvatarUploadProgress(95);
       
       if (uploadedUrl) {
         // Update database
@@ -189,11 +200,16 @@ const Profile = () => {
           avatar_url: uploadedUrl
         }));
         
+        setAvatarUploadProgress(100);
         toast.success(t("Avatar updated", "头像已更新"));
+        
+        // Reset progress after a short delay
+        setTimeout(() => setAvatarUploadProgress(0), 1000);
       }
     } catch (error: any) {
       console.error('Error uploading avatar:', error);
       toast.error(t("Failed to upload avatar", "头像上传失败"));
+      setAvatarUploadProgress(0);
     } finally {
       setUploadingAvatar(false);
     }
@@ -205,9 +221,18 @@ const Profile = () => {
     
     try {
       setUploadingBackground(true);
+      setBackgroundUploadProgress(10);
+      
+      // Simulate progress during upload
+      const progressInterval = setInterval(() => {
+        setBackgroundUploadProgress(prev => Math.min(prev + 10, 90));
+      }, 300);
       
       // Upload immediately to get permanent URL
       const uploadedUrl = await uploadBackground(user.id, file);
+      
+      clearInterval(progressInterval);
+      setBackgroundUploadProgress(95);
       
       if (uploadedUrl) {
         // Update database
@@ -226,11 +251,16 @@ const Profile = () => {
           background_image_url: uploadedUrl
         }));
         
+        setBackgroundUploadProgress(100);
         toast.success(t("Background updated", "背景已更新"));
+        
+        // Reset progress after a short delay
+        setTimeout(() => setBackgroundUploadProgress(0), 1000);
       }
     } catch (error: any) {
       console.error('Error uploading background:', error);
       toast.error(t("Failed to upload background", "背景上传失败"));
+      setBackgroundUploadProgress(0);
     } finally {
       setUploadingBackground(false);
     }
@@ -406,7 +436,9 @@ const Profile = () => {
         onRemoveAvatar={removeAvatar}
         onRemoveBackground={handleRemoveBackground}
         uploadingAvatar={uploadingAvatar}
+        avatarUploadProgress={avatarUploadProgress}
         uploadingBackground={uploadingBackground}
+        backgroundUploadProgress={backgroundUploadProgress}
         astronomyTip={randomTip}
         motto={profile?.motto}
         onMottoSave={handleMottoSave}
