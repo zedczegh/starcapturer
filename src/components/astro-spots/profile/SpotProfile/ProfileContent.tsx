@@ -2,6 +2,7 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 import LocationDetailsLoading from "@/components/location/LocationDetailsLoading";
 import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
 import ProfileHeaderSection from './ProfileHeaderSection';
@@ -22,6 +23,7 @@ interface ProfileContentProps {
 
 const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFromCommunity }) => {
   const { t } = useLanguage();
+  const { user: authUser } = useAuth();
   
   const {
     spot,
@@ -138,13 +140,8 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
         loadingImages={loadingImages}
         user={user}
         isCreator={isCreator}
-        comments={comments}
-        commentSending={commentSending}
+        currentUserId={authUser?.id}
         onImagesUpdate={handleImagesUpdate}
-        onCommentsUpdate={handleCommentsUpdate}
-        onCommentSubmit={handleCommentSubmit}
-        onCommentDelete={deleteComment}
-        onCommentLike={handleLike}
         verificationStatus={spot.verification_status || 'unverified'}
       />
 
