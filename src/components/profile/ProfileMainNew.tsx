@@ -128,7 +128,7 @@ const ProfileMainNew = ({
         {/* Enhanced Profile Header Section with Glow */}
         <div className="relative -mt-20 sm:-mt-24 mb-6 sm:mb-8">
           <div className="max-w-4xl mx-auto">
-            <Card className="bg-cosmic-900/95 backdrop-blur-xl border border-primary/10 p-6 sm:p-8 relative">
+            <Card className="bg-cosmic-900/10 backdrop-blur-xl border border-primary/10 p-6 sm:p-8 relative">
               {/* Settings & Wallet Icons - Top Right Stacked */}
               <div className="absolute top-4 right-4 flex flex-col gap-2">
                 <Button
