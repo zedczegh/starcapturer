@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import ProfileLoader from '@/components/profile/ProfileLoader';
-import ProfileMain from '@/components/profile/ProfileMain';
+import ProfileMain from '@/components/profile/ProfileMainNew';
 import { 
   uploadAvatar, 
   upsertUserProfile, 
@@ -37,6 +37,7 @@ const Profile = () => {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [randomTip, setRandomTip] = useState<[string, string] | null>(null);
   const [tags, setTags] = useState<string[]>([]);
+  const [postsRefreshKey, setPostsRefreshKey] = useState(0);
 
   const { register, handleSubmit, setValue } = useForm<ProfileFormValues>({
     defaultValues: {
@@ -248,6 +249,10 @@ const Profile = () => {
     setAvatarFile(null); // Clear file since we're using URL from album
   };
 
+  const handlePostsUpdate = () => {
+    setPostsRefreshKey(prev => prev + 1);
+  };
+
   if (!authChecked || loading) return <ProfileLoader />;
   
   if (authError) {
@@ -293,6 +298,8 @@ const Profile = () => {
         bio={profile?.bio}
         userId={user.id}
         onAvatarSelectFromAlbum={handleAvatarSelectFromAlbum}
+        onPostsUpdate={handlePostsUpdate}
+        postsRefreshKey={postsRefreshKey}
       />
     </div>
   );
