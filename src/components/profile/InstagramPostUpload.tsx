@@ -159,9 +159,11 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
                       <video
                         src={url}
                         className="w-full h-full object-cover"
-                        controls
-                        preload="metadata"
+                        autoPlay
+                        loop
+                        muted
                         playsInline
+                        preload="auto"
                       />
                     ) : (
                       <img

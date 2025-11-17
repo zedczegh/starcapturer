@@ -156,10 +156,10 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
   const getPostImages = (post: UserPost): string[] => {
     // Check if post has images array (new format)
     if (post.images && Array.isArray(post.images) && post.images.length > 0) {
-      return post.images;
+      return post.images.map(path => getFileUrl(path));
     }
     // Fallback to single file_path (old format)
-    return [post.file_path];
+    return [getFileUrl(post.file_path)];
   };
 
   const displayedPosts = selectedTab === 'my-feeds' ? posts : collectedPosts;
