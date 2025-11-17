@@ -72,11 +72,15 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
     }
   }, [loading, isInitialized, displayedLocations]);
 
-  // Apply real-time SIQS to recommended locations
+  // Apply real-time SIQS to recommended locations progressively
   useEffect(() => {
     const locationsToEnhance = displayedLocations.length > 0 ? displayedLocations : cachedLocations;
     
     if (locationsToEnhance.length > 0) {
+      // Show locations immediately
+      setEnhancedLocations(locationsToEnhance);
+      
+      // Then update with SIQS progressively in the background
       const updateWithSiqs = async () => {
         try {
           // Apply real-time SIQS to all locations including certified ones
@@ -84,11 +88,12 @@ const RecommendedPhotoPoints: React.FC<RecommendedPhotoPointsProps> = ({
           setEnhancedLocations(updated);
         } catch (err) {
           console.error("Error updating recommended locations with SIQS:", err);
-          setEnhancedLocations(locationsToEnhance);
+          // Keep the locations visible even if SIQS update fails
         }
       };
       
-      updateWithSiqs();
+      // Delay SIQS update slightly to prioritize showing locations first
+      setTimeout(updateWithSiqs, 100);
     }
   }, [displayedLocations, cachedLocations, userLocation]);
 

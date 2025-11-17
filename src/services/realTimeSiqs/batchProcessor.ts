@@ -17,28 +17,44 @@ export async function batchCalculateSiqs(
   console.log(`Batch calculating SIQS for ${locations.length} locations`);
   
   try {
-    // Process locations in parallel for efficiency but with a concurrency limit
-    const results = await Promise.all(
-      locations.map(async location => {
-        const siqsResult = await calculateRealTimeSiqs(
-          location.latitude, 
-          location.longitude, 
-          location.bortleScale || 5
-        );
-        
-        // Merge SIQS results with the original location data
-        return {
-          ...location,
-          siqs: siqsResult.siqs,
-          isViable: siqsResult.isViable,
-          siqsResult: {
-            score: siqsResult.siqs,
-            isViable: siqsResult.isViable,
-            factors: siqsResult.factors || []
+    // Process locations with concurrency limit to avoid overwhelming the API
+    const CONCURRENT_LIMIT = 3;
+    const results: SharedAstroSpot[] = [];
+    
+    for (let i = 0; i < locations.length; i += CONCURRENT_LIMIT) {
+      const batch = locations.slice(i, i + CONCURRENT_LIMIT);
+      const batchResults = await Promise.all(
+        batch.map(async location => {
+          try {
+            const siqsResult = await calculateRealTimeSiqs(
+              location.latitude, 
+              location.longitude, 
+              location.bortleScale || 5
+            );
+            
+            // Merge SIQS results with the original location data
+            return {
+              ...location,
+              siqs: siqsResult.siqs,
+              isViable: siqsResult.isViable,
+              siqsResult: {
+                score: siqsResult.siqs,
+                isViable: siqsResult.isViable,
+                factors: siqsResult.factors || []
+              }
+            };
+          } catch (error) {
+            console.error(`Error calculating SIQS for location at ${location.latitude}, ${location.longitude}:`, error);
+            return {
+              ...location,
+              siqs: location.bortleScale ? (10 - location.bortleScale) : 5,
+              isViable: true
+            };
           }
-        };
-      })
-    );
+        })
+      );
+      results.push(...batchResults);
+    }
     
     return results;
   } catch (error) {
