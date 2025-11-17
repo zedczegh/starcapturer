@@ -149,32 +149,34 @@ const MessageItem: React.FC<MessageItemProps> = ({
           )}
 
           {/* Shared Post Preview */}
-          {isSharedPost && (
-            <div className="space-y-2">
-              <p className="text-sm opacity-90">Shared a post with you:</p>
-              <Card 
-                className="overflow-hidden cursor-pointer hover:scale-[1.01] transition-transform bg-cosmic-700/40 border-cosmic-600/30"
-                onClick={handlePostClick}
-              >
-                {postImageUrl && (
-                  <img
-                    src={postImageUrl}
-                    alt="Shared post"
-                    className="w-full h-48 object-cover"
-                  />
-                )}
-                {metadata.post_description && (
-                  <div className="p-3">
-                    <p className="text-sm text-cosmic-200 line-clamp-2">
+          {isSharedPost && postImageUrl && (
+            <Card 
+              className="overflow-hidden cursor-pointer hover:scale-[1.02] transition-all bg-cosmic-700/40 border-cosmic-600/30 max-w-[280px]"
+              onClick={handlePostClick}
+            >
+              <div className="relative w-full aspect-square">
+                <img
+                  src={postImageUrl}
+                  alt="Shared post"
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-cosmic-950/80 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-3">
+                  {metadata.post_description && (
+                    <p className="text-sm text-white font-medium line-clamp-2 mb-1">
                       {metadata.post_description}
                     </p>
-                  </div>
-                )}
-                <div className="px-3 pb-3 text-xs text-cosmic-400">
-                  Tap to view full post
+                  )}
+                  <p className="text-xs text-cosmic-300 flex items-center gap-1">
+                    <span>Tap to view post</span>
+                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </p>
                 </div>
-              </Card>
-            </div>
+              </div>
+            </Card>
           )}
         </div>
         
