@@ -148,6 +148,31 @@
   .styled-scrollbar::-webkit-scrollbar-thumb:hover {
     background: hsla(30, 90%, 55%, 0.6);
   }
+
+  /* Post highlight effect for shared links */
+  .post-highlight {
+    animation: post-highlight-pulse 0.5s ease-in-out;
+    box-shadow: 0 0 0 4px hsl(var(--primary)), 
+                0 0 40px hsl(var(--primary) / 0.6),
+                0 0 60px hsl(var(--primary) / 0.3) !important;
+    transform: scale(1.02) !important;
+    transition: all 0.3s ease-in-out !important;
+    position: relative;
+    z-index: 10;
+  }
+
+  @keyframes post-highlight-pulse {
+    0%, 100% {
+      box-shadow: 0 0 0 4px hsl(var(--primary)), 
+                  0 0 40px hsl(var(--primary) / 0.6),
+                  0 0 60px hsl(var(--primary) / 0.3);
+    }
+    50% {
+      box-shadow: 0 0 0 6px hsl(var(--primary)), 
+                  0 0 50px hsl(var(--primary) / 0.8),
+                  0 0 80px hsl(var(--primary) / 0.5);
+    }
+  }
   
   @keyframes tooltip-appear {
     from {

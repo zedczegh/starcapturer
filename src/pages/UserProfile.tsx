@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { useParams, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import NavBar from '@/components/NavBar';
@@ -18,7 +18,8 @@ const UserProfile = () => {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
   const [randomTip, setRandomTip] = useState<[string, string] | null>(null);
-  const scrollToPost = location.state?.scrollToPost;
+  const [searchParams] = useSearchParams();
+  const scrollToPost = searchParams.get('post') || location.state?.scrollToPost;
 
   useEffect(() => {
     if (!userId) {
@@ -45,15 +46,12 @@ const UserProfile = () => {
           // Scroll to center the element on screen
           postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
           
-          // Add highlight effect with glow
-          postElement.style.transition = 'all 0.3s ease-in-out';
-          postElement.style.boxShadow = '0 0 0 3px hsl(var(--primary)), 0 0 30px hsl(var(--primary) / 0.5)';
-          postElement.style.transform = 'scale(1.01)';
+          // Add highlight effect with glowing orange border
+          postElement.classList.add('post-highlight');
           
           // Remove highlight after 3 seconds
           setTimeout(() => {
-            postElement.style.boxShadow = '';
-            postElement.style.transform = '';
+            postElement.classList.remove('post-highlight');
           }, 3000);
         } else {
           console.warn('[UserProfile] Post element not found:', `post-${scrollToPost}`);
