@@ -52,9 +52,9 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
     const file = e.target.files?.[0];
     if (file) {
       if (file.type.startsWith('image/')) {
-        // Check file size (5MB limit like messages)
-        if (file.size > 5 * 1024 * 1024) {
-          toast.error(t('Image must be less than 5MB', '图片必须小于5MB'));
+        // Check file size (100MB limit)
+        if (file.size > 100 * 1024 * 1024) {
+          toast.error(t('Image must be less than 100MB', '图片必须小于100MB'));
           return;
         }
         
