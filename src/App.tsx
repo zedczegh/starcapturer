@@ -14,7 +14,6 @@ const LazyLocationDetails = lazy(() => import('@/pages/LocationDetails'));
 const LazyCommunityAstroSpots = lazy(() => import('@/pages/CommunityAstroSpots'));
 
 // Keep light components as regular imports
-import IndexPage from './pages/Index';
 import NotFound from './pages/NotFound';
 import About from './pages/About';
 import UsefulLinks from './pages/UsefulLinks';
@@ -101,7 +100,8 @@ function AppContent() {
           <LazyCommunityAstroSpots />
         </Suspense>
       } />
-      <Route path="/calculator" element={<IndexPage />} />
+      {/* Redirect deprecated /calculator route to community page */}
+      <Route path="/calculator" element={<Navigate to="/" replace />} />
       <Route path="/photo-points" element={
         <Suspense fallback={<SimpleLoadingFallback />}>
           <LazyPhotoPointsNearby />

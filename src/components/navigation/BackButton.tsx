@@ -17,7 +17,7 @@ interface BackButtonProps {
 }
 
 const BackButton: React.FC<BackButtonProps> = ({
-  destination = "/",
+  destination = "/", // Default to community page (root)
   className,
   variant = "outline",
   size = "default",
@@ -47,7 +47,7 @@ const BackButton: React.FC<BackButtonProps> = ({
       
       // When returning to the community page, add a refresh timestamp to ensure 
       // the community page loads fresh data and doesn't use stale state
-      navigate('/community', { 
+      navigate('/', { 
         replace,
         state: { 
           refreshTimestamp,
