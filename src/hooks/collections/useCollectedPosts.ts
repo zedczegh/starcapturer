@@ -80,6 +80,8 @@ export const useCollectedPosts = () => {
       setLoading(true);
       setError(null);
 
+      console.log('[Collected Posts] Fetching for user:', user.id);
+
       const { data: interactions, error: intError } = await supabase
         .from('post_interactions')
         .select('post_id')
@@ -87,6 +89,8 @@ export const useCollectedPosts = () => {
         .eq('interaction_type', 'collect');
 
       if (intError) throw intError;
+
+      console.log('[Collected Posts] Found interactions:', interactions?.length);
 
       if (interactions && interactions.length > 0) {
         const postIds = interactions.map(i => i.post_id);
@@ -97,6 +101,8 @@ export const useCollectedPosts = () => {
           .order('created_at', { ascending: false });
 
         if (postsError) throw postsError;
+
+        console.log('[Collected Posts] Found posts:', postsData?.length);
 
         if (postsData && postsData.length > 0) {
           const userIds = [...new Set(postsData.map(p => p.user_id))];
@@ -112,6 +118,7 @@ export const useCollectedPosts = () => {
             avatar_url: profiles?.find(p => p.id === post.user_id)?.avatar_url || null
           }));
 
+          console.log('[Collected Posts] Enriched posts:', enrichedPosts.length);
           setPosts(enrichedPosts);
           saveCache(enrichedPosts);
         } else {
@@ -119,6 +126,7 @@ export const useCollectedPosts = () => {
           saveCache([]);
         }
       } else {
+        console.log('[Collected Posts] No interactions found');
         setPosts([]);
         saveCache([]);
       }

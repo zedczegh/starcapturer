@@ -40,7 +40,9 @@ const ProfileMainNew = ({
   tags,
   handleSubmit,
   onSubmit,
-  setTags
+  setTags,
+  isOwnProfile = true,
+  viewMode = false
 }: any) => {
   const navigate = useNavigate();
   const { t } = useLanguage();
@@ -169,27 +171,29 @@ const ProfileMainNew = ({
         <div className="relative -mt-20 sm:-mt-24 mb-6 sm:mb-8">
           <div className="max-w-4xl mx-auto">
             <Card className="bg-cosmic-900/10 backdrop-blur-xl border border-primary/10 p-6 sm:p-8 relative">
-              {/* Settings & Wallet Icons - Top Right Stacked */}
-              <div className="absolute top-4 right-4 flex flex-col gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigate('/profile/settings')}
-                  className="h-9 w-9 rounded-full hover:bg-cosmic-800/50"
-                  title={t('Settings', '设置')}
-                >
-                  <Settings className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigate('/profile/wallet')}
-                  className="h-9 w-9 rounded-full hover:bg-cosmic-800/50"
-                  title={t('Wallet', '钱包')}
-                >
-                  <Wallet className="h-4 w-4" />
-                </Button>
-              </div>
+              {/* Settings & Wallet Icons - Top Right Stacked - Only show on own profile */}
+              {!viewMode && (
+                <div className="absolute top-4 right-4 flex flex-col gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigate('/profile/settings')}
+                    className="h-9 w-9 rounded-full hover:bg-cosmic-800/50"
+                    title={t('Settings', '设置')}
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigate('/profile/wallet')}
+                    className="h-9 w-9 rounded-full hover:bg-cosmic-800/50"
+                    title={t('Wallet', '钱包')}
+                  >
+                    <Wallet className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
 
               {/* Top Left Layout */}
               <div className="flex items-start gap-6">

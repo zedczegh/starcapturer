@@ -202,6 +202,7 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
             {posts.map((post, index) => (
               <motion.div
                 key={post.id}
+                id={`post-${post.id}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
