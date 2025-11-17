@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Trash2, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { Trash2, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from '@/integrations/supabase/client';
 import CommentInput from "./CommentInput";
 import { Comment } from '../types/comments';
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,7 +33,6 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
   const [showAllReplies, setShowAllReplies] = useState(false);
   const [deleting, setDeleting] = useState(false);
   
-  // Determine if we should collapse replies
   const hasReplies = comment.replies && comment.replies.length > 0;
   const hasMoreThanFiveReplies = hasReplies && comment.replies.length > 5;
   const visibleReplies = showAllReplies || !hasMoreThanFiveReplies 
@@ -78,17 +77,32 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
     }
   };
 
+  const getCommentImageUrl = (imagePath: string) => {
+    if (imagePath.startsWith('http')) return imagePath;
+    const { data } = supabase.storage.from('comment-images').getPublicUrl(imagePath);
+    return data?.publicUrl || imagePath;
+  };
+
+  const getCommentImages = (commentData: Comment): string[] => {
+    if (commentData.image_urls && commentData.image_urls.length > 0) {
+      return commentData.image_urls.map(getCommentImageUrl);
+    }
+    if (commentData.image_url) {
+      return [getCommentImageUrl(commentData.image_url)];
+    }
+    return [];
+  };
+
   const formattedCreatedAt = getFormattedDate(comment.created_at);
   const username = comment.profiles?.username || t("Anonymous", "匿名用户");
   const userInitial = username ? username.charAt(0).toUpperCase() : 'U';
-
-  const isReply = false; // Main comments are not replies
+  const commentImages = getCommentImages(comment);
 
   return (
-    <div className={`group ${isReply ? 'pl-6 mt-4 border-l-2 border-border/30' : ''}`}>
-      <div className="flex gap-3">
-        <div className="flex-shrink-0">
-          <Avatar className={`${isReply ? 'w-8 h-8' : 'w-10 h-10'} ring-2 ring-background shadow-sm`}>
+    <div className="group">
+      <div className="flex gap-3 items-start">
+        <div className="flex-shrink-0 pt-1">
+          <Avatar className="w-10 h-10">
             {comment.profiles?.avatar_url ? (
               <AvatarImage 
                 src={comment.profiles.avatar_url} 
@@ -96,7 +110,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
                 className="object-cover"
               />
             ) : (
-              <AvatarFallback className="bg-primary/10 text-primary font-medium">
+              <AvatarFallback className="bg-muted text-foreground font-medium">
                 {userInitial}
               </AvatarFallback>
             )}
@@ -104,105 +118,109 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
         </div>
         
         <div className="flex-grow min-w-0">
-            <div className="bg-card/60 backdrop-blur-sm rounded-xl p-4 border border-border/50 shadow-sm transition-all duration-200 group-hover:shadow-md group-hover:border-border/80 relative">
-              {deleting && (
-                <div className="absolute inset-0 bg-background/50 backdrop-blur-sm rounded-xl flex items-center justify-center z-10">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    {t("Deleting...", "删除中...")}
-                  </div>
+          <div className="relative">
+            {deleting && (
+              <div className="absolute inset-0 bg-background/70 backdrop-blur-sm rounded-2xl flex items-center justify-center z-10">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {t("Deleting...", "删除中...")}
                 </div>
-              )}
-              <div className="flex justify-between items-start mb-2">
-                <span className="font-semibold text-sm text-foreground">{username}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">{formattedCreatedAt}</span>
-                  {isCommentOwner && onDelete && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all duration-200"
+              </div>
+            )}
+            
+            <div className="bg-muted/50 rounded-2xl px-4 py-2.5 inline-block max-w-full">
+              <div className="flex items-start justify-between gap-2 mb-1">
+                <span className="font-semibold text-sm text-left">{username}</span>
+                {isCommentOwner && onDelete && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity -mt-0.5"
+                        disabled={deleting}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{t("Delete Comment", "删除评论")}</AlertDialogTitle>
+                        <AlertDialogDescription className="text-left">
+                          {t("Are you sure you want to delete this comment? This action cannot be undone.", 
+                             "您确定要删除此评论吗？此操作无法撤销。")}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{t("Cancel", "取消")}</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={handleDeleteComment} 
+                          className="bg-destructive hover:bg-destructive/90"
                           disabled={deleting}
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent className="max-w-md">
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>{t("Delete Comment", "删除评论")}</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            {t("Are you sure you want to delete this comment? This action cannot be undone.", 
-                               "您确定要删除此评论吗？此操作无法撤销。")}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>{t("Cancel", "取消")}</AlertDialogCancel>
-                          <AlertDialogAction 
-                            onClick={handleDeleteComment} 
-                            className="bg-destructive hover:bg-destructive/90"
-                            disabled={deleting}
-                          >
-                            {deleting ? (
-                              <>
-                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                                {t("Deleting...", "删除中...")}
-                              </>
-                            ) : (
-                              t("Delete", "删除")
-                            )}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
-                </div>
+                          {deleting ? (
+                            <>
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                              {t("Deleting...", "删除中...")}
+                            </>
+                          ) : (
+                            t("Delete", "删除")
+                          )}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </div>
             
-            {comment.content && (
-              <p className="text-sm text-foreground/90 leading-relaxed mb-3">
-                {comment.content}
-              </p>
-            )}
+              {comment.content && (
+                <p className="text-sm text-foreground text-left leading-relaxed whitespace-pre-wrap break-words">
+                  {comment.content}
+                </p>
+              )}
+            </div>
             
-            {comment.image_url && (
-              <div className="mt-2">
-                <img
-                  src={comment.image_url}
-                  alt="Comment attachment"
-                  className="max-w-xs h-auto rounded-lg border border-border/30 cursor-pointer hover:opacity-90 transition-opacity"
-                  style={{ maxHeight: '200px', objectFit: 'cover' }}
-                  onClick={() => window.open(comment.image_url!, '_blank')}
-                  onError={(e) => {
-                    console.error('Failed to load comment image:', comment.image_url);
-                    e.currentTarget.style.display = 'none';
-                  }}
-                  loading="lazy"
-                  crossOrigin="anonymous"
-                />
+            {commentImages.length > 0 && (
+              <div className={`mt-2 grid gap-2 ${commentImages.length === 1 ? 'grid-cols-1' : commentImages.length === 2 ? 'grid-cols-2' : 'grid-cols-2'} max-w-md`}>
+                {commentImages.map((imageUrl, index) => (
+                  <div 
+                    key={index}
+                    className="relative rounded-lg overflow-hidden border border-border/30 cursor-pointer hover:opacity-95 transition-opacity group/img"
+                    onClick={() => window.open(imageUrl, '_blank')}
+                  >
+                    <img
+                      src={imageUrl}
+                      alt={`Comment attachment ${index + 1}`}
+                      className="w-full h-auto object-cover"
+                      style={{ maxHeight: commentImages.length === 1 ? '300px' : '200px' }}
+                      onError={(e) => {
+                        console.error('Failed to load comment image:', imageUrl);
+                        e.currentTarget.parentElement!.style.display = 'none';
+                      }}
+                      loading="lazy"
+                    />
+                  </div>
+                ))}
               </div>
             )}
+            
+            <div className="flex items-center gap-3 mt-1 ml-1 text-xs text-muted-foreground">
+              <span className="text-left">{formattedCreatedAt}</span>
+              {authUser && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleToggleReplyInput}
+                  className="text-xs font-semibold hover:underline p-0 h-auto hover:bg-transparent"
+                >
+                  {t("Reply", "回复")}
+                </Button>
+              )}
+            </div>
           </div>
           
-          {/* Reply button */}
-          {!isReply && authUser && (
-            <div className="mt-3 ml-1">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleToggleReplyInput}
-                className="text-xs text-muted-foreground hover:text-foreground p-2 h-auto font-medium transition-all duration-200 hover:bg-muted/50 rounded-lg hover:scale-105"
-              >
-                <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
-                {t("Reply", "回复")}
-              </Button>
-            </div>
-          )}
-          
-          {/* Reply input */}
           {showReplyInput && authUser && (
-            <div className="mt-3 ml-1">
+            <div className="mt-3">
               <CommentInput
                 onSubmit={handleReplySubmit}
                 sending={false}
@@ -211,120 +229,131 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
             </div>
           )}
           
-          {/* Replies section */}
           {hasReplies && (
             <div className="mt-4 space-y-4">
-              {visibleReplies.map((reply) => (
-                <div key={reply.id} className="flex gap-3 pl-4 border-l-2 border-border/20">
-                  <div className="flex-shrink-0">
-                    <Avatar className="w-7 h-7 ring-1 ring-background">
-                      {reply.profiles?.avatar_url ? (
-                        <AvatarImage 
-                          src={reply.profiles.avatar_url} 
-                          alt={reply.profiles?.username || t("Anonymous", "匿名用户")} 
-                          className="object-cover"
-                        />
-                      ) : (
-                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
-                          {(reply.profiles?.username || "U").charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                  </div>
-                  <div className="flex-grow min-w-0">
-                    <div className="bg-muted/30 rounded-lg p-3 border border-border/30 relative">
-                      {deleting && (
-                        <div className="absolute inset-0 bg-background/50 backdrop-blur-sm rounded-lg flex items-center justify-center z-10">
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                            {t("Deleting...", "删除中...")}
+              {visibleReplies.map((reply) => {
+                const replyImages = getCommentImages(reply);
+                return (
+                  <div key={reply.id} className="flex gap-3 items-start">
+                    <div className="flex-shrink-0 pt-1">
+                      <Avatar className="w-8 h-8">
+                        {reply.profiles?.avatar_url ? (
+                          <AvatarImage 
+                            src={reply.profiles.avatar_url} 
+                            alt={reply.profiles?.username || t("Anonymous", "匿名用户")} 
+                            className="object-cover"
+                          />
+                        ) : (
+                          <AvatarFallback className="bg-muted text-foreground text-xs font-medium">
+                            {(reply.profiles?.username || "U").charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                    </div>
+                    <div className="flex-grow min-w-0">
+                      <div className="relative">
+                        {deleting && (
+                          <div className="absolute inset-0 bg-background/70 backdrop-blur-sm rounded-2xl flex items-center justify-center z-10">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              {t("Deleting...", "删除中...")}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="font-medium text-xs text-foreground">
-                          {reply.profiles?.username || t("Anonymous", "匿名用户")}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">{getFormattedDate(reply.created_at)}</span>
-                          {authUser?.id === reply.user_id && onDelete && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all duration-200"
-                                  disabled={deleting}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent className="max-w-md">
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>{t("Delete Reply", "删除回复")}</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    {t("Are you sure you want to delete this reply? This action cannot be undone.", 
-                                       "您确定要删除此回复吗？此操作无法撤销。")}
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>{t("Cancel", "取消")}</AlertDialogCancel>
-                                  <AlertDialogAction 
-                                    onClick={() => onDelete(reply.id)} 
-                                    className="bg-destructive hover:bg-destructive/90"
+                        )}
+                        
+                        <div className="bg-muted/50 rounded-2xl px-3 py-2 inline-block max-w-full">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <span className="font-semibold text-xs text-left">
+                              {reply.profiles?.username || t("Anonymous", "匿名用户")}
+                            </span>
+                            {authUser?.id === reply.user_id && onDelete && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-4 w-4 p-0 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                                     disabled={deleting}
                                   >
-                                    {deleting ? (
-                                      <>
-                                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                                        {t("Deleting...", "删除中...")}
-                                      </>
-                                    ) : (
-                                      t("Delete", "删除")
-                                    )}
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>{t("Delete Reply", "删除回复")}</AlertDialogTitle>
+                                    <AlertDialogDescription className="text-left">
+                                      {t("Are you sure you want to delete this reply? This action cannot be undone.", 
+                                         "您确定要删除此回复吗？此操作无法撤销。")}
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>{t("Cancel", "取消")}</AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      onClick={handleDeleteComment} 
+                                      className="bg-destructive hover:bg-destructive/90"
+                                      disabled={deleting}
+                                    >
+                                      {deleting ? (
+                                        <>
+                                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                          {t("Deleting...", "删除中...")}
+                                        </>
+                                      ) : (
+                                        t("Delete", "删除")
+                                      )}
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+                          </div>
+                          
+                          {reply.content && (
+                            <p className="text-xs text-foreground text-left leading-relaxed whitespace-pre-wrap break-words">
+                              {reply.content}
+                            </p>
                           )}
                         </div>
-                      </div>
-                      
-                      {reply.content && (
-                        <p className="text-sm text-foreground/90 leading-relaxed mb-2">
-                          {reply.content}
-                        </p>
-                      )}
-                      
-                      {reply.image_url && (
-                        <div className="mt-2">
-                          <img
-                            src={reply.image_url}
-                            alt="Reply attachment"
-                            className="max-w-32 h-auto rounded-md border border-border/30 cursor-pointer hover:opacity-90 transition-opacity"
-                            style={{ maxHeight: '120px', objectFit: 'cover' }}
-                            onClick={() => window.open(reply.image_url!, '_blank')}
-                            onError={(e) => {
-                              console.error('Failed to load reply image:', reply.image_url);
-                              e.currentTarget.style.display = 'none';
-                            }}
-                            loading="lazy"
-                            crossOrigin="anonymous"
-                          />
+                        
+                        {replyImages.length > 0 && (
+                          <div className={`mt-1.5 grid gap-1.5 ${replyImages.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} max-w-xs`}>
+                            {replyImages.map((imageUrl, index) => (
+                              <div 
+                                key={index}
+                                className="relative rounded-md overflow-hidden border border-border/30 cursor-pointer hover:opacity-95 transition-opacity"
+                                onClick={() => window.open(imageUrl, '_blank')}
+                              >
+                                <img
+                                  src={imageUrl}
+                                  alt={`Reply attachment ${index + 1}`}
+                                  className="w-full h-auto object-cover"
+                                  style={{ maxHeight: '150px' }}
+                                  onError={(e) => {
+                                    console.error('Failed to load reply image:', imageUrl);
+                                    e.currentTarget.parentElement!.style.display = 'none';
+                                  }}
+                                  loading="lazy"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center gap-2 mt-1 ml-1 text-xs text-muted-foreground">
+                          <span className="text-left">{getFormattedDate(reply.created_at)}</span>
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               
-              {/* View more/less replies toggle */}
               {hasMoreThanFiveReplies && (
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
                   onClick={handleToggleReplies}
-                  className="text-xs ml-4 bg-background/50 hover:bg-background border-border/50 transition-all duration-200 hover:scale-105"
+                  className="text-xs font-semibold text-left ml-11 hover:underline p-0 h-auto"
                 >
                   {showAllReplies ? (
                     <>
@@ -334,8 +363,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
                   ) : (
                     <>
                       <ChevronDown className="h-3.5 w-3.5 mr-1" />
-                      {t("Show all replies", "显示所有回复")} 
-                      ({comment.replies.length - 5} {t("more", "更多")})
+                      {t("View", "查看")} {comment.replies.length - 5} {t("more replies", "更多回复")}
                     </>
                   )}
                 </Button>
