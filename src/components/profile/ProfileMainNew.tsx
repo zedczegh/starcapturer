@@ -128,10 +128,32 @@ const ProfileMainNew = ({
         {/* Enhanced Profile Header Section with Glow */}
         <div className="relative -mt-20 sm:-mt-24 mb-6 sm:mb-8">
           <div className="max-w-4xl mx-auto">
-            <Card className="bg-cosmic-900/95 backdrop-blur-xl border border-primary/10 p-4 sm:p-6">
-              <div className="flex items-center gap-4 sm:gap-6">
-                {/* Profile Picture with Enhanced Glow */}
-                <div className="flex-shrink-0 relative">
+            <Card className="bg-cosmic-900/95 backdrop-blur-xl border border-primary/10 p-6 sm:p-8 relative">
+              {/* Settings & Wallet Icons - Top Right Stacked */}
+              <div className="absolute top-4 right-4 flex flex-col gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate('/profile/settings')}
+                  className="h-9 w-9 rounded-full hover:bg-cosmic-800/50"
+                  title={t('Settings', '设置')}
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate('/profile/wallet')}
+                  className="h-9 w-9 rounded-full hover:bg-cosmic-800/50"
+                  title={t('Wallet', '钱包')}
+                >
+                  <Wallet className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="flex flex-col items-center text-center">
+                {/* Profile Picture with Enhanced Glow - Centered */}
+                <div className="relative mb-4">
                   <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse"></div>
                   <div className="relative">
                     <ProfileAvatar 
@@ -143,46 +165,28 @@ const ProfileMainNew = ({
                   </div>
                 </div>
                 
-                {/* Name and Info Section */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-white via-primary to-purple-400 bg-clip-text text-transparent truncate">
-                      {displayUsername}
-                    </h1>
-                    <AdminBadge size="sm" />
-                  </div>
-                  {bio && (
-                    <p className="text-cosmic-300 text-sm leading-relaxed line-clamp-2 mb-2">
-                      {bio}
-                    </p>
-                  )}
+                {/* Username - Centered */}
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white via-primary to-purple-400 bg-clip-text text-transparent">
+                    {displayUsername}
+                  </h1>
+                  <AdminBadge size="sm" />
+                </div>
+
+                {/* Bio - Centered if exists */}
+                {bio && (
+                  <p className="text-cosmic-300 text-sm leading-relaxed max-w-md mb-3">
+                    {bio}
+                  </p>
+                )}
+                
+                {/* Motto - Centered Below Username */}
+                <div className="w-full max-w-md">
                   <ProfileMotto 
                     motto={motto}
                     onSave={onMottoSave}
                     isOwner={true}
                   />
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-2 flex-shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => navigate('/profile/settings')}
-                    className="h-10 w-10 rounded-full hover:bg-cosmic-800/50"
-                    title={t('Settings', '设置')}
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => navigate('/profile/wallet')}
-                    className="h-10 w-10 rounded-full hover:bg-cosmic-800/50"
-                    title={t('Wallet', '钱包')}
-                  >
-                    <Wallet className="h-4 w-4" />
-                  </Button>
                 </div>
               </div>
             </Card>
