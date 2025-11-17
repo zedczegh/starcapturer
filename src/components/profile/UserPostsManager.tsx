@@ -4,13 +4,14 @@ import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Trash2, Loader2, Image, Edit } from 'lucide-react';
+import { Trash2, Loader2, Image, Edit, Plus, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OptimizedImage } from '@/components/ui/optimized-components';
 import { PostInteractions } from './PostInteractions';
 import { PostComments } from './PostComments';
 import { EditPostDialog } from './EditPostDialog';
 import { PostImageCarousel } from './PostImageCarousel';
+import { ShareCardGenerator } from './ShareCardGenerator';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface UserPost {
@@ -30,12 +31,14 @@ interface UserPostsManagerProps {
   userId: string;
   isOwnProfile?: boolean;
   currentUserId?: string;
+  onCreatePost?: () => void;
 }
 
 export const UserPostsManager: React.FC<UserPostsManagerProps> = ({ 
   userId, 
   isOwnProfile = false,
-  currentUserId 
+  currentUserId,
+  onCreatePost
 }) => {
   const { t } = useLanguage();
   const [posts, setPosts] = useState<UserPost[]>([]);
@@ -43,13 +46,32 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState<string>('my-feeds');
   const [editingPost, setEditingPost] = useState<UserPost | null>(null);
+  const [username, setUsername] = useState<string>('user');
 
   useEffect(() => {
     loadPosts();
+    loadUsername();
     if (currentUserId) {
       loadCollectedPosts();
     }
   }, [userId, currentUserId]);
+
+  const loadUsername = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      if (data?.username) {
+        setUsername(data.username);
+      }
+    } catch (error: any) {
+      console.error('Error loading username:', error);
+    }
+  };
 
   const loadPosts = async () => {
     try {
@@ -156,6 +178,17 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
         <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-primary bg-clip-text text-transparent">
           {t('Posts', '帖子')}
         </h2>
+        {isOwnProfile && onCreatePost && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onCreatePost}
+            className="h-10 w-10 rounded-full bg-primary/20 hover:bg-primary/30 border border-primary/30"
+            title={t('Create Post', '创建帖子')}
+          >
+            <Plus className="h-5 w-5" />
+          </Button>
+        )}
       </div>
 
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="mb-4">
@@ -226,11 +259,19 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
 
                 {/* Post Interactions */}
                 <div className="px-2 py-2 border-t border-primary/10">
-                  <PostInteractions 
-                    postId={post.id}
-                    userId={post.user_id}
-                    currentUserId={currentUserId}
-                  />
+                  <div className="flex items-center justify-between">
+                    <PostInteractions 
+                      postId={post.id}
+                      userId={post.user_id}
+                      currentUserId={currentUserId}
+                    />
+                    <ShareCardGenerator
+                      postId={post.id}
+                      imageUrl={getFileUrl(getPostImages(post)[0])}
+                      description={post.description}
+                      username={username}
+                    />
+                  </div>
                 </div>
 
                 {/* Comments */}
