@@ -9,6 +9,16 @@ import { siqsEmojis } from './SiqsEmojiData';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useLocationSharing } from '@/hooks/location/useLocationSharing';
 import { UploadProgress } from '@/components/ui/upload-progress';
+import { LinkPreview } from './LinkPreview';
+import { supabase } from '@/integrations/supabase/client';
+
+interface LinkPreviewData {
+  postId: string;
+  postOwnerId: string;
+  imageUrl: string;
+  description: string;
+  ownerUsername: string;
+}
 
 interface MessageInputProps {
   onSend: (text: string, imageFile?: File | null, locationData?: any) => void;
@@ -28,6 +38,8 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
   const { gettingLocation, shareCurrentLocation } = useLocationSharing();
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [linkPreview, setLinkPreview] = useState<LinkPreviewData | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   
   const handleSend = () => {
     if ((!message.trim() && !imageFile) || sending) return;
@@ -37,6 +49,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
     setDisplayMessage(null);
     setImageFile(null);
     setImagePreview(null);
+    setLinkPreview(null);
     
     // Focus back on textarea after sending
     setTimeout(() => {
@@ -50,6 +63,65 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
   useEffect(() => {
     setDisplayMessage(<EmojiRenderer text={message} />);
   }, [message]);
+
+  // Detect post links in message and fetch preview
+  useEffect(() => {
+    const detectPostLink = async () => {
+      if (loadingPreview || linkPreview) return;
+      
+      // Regex to match post links
+      const postLinkRegex = /https?:\/\/[^\s]+\/profile\/([a-f0-9-]+)\?post=([a-f0-9-]+)/i;
+      const match = message.match(postLinkRegex);
+      
+      if (match) {
+        const [, userId, postId] = match;
+        setLoadingPreview(true);
+        
+        try {
+          // Fetch post data
+          const { data: post, error: postError } = await supabase
+            .from('user_posts')
+            .select('*')
+            .eq('id', postId)
+            .single();
+          
+          if (postError) throw postError;
+          
+          // Fetch owner username
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', userId)
+            .single();
+          
+          // Get image URL
+          let imageUrl = '';
+          if (post.images && Array.isArray(post.images) && post.images.length > 0) {
+            imageUrl = post.images[0] as string;
+          } else if (post.file_path) {
+            const { data } = supabase.storage
+              .from('user-posts')
+              .getPublicUrl(post.file_path);
+            imageUrl = data.publicUrl;
+          }
+          
+          setLinkPreview({
+            postId,
+            postOwnerId: userId,
+            imageUrl,
+            description: post.description || '',
+            ownerUsername: profile?.username || 'Unknown'
+          });
+        } catch (error) {
+          console.error('Error fetching post preview:', error);
+        } finally {
+          setLoadingPreview(false);
+        }
+      }
+    };
+    
+    detectPostLink();
+  }, [message, loadingPreview, linkPreview]);
   
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -158,6 +230,14 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
         fileName={imageFile?.name || ''}
         show={uploading} 
       />
+      
+      {linkPreview && (
+        <LinkPreview 
+          data={linkPreview} 
+          onRemove={() => setLinkPreview(null)} 
+        />
+      )}
+      
       {imagePreview && (
         <div className="relative inline-block">
           <img 
