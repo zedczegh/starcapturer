@@ -70,7 +70,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
       if (loadingPreview || linkPreview) return;
       
       // Regex to match post links
-      const postLinkRegex = /https?:\/\/[^\s]+\/profile\/([a-f0-9-]+)\?post=([a-f0-9-]+)/i;
+      const postLinkRegex = /https?:\/\/[^\s]+\/user\/([a-f0-9-]+)\?post=([a-f0-9-]+)/i;
       const match = message.match(postLinkRegex);
       
       if (match) {
