@@ -10,6 +10,7 @@ import { OptimizedImage } from '@/components/ui/optimized-components';
 import { PostInteractions } from './PostInteractions';
 import { PostComments } from './PostComments';
 import { EditPostDialog } from './EditPostDialog';
+import { PostImageCarousel } from './PostImageCarousel';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface UserPost {
@@ -190,27 +191,14 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
                 transition={{ delay: index * 0.05 }}
                 className="bg-cosmic-800/40 backdrop-blur-xl border border-primary/10 rounded-lg overflow-hidden"
               >
-                {/* Post Image */}
-                <div className="relative w-full aspect-square">
-                  <OptimizedImage
-                    src={getFileUrl(post.file_path)}
+                {/* Post Images Carousel */}
+                <div className="relative">
+                  <PostImageCarousel 
+                    images={getPostImages(post).map(img => getFileUrl(img))}
                     alt={post.description || post.file_name}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                      const parent = target.parentElement;
-                      if (parent) {
-                        const fallback = document.createElement('div');
-                        fallback.className = 'w-full h-full flex flex-col items-center justify-center bg-cosmic-900 text-center p-4';
-                        fallback.innerHTML = `<svg class="h-12 w-12 text-cosmic-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg><span class="text-sm text-cosmic-400">${post.file_name}</span>`;
-                        parent.appendChild(fallback);
-                      }
-                    }}
                   />
                   {isOwnProfile && selectedTab === 'my-feeds' && (
-                    <div className="absolute top-2 right-2 flex gap-2">
+                    <div className="absolute top-2 right-2 flex gap-2 z-10">
                       <Button
                         variant="secondary"
                         size="sm"
