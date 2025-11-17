@@ -7,12 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Trash2, Loader2, Image, Edit, Plus, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OptimizedImage } from '@/components/ui/optimized-components';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { PostInteractions } from './PostInteractions';
 import { PostComments } from './PostComments';
 import { EditPostDialog } from './EditPostDialog';
 import { PostImageCarousel } from './PostImageCarousel';
-import { ShareCardGenerator } from './ShareCardGenerator';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { formatDistanceToNow } from 'date-fns';
 
 interface UserPost {
   id: string;
@@ -25,6 +26,8 @@ interface UserPost {
   category: string;
   created_at: string;
   images?: string[];
+  username?: string;
+  avatar_url?: string;
 }
 
 interface UserPostsManagerProps {
@@ -82,9 +85,19 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      
+      // Fetch user profile for avatar and username
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username, avatar_url')
+        .eq('id', userId)
+        .single();
+      
       setPosts((data || []).map(post => ({
         ...post,
-        images: Array.isArray(post.images) ? post.images as string[] : []
+        images: Array.isArray(post.images) ? post.images as string[] : [],
+        username: profile?.username || 'User',
+        avatar_url: profile?.avatar_url || null
       })));
     } catch (error: any) {
       console.error('Error loading posts:', error);
@@ -115,10 +128,22 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
           .order('created_at', { ascending: false });
 
         if (postsError) throw postsError;
-        setCollectedPosts((postsData || []).map(post => ({
-          ...post,
-          images: Array.isArray(post.images) ? post.images as string[] : []
-        })));
+        
+        // Fetch user profiles for all collected posts
+        if (postsData && postsData.length > 0) {
+          const userIds = [...new Set(postsData.map(p => p.user_id))];
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, username, avatar_url')
+            .in('id', userIds);
+          
+          setCollectedPosts((postsData || []).map(post => ({
+            ...post,
+            images: Array.isArray(post.images) ? post.images as string[] : [],
+            username: profiles?.find(p => p.id === post.user_id)?.username || 'User',
+            avatar_url: profiles?.find(p => p.id === post.user_id)?.avatar_url || null
+          })));
+        }
       }
     } catch (error: any) {
       console.error('Error loading collected posts:', error);
@@ -259,10 +284,28 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
                   )}
                 </div>
 
-                {/* Post Description */}
+                {/* Post Description with User Info */}
                 {post.description && (
                   <div className="px-4 py-3">
-                    <p className="text-cosmic-200 text-sm">{post.description}</p>
+                    <div className="flex items-start gap-3">
+                      <Avatar className="h-8 w-8 border border-primary/20">
+                        <AvatarImage src={post.avatar_url || ''} alt={post.username} />
+                        <AvatarFallback className="bg-primary/20 text-primary">
+                          {post.username?.[0]?.toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-medium text-foreground">
+                            {post.username || 'User'}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                          </span>
+                        </div>
+                        <p className="text-cosmic-200 text-sm text-left">{post.description}</p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -274,21 +317,11 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
                       userId={post.user_id}
                       currentUserId={currentUserId}
                     />
-                    <ShareCardGenerator
+                    <PostComments 
                       postId={post.id}
-                      imageUrl={getFileUrl(getPostImages(post)[0])}
-                      description={post.description}
-                      username={username}
+                      currentUserId={currentUserId}
                     />
                   </div>
-                </div>
-
-                {/* Comments */}
-                <div className="px-4 py-2 border-t border-primary/10">
-                  <PostComments 
-                    postId={post.id}
-                    currentUserId={currentUserId}
-                  />
                 </div>
               </motion.div>
             ))}
