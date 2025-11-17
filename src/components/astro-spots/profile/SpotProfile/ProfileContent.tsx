@@ -43,7 +43,8 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
     handleMessageCreator,
     refreshData,
     triggerRefresh,
-    deleteComment
+    deleteComment,
+    handleLike
   } = useProfileContent(spotId, user, comingFromCommunity, t);
 
   // Force data refresh when spotId changes
@@ -143,6 +144,7 @@ const ProfileContent: React.FC<ProfileContentProps> = ({ spotId, user, comingFro
         onCommentsUpdate={handleCommentsUpdate}
         onCommentSubmit={handleCommentSubmit}
         onCommentDelete={deleteComment}
+        onCommentLike={handleLike}
         verificationStatus={spot.verification_status || 'unverified'}
       />
 
