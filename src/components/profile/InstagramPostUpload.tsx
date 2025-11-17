@@ -27,7 +27,8 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
     if (!files || files.length === 0) return;
 
     const MAX_FILES = 10;
-    const maxSize = 100 * 1024 * 1024; // 100MB for videos
+    const maxImageSize = 20 * 1024 * 1024; // 20MB for images
+    const maxVideoSize = 50 * 1024 * 1024; // 50MB for videos
     const validFiles: File[] = [];
     const urls: string[] = [];
 
@@ -38,15 +39,19 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
     }
 
     Array.from(files).forEach(file => {
-      // Check file size
-      if (file.size > maxSize) {
-        toast.error(`File "${file.name}" exceeds 100MB limit`);
-        return;
-      }
-      
       // Validate file type (images and videos)
       if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
         toast.error(`File "${file.name}" must be an image or video`);
+        return;
+      }
+      
+      // Check file size based on type
+      const isVideo = file.type.startsWith('video/');
+      const maxSize = isVideo ? maxVideoSize : maxImageSize;
+      const maxSizeMB = isVideo ? 50 : 20;
+      
+      if (file.size > maxSize) {
+        toast.error(`${isVideo ? 'Video' : 'Image'} "${file.name}" exceeds ${maxSizeMB}MB limit`);
         return;
       }
       
@@ -154,8 +159,8 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
                       <video
                         src={url}
                         className="w-full h-full object-cover"
-                        muted
-                        loop
+                        controls
+                        preload="metadata"
                         playsInline
                       />
                     ) : (
@@ -192,7 +197,7 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
               {previewUrls.length > 0 ? 'Add more files' : 'Select images or videos'}
             </span>
             <span className="text-xs text-cosmic-400 mt-1">
-              {previewUrls.length} / 10 files (images or videos, max 100MB each)
+              {previewUrls.length} / 10 files (Images: max 20MB, Videos: max 50MB)
             </span>
           </div>
           <input

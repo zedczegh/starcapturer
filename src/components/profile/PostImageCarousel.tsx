@@ -14,10 +14,13 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
 
   if (images.length === 0) return null;
 
-  // Check if current item is a video based on file extension
+  // Check if current item is a video based on file extension or URL pattern
   const isVideo = (url: string) => {
-    const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv'];
-    return videoExtensions.some(ext => url.toLowerCase().includes(ext));
+    const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv', '.m4v'];
+    const lowerUrl = url.toLowerCase();
+    return videoExtensions.some(ext => lowerUrl.includes(ext)) || 
+           lowerUrl.includes('video') ||
+           url.includes('/video/');
   };
 
   const goToPrevious = () => {
@@ -27,6 +30,8 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
   const goToNext = () => {
     setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
+
+  const currentIsVideo = isVideo(images[currentIndex]);
 
   return (
     <div className="relative w-full aspect-square bg-cosmic-900">
@@ -40,16 +45,19 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
           transition={{ duration: 0.3 }}
           className="w-full h-full"
         >
-          {isVideo(images[currentIndex]) ? (
+          {currentIsVideo ? (
             <video
               src={images[currentIndex]}
               className="w-full h-full object-cover"
               controls
-              loop
+              controlsList="nodownload"
+              preload="metadata"
               playsInline
-              autoPlay
-              muted
-            />
+              key={images[currentIndex]}
+            >
+              <source src={images[currentIndex]} type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
           ) : (
             <OptimizedImage
               src={images[currentIndex]}
@@ -86,7 +94,7 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
 
           {/* Dot Indicators */}
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-            {images.map((_, index) => (
+            {images.map((url, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentIndex(index)}
@@ -95,7 +103,7 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
                     ? 'w-8 bg-white' 
                     : 'w-2 bg-white/50 hover:bg-white/70'
                 }`}
-                aria-label={`Go to item ${index + 1}`}
+                aria-label={`Go to ${isVideo(url) ? 'video' : 'image'} ${index + 1}`}
               />
             ))}
           </div>
