@@ -26,9 +26,16 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    const MAX_IMAGES = 10;
     const maxSize = 20 * 1024 * 1024; // 20MB
     const validFiles: File[] = [];
     const urls: string[] = [];
+
+    // Check if adding these files would exceed the limit
+    if (selectedFiles.length + files.length > MAX_IMAGES) {
+      toast.error(`You can only upload up to ${MAX_IMAGES} images per post`);
+      return;
+    }
 
     Array.from(files).forEach(file => {
       if (file.size > maxSize) {
@@ -157,9 +164,14 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
           className="flex items-center justify-center gap-2 px-4 py-8 border-2 border-dashed border-primary/30 hover:border-primary/50 rounded-xl bg-cosmic-800/40 hover:bg-cosmic-800/60 cursor-pointer transition-all group"
         >
           <ImageIcon className="h-6 w-6 text-primary group-hover:scale-110 transition-transform" />
-          <span className="text-sm font-medium text-cosmic-100">
-            {previewUrls.length > 0 ? 'Add more images' : 'Select images'}
-          </span>
+          <div className="flex flex-col items-center">
+            <span className="text-sm font-medium text-cosmic-100">
+              {previewUrls.length > 0 ? 'Add more images' : 'Select images'}
+            </span>
+            <span className="text-xs text-cosmic-400 mt-1">
+              {previewUrls.length} / 10 images
+            </span>
+          </div>
           <input
             id="post-upload"
             type="file"
@@ -167,7 +179,7 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
             accept="image/*"
             onChange={handleFileSelect}
             className="hidden"
-            disabled={uploading}
+            disabled={uploading || previewUrls.length >= 10}
           />
         </label>
 
