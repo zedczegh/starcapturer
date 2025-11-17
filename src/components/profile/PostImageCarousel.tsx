@@ -124,6 +124,8 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
                 muted={isMuted}
                 autoPlay
                 preload="auto"
+                crossOrigin="anonymous"
+                controls={false}
                 onLoadStart={() => {
                   console.log('Video loading:', images[currentIndex]);
                   setIsLoading(true);
@@ -133,7 +135,13 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
                   setIsLoading(false);
                 }}
                 onError={(e) => {
-                  console.error('Video error:', images[currentIndex], e);
+                  const video = e.target as HTMLVideoElement;
+                  console.error('Video error:', {
+                    src: images[currentIndex],
+                    error: video.error,
+                    networkState: video.networkState,
+                    readyState: video.readyState
+                  });
                   setIsLoading(false);
                 }}
                 onPlay={() => {
@@ -142,7 +150,9 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
                 }}
                 onPause={() => setIsPlaying(false)}
                 key={images[currentIndex]}
-              />
+              >
+                Your browser does not support the video tag.
+              </video>
               
               {/* Loading spinner */}
               {isLoading && (
