@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import ProfileAvatar from './ProfileAvatar';
-import ProfileBackground from './ProfileBackground';
 import AstronomyTip from './AstronomyTip';
 import { AdminBadge } from './AdminBadge';
 import { UserPostsManager } from './UserPostsManager';
 import { InstagramPostUpload } from './InstagramPostUpload';
-import { Settings, Wallet, Plus } from 'lucide-react';
+import { Settings, Wallet, Plus, Camera, X } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const ProfileMainNew = ({
@@ -40,27 +40,82 @@ const ProfileMainNew = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-cosmic-950 to-slate-900">
-      {/* Enhanced Cover Photo with User's Background or Default */}
-      <div className="relative h-[200px] sm:h-[250px] md:h-[350px] overflow-hidden">
+      {/* Enhanced Cover Photo with User's Background and Upload Controls */}
+      <div className="relative h-[200px] sm:h-[250px] md:h-[350px] overflow-hidden group">
         {backgroundUrl ? (
           <>
             <img 
               src={backgroundUrl} 
               alt="Profile Background" 
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105 duration-700"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-cosmic-950 via-cosmic-950/50 to-transparent"></div>
+            
+            {/* Upload Controls - Show on hover */}
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center gap-4">
+              <Button
+                onClick={onRemoveBackground}
+                variant="destructive"
+                size="sm"
+                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                type="button"
+              >
+                <X className="w-4 h-4 mr-2" />
+                {t("Remove", "删除")}
+              </Button>
+              <label htmlFor="background-upload-cover" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  type="button"
+                  asChild
+                >
+                  <span className="cursor-pointer">
+                    <Camera className="w-4 h-4 mr-2" />
+                    {t("Change", "更改")}
+                  </span>
+                </Button>
+              </label>
+            </div>
           </>
         ) : (
           <>
             <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-purple-900/30 to-cosmic-900"></div>
             <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1200&h=400&fit=crop')] bg-cover bg-center opacity-30 transform scale-110 hover:scale-105 transition-transform duration-1000"></div>
             <div className="absolute inset-0 bg-gradient-to-t from-cosmic-950 via-cosmic-950/50 to-transparent"></div>
+            
+            {/* Upload Button for Empty State */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <label htmlFor="background-upload-cover">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  asChild
+                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <span className="cursor-pointer">
+                    <Camera className="w-4 h-4 mr-2" />
+                    {uploadingBackground ? t("Uploading...", "上传中...") : t("Add Background", "添加背景")}
+                  </span>
+                </Button>
+              </label>
+            </div>
           </>
         )}
         
+        {/* Hidden file input */}
+        <input
+          id="background-upload-cover"
+          type="file"
+          accept="image/*"
+          onChange={onBackgroundChange}
+          className="hidden"
+          disabled={uploadingBackground}
+        />
+        
         {/* Animated stars overlay */}
-        <div className="absolute inset-0 opacity-20">
+        <div className="absolute inset-0 opacity-20 pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-1 h-1 bg-white rounded-full animate-pulse"></div>
           <div className="absolute top-1/3 right-1/3 w-1 h-1 bg-white rounded-full animate-pulse delay-100"></div>
           <div className="absolute bottom-1/4 left-1/2 w-1 h-1 bg-white rounded-full animate-pulse delay-200"></div>
@@ -68,18 +123,8 @@ const ProfileMainNew = ({
       </div>
 
       <div className="container mx-auto px-3 sm:px-4 md:px-6 max-w-7xl">
-        {/* Background Image Upload Section */}
-        <div className="relative -mt-32 sm:-mt-36 mb-4 sm:mb-6 px-4">
-          <ProfileBackground
-            backgroundUrl={backgroundUrl}
-            onBackgroundChange={onBackgroundChange}
-            onRemoveBackground={onRemoveBackground}
-            uploadingBackground={uploadingBackground}
-          />
-        </div>
-
         {/* Enhanced Profile Header Section with Glow */}
-        <div className="relative mb-6 sm:mb-8">
+        <div className="relative -mt-20 sm:-mt-24 mb-6 sm:mb-8">
           <Card className="bg-cosmic-900/95 backdrop-blur-xl border border-primary/10 p-4 sm:p-6">
             <div className="flex items-center gap-4 sm:gap-6">
               {/* Profile Picture with Enhanced Glow */}
