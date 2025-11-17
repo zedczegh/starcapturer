@@ -38,13 +38,13 @@ export const uploadBackground = async (userId: string, file: File): Promise<stri
       return null;
     }
 
-    // Check file size - max 10MB
-    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+    // Check file size - max 100MB
+    const maxSize = 100 * 1024 * 1024; // 100MB in bytes
     const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
     
     if (file.size > maxSize) {
       toast.error('File too large', { 
-        description: `Maximum file size is 10MB. Your file is ${fileSizeMB}MB` 
+        description: `Maximum file size is 100MB. Your file is ${fileSizeMB}MB` 
       });
       return null;
     }
@@ -74,7 +74,7 @@ export const uploadBackground = async (userId: string, file: File): Promise<stri
       
       // Handle file size errors
       if (uploadError.message.includes('size') || uploadError.message.includes('large')) {
-        toast.error('File too large', { description: 'Please try a smaller file (max 10MB)' });
+        toast.error('File too large', { description: 'Please try a smaller file (max 100MB)' });
         return null;
       }
       
