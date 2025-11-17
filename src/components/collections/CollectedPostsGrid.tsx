@@ -34,19 +34,31 @@ export const CollectedPostsGrid: React.FC<CollectedPostsGridProps> = ({ posts })
   const getFileUrl = (filePath: string) => {
     if (!filePath) return '';
     
+    // If it's already a full URL, return it
     if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
       return filePath;
     }
     
+    // Otherwise, get the public URL from storage
     const { data } = supabase.storage.from('user-posts').getPublicUrl(filePath);
     return data.publicUrl;
   };
 
   const getFirstImage = (post: CollectedPost): string => {
+    console.log('[CollectedPostsGrid] Post images:', post.images, 'File path:', post.file_path);
+    
+    // Check if images array exists and has items
     if (post.images && Array.isArray(post.images) && post.images.length > 0) {
-      return post.images[0];
+      const firstImage = post.images[0];
+      console.log('[CollectedPostsGrid] Using first image from array:', firstImage);
+      // Images in the array are already full URLs
+      return firstImage;
     }
-    return getFileUrl(post.file_path);
+    
+    // Fall back to file_path
+    const url = getFileUrl(post.file_path);
+    console.log('[CollectedPostsGrid] Using file_path URL:', url);
+    return url;
   };
 
   const handlePostClick = (post: CollectedPost) => {
@@ -73,17 +85,22 @@ export const CollectedPostsGrid: React.FC<CollectedPostsGridProps> = ({ posts })
           >
             {/* Thumbnail Image */}
             <div className="relative aspect-square overflow-hidden bg-cosmic-900">
-              {getFirstImage(post) ? (
-                <img 
-                  src={getFirstImage(post)}
-                  alt={post.description || post.file_name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <ImageIcon className="w-12 h-12 text-cosmic-400" />
-                </div>
-              )}
+              <img 
+                src={getFirstImage(post)}
+                alt={post.description || post.file_name}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                onError={(e) => {
+                  console.error('[CollectedPostsGrid] Image failed to load:', getFirstImage(post));
+                  e.currentTarget.style.display = 'none';
+                  const parent = e.currentTarget.parentElement;
+                  if (parent) {
+                    const fallback = document.createElement('div');
+                    fallback.className = 'w-full h-full flex items-center justify-center';
+                    fallback.innerHTML = '<svg class="w-12 h-12 text-cosmic-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
+                    parent.appendChild(fallback);
+                  }
+                }}
+              />
               
               {/* Image count badge if multiple images */}
               {post.images && post.images.length > 1 && (
