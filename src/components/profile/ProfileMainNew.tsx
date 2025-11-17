@@ -10,9 +10,10 @@ import ProfileMotto from './ProfileMotto';
 import { AdminBadge } from './AdminBadge';
 import { UserPostsManager } from './UserPostsManager';
 import { InstagramPostUpload } from './InstagramPostUpload';
-import AppleStyleTagBubble from './AppleStyleTagBubble';
+import ProfileTag from './ProfileTag';
 import { Settings, Wallet, Camera, X } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { motion } from 'framer-motion';
 
 const ProfileMainNew = ({
   displayUsername,
@@ -43,6 +44,22 @@ const ProfileMainNew = ({
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+
+  // Animation variants for staggered tag animations
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+  
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { opacity: 1, y: 0 }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-cosmic-950 to-slate-900">
@@ -210,17 +227,20 @@ const ProfileMainNew = ({
                     </p>
                   )}
                   
-                  {/* Apple-style Tag Bubbles */}
+                  {/* Tags - Same style as mini profiles */}
                   {tags && tags.length > 0 && (
-                    <div className="flex flex-wrap gap-3 mt-4">
-                      {tags.map((tag, index) => (
-                        <AppleStyleTagBubble 
-                          key={tag} 
-                          tag={tag} 
-                          index={index}
-                        />
+                    <motion.div 
+                      className="mt-2 flex flex-wrap gap-2"
+                      variants={containerVariants}
+                      initial="hidden"
+                      animate="visible"
+                    >
+                      {tags.map((tag: string) => (
+                        <motion.div key={tag} variants={itemVariants}>
+                          <ProfileTag tag={tag} size="sm" />
+                        </motion.div>
                       ))}
-                    </div>
+                    </motion.div>
                   )}
                 </div>
               </div>
