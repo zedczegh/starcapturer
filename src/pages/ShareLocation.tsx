@@ -359,10 +359,13 @@ const BortleNow: React.FC = () => {
         t("Counting stars and analyzing brightness...", "计算星数并分析亮度...")
       );
       
+      const startTime = performance.now();
+      
       // Import star analysis utilities
       const { countStarsInImage, calculateBortleFromStars } = await import('@/utils/starCountUtils');
+      const { validateBortleCalculation } = await import('@/utils/starDetection/diagnostics');
       
-      // Count stars in the captured image
+      // Count stars in the captured image with improved algorithm
       const detectedStarCount = countStarsInImage(imageData);
       
       // Calculate average sky brightness (excluding bright spots/stars)
@@ -383,6 +386,19 @@ const BortleNow: React.FC = () => {
       
       // Calculate Bortle scale from actual star count and brightness
       const measuredBortle = calculateBortleFromStars(detectedStarCount, avgBrightness);
+      
+      const processingTime = performance.now() - startTime;
+      console.log(`Star detection completed in ${processingTime.toFixed(2)}ms`);
+      
+      // Validate the calculation internally
+      const calcValidation = validateBortleCalculation(detectedStarCount, avgBrightness, measuredBortle);
+      
+      if (calcValidation.warnings.length > 0) {
+        console.warn('Bortle calculation warnings:', calcValidation.warnings);
+      }
+      
+      console.log(`Detection confidence: ${calcValidation.confidence}`);
+      console.log(`Detected ${detectedStarCount} stars, brightness ${avgBrightness.toFixed(2)}, Bortle ${measuredBortle}`);
       
       const currentLat = parseFloat(latitude);
       const currentLng = parseFloat(longitude);
