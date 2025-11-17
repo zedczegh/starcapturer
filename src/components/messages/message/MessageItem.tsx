@@ -42,10 +42,19 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const isPostInteraction = metadata?.type === 'post_interaction';
   const isSharedPost = metadata?.type === 'shared_post';
 
-  // Load post image for shared posts
+  // Load post image for shared posts - handle both full URLs and storage paths
   React.useEffect(() => {
     if (isSharedPost && metadata?.post_image_url) {
-      setPostImageUrl(metadata.post_image_url);
+      // If it's already a full URL, use it directly
+      if (metadata.post_image_url.startsWith('http://') || metadata.post_image_url.startsWith('https://')) {
+        setPostImageUrl(metadata.post_image_url);
+      } else {
+        // Otherwise, convert storage path to public URL
+        const { data } = supabase.storage
+          .from('user-posts')
+          .getPublicUrl(metadata.post_image_url);
+        setPostImageUrl(data.publicUrl);
+      }
     }
   }, [isSharedPost, metadata]);
 
@@ -69,7 +78,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
     }
   };
 
-  const hasContent = message.text || message.image_url || message.location || isPostInteraction || isSharedPost;
+  const hasContent = message.message || message.image_url || message.location || isPostInteraction || isSharedPost;
   
   if (!hasContent) return null;
   
@@ -96,9 +105,9 @@ const MessageItem: React.FC<MessageItemProps> = ({
             </Button>
           )}
           
-          {message.text && !isSharedPost && !isPostInteraction && (
+          {message.message && !isSharedPost && !isPostInteraction && (
             <div className="mb-2 whitespace-pre-wrap">
-              <EmojiRenderer text={message.text} />
+              <EmojiRenderer text={message.message} />
             </div>
           )}
           
