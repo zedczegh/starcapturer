@@ -244,11 +244,6 @@ const Profile = () => {
     setAvatarFile(null);
   };
 
-  const handleAvatarSelectFromAlbum = (imageUrl: string) => {
-    setAvatarUrl(imageUrl);
-    setAvatarFile(null); // Clear file since we're using URL from album
-  };
-
   const handlePostsUpdate = () => {
     setPostsRefreshKey(prev => prev + 1);
   };
@@ -297,7 +292,6 @@ const Profile = () => {
         setTags={setTags}
         bio={profile?.bio}
         userId={user.id}
-        onAvatarSelectFromAlbum={handleAvatarSelectFromAlbum}
         onPostsUpdate={handlePostsUpdate}
         postsRefreshKey={postsRefreshKey}
       />

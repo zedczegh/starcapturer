@@ -9,7 +9,6 @@ import PasswordChangeForm from './PasswordChangeForm';
 import PaymentMethodsSection from './PaymentMethodsSection';
 import WalletSection from './WalletSection';
 import { UserPostsManager } from './UserPostsManager';
-import { FeaturedAlbumManager } from './FeaturedAlbumManager';
 
 const ProfileMain = ({
   displayUsername,
@@ -25,8 +24,7 @@ const ProfileMain = ({
   tags,
   setTags,
   bio,
-  userId,
-  onAvatarSelectFromAlbum
+  userId
 }: any) => (
   <div className="min-h-screen bg-gradient-to-b from-slate-950 via-cosmic-950 to-slate-900">
     {/* Enhanced Cover Photo with Parallax Effect */}
@@ -94,15 +92,6 @@ const ProfileMain = ({
               setTags={setTags}
             />
           </Card>
-
-          {/* Featured Album with Enhanced Styling */}
-          <div className="transform hover:scale-[1.01] transition-transform duration-300">
-            <FeaturedAlbumManager 
-              userId={userId} 
-              isOwnProfile={true}
-              onAvatarSelect={onAvatarSelectFromAlbum}
-            />
-          </div>
 
           {/* Posts with Enhanced Styling */}
           <div className="transform hover:scale-[1.01] transition-transform duration-300">

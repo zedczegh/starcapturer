@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import ProfileAvatar from './ProfileAvatar';
 import AstronomyTip from './AstronomyTip';
 import { AdminBadge } from './AdminBadge';
 import { UserPostsManager } from './UserPostsManager';
 import { InstagramPostUpload } from './InstagramPostUpload';
-import { FeaturedAlbumDialog } from './FeaturedAlbumDialog';
-import { Settings, Wallet } from 'lucide-react';
+import { Settings, Wallet, Plus } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const ProfileMainNew = ({
@@ -20,13 +20,12 @@ const ProfileMainNew = ({
   astronomyTip,
   bio,
   userId,
-  onAvatarSelectFromAlbum,
   onPostsUpdate,
   postsRefreshKey
 }: any) => {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const [featuredAlbumOpen, setFeaturedAlbumOpen] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-cosmic-950 to-slate-900">
@@ -47,10 +46,10 @@ const ProfileMainNew = ({
       <div className="container mx-auto px-3 sm:px-4 md:px-6 max-w-7xl">
         {/* Enhanced Profile Header Section with Glow */}
         <div className="relative -mt-20 sm:-mt-24 mb-6 sm:mb-8">
-          <Card className="bg-cosmic-900/90 backdrop-blur-2xl border border-primary/20 shadow-2xl shadow-primary/10 p-5 sm:p-6 md:p-8 hover:shadow-primary/20 transition-shadow duration-500">
-            <div className="flex flex-col sm:flex-row sm:items-end gap-6 sm:gap-8">
-              {/* Profile Picture with Enhanced Glow - Clickable for Featured Album */}
-              <div className="flex-shrink-0 mx-auto sm:mx-0 relative">
+          <Card className="bg-cosmic-900/95 backdrop-blur-xl border border-primary/10 p-4 sm:p-6">
+            <div className="flex items-center gap-4 sm:gap-6">
+              {/* Profile Picture with Enhanced Glow */}
+              <div className="flex-shrink-0 relative">
                 <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse"></div>
                 <div className="relative">
                   <ProfileAvatar 
@@ -59,27 +58,19 @@ const ProfileMainNew = ({
                     onRemoveAvatar={onRemoveAvatar}
                     uploadingAvatar={uploadingAvatar}
                   />
-                  <button 
-                    onClick={() => setFeaturedAlbumOpen(true)}
-                    className="absolute inset-0 rounded-full bg-black/0 hover:bg-black/20 transition-colors flex items-center justify-center group"
-                  >
-                    <span className="text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity font-medium">
-                      View Album
-                    </span>
-                  </button>
                 </div>
               </div>
               
-              {/* Enhanced Name and Info Section */}
-              <div className="flex-1 pb-2 text-center sm:text-left">
-                <div className="flex flex-col sm:flex-row items-center sm:items-center gap-2 mb-3">
-                  <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white via-primary to-purple-400 bg-clip-text text-transparent">
+              {/* Name and Info Section */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-white via-primary to-purple-400 bg-clip-text text-transparent truncate">
                     {displayUsername}
                   </h1>
-                  <AdminBadge size="md" />
+                  <AdminBadge size="sm" />
                 </div>
                 {bio && (
-                  <p className="text-cosmic-200 text-base sm:text-lg leading-relaxed max-w-2xl mb-2">
+                  <p className="text-cosmic-300 text-sm leading-relaxed line-clamp-2 mb-2">
                     {bio}
                   </p>
                 )}
@@ -87,24 +78,33 @@ const ProfileMainNew = ({
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-2 self-end">
+              <div className="flex gap-2 flex-shrink-0">
                 <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate('/profile/settings')}
-                  className="border-primary/30 hover:bg-primary/10"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setUploadDialogOpen(true)}
+                  className="h-10 w-10 rounded-full bg-primary/20 hover:bg-primary/30 border border-primary/30"
+                  title={t('Create Post', '创建帖子')}
                 >
-                  <Settings className="h-4 w-4 mr-2" />
-                  {t('Settings', '设置')}
+                  <Plus className="h-5 w-5" />
                 </Button>
                 <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate('/profile/wallet')}
-                  className="border-primary/30 hover:bg-primary/10"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate('/profile/settings')}
+                  className="h-10 w-10 rounded-full hover:bg-cosmic-800/50"
+                  title={t('Settings', '设置')}
                 >
-                  <Wallet className="h-4 w-4 mr-2" />
-                  {t('Wallet', '钱包')}
+                  <Settings className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate('/profile/wallet')}
+                  className="h-10 w-10 rounded-full hover:bg-cosmic-800/50"
+                  title={t('Wallet', '钱包')}
+                >
+                  <Wallet className="h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -112,18 +112,7 @@ const ProfileMainNew = ({
         </div>
 
         {/* Content Area - Instagram-like Layout */}
-        <div className="max-w-4xl mx-auto space-y-6 pb-12">
-          {/* Create New Post */}
-          <Card className="bg-cosmic-900/90 backdrop-blur-2xl border border-primary/10 shadow-lg p-6">
-            <h2 className="font-bold text-xl bg-gradient-to-r from-white to-primary bg-clip-text text-transparent mb-4">
-              {t('Create New Post', '创建新帖子')}
-            </h2>
-            <InstagramPostUpload 
-              userId={userId}
-              onUploadComplete={onPostsUpdate}
-            />
-          </Card>
-
+        <div className="max-w-4xl mx-auto pb-12">
           {/* Posts Grid */}
           <UserPostsManager 
             userId={userId} 
@@ -134,14 +123,23 @@ const ProfileMainNew = ({
         </div>
       </div>
 
-      {/* Featured Album Dialog */}
-      <FeaturedAlbumDialog
-        open={featuredAlbumOpen}
-        onOpenChange={setFeaturedAlbumOpen}
-        userId={userId}
-        isOwnProfile={true}
-        onAvatarSelect={onAvatarSelectFromAlbum}
-      />
+      {/* Upload Post Dialog */}
+      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <DialogContent className="bg-cosmic-900/95 backdrop-blur-xl border-primary/20 max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl bg-gradient-to-r from-white to-primary bg-clip-text text-transparent">
+              {t('Create New Post', '创建新帖子')}
+            </DialogTitle>
+          </DialogHeader>
+          <InstagramPostUpload 
+            userId={userId}
+            onUploadComplete={() => {
+              onPostsUpdate();
+              setUploadDialogOpen(false);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
