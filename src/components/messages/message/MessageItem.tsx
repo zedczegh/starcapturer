@@ -87,7 +87,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
               : 'bg-cosmic-800/40 text-cosmic-100 rounded-tl-none'
           }`}
         >
-          {isSender && (
+          {isSender && !isSharedPost && !isPostInteraction && (
             <Button
               variant="ghost"
               size="sm"
@@ -100,7 +100,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
             </Button>
           )}
           
-          {message.text && !isSharedPost && (
+          {message.text && !isSharedPost && !isPostInteraction && (
             <div className="mb-2 whitespace-pre-wrap">
               <EmojiRenderer text={message.text} />
             </div>

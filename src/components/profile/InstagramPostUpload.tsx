@@ -63,7 +63,9 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
     setUploading(true);
 
     try {
-      const uploadPromises = selectedFiles.map(async (file) => {
+      // Upload all files
+      const uploadedPaths: string[] = [];
+      for (const file of selectedFiles) {
         const fileExt = file.name.split('.').pop();
         const fileName = `${userId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
@@ -72,25 +74,26 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
           .upload(fileName, file);
 
         if (uploadError) throw uploadError;
+        uploadedPaths.push(fileName);
+      }
 
-        const { error: dbError } = await supabase
-          .from('user_posts')
-          .insert({
-            user_id: userId,
-            file_name: file.name,
-            file_path: fileName,
-            file_type: file.type,
-            file_size: file.size,
-            description: description,
-            category: 'general',
-          });
+      // Create single post with multiple images
+      const { error: dbError } = await supabase
+        .from('user_posts')
+        .insert({
+          user_id: userId,
+          file_name: selectedFiles[0].name,
+          file_path: uploadedPaths[0], // Primary image
+          file_type: selectedFiles[0].type,
+          file_size: selectedFiles.reduce((sum, f) => sum + f.size, 0),
+          description: description.trim(),
+          category: 'general',
+          images: uploadedPaths // All images array
+        });
 
-        if (dbError) throw dbError;
-      });
+      if (dbError) throw dbError;
 
-      await Promise.all(uploadPromises);
-
-      toast.success('Posts uploaded successfully');
+      toast.success('Post uploaded successfully');
       
       // Cleanup
       previewUrls.forEach(url => URL.revokeObjectURL(url));
