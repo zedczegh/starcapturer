@@ -10,6 +10,7 @@ import ProfileMotto from './ProfileMotto';
 import { AdminBadge } from './AdminBadge';
 import { UserPostsManager } from './UserPostsManager';
 import { InstagramPostUpload } from './InstagramPostUpload';
+import AppleStyleTagBubble from './AppleStyleTagBubble';
 import { Settings, Wallet, Camera, X } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -34,9 +35,9 @@ const ProfileMainNew = ({
   postsRefreshKey,
   register,
   saving,
+  tags,
   handleSubmit,
   onSubmit,
-  tags,
   setTags
 }: any) => {
   const navigate = useNavigate();
@@ -167,9 +168,10 @@ const ProfileMainNew = ({
                 </Button>
               </div>
 
-              <div className="flex flex-col items-center text-center">
-                {/* Profile Picture with Enhanced Glow - Centered */}
-                <div className="relative mb-4">
+              {/* Top Left Layout */}
+              <div className="flex items-start gap-6">
+                {/* Avatar with glow */}
+                <div className="relative flex-shrink-0">
                   <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse"></div>
                   <div className="relative">
                     <ProfileAvatar 
@@ -182,28 +184,44 @@ const ProfileMainNew = ({
                   </div>
                 </div>
                 
-                {/* Username - Centered */}
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white via-primary to-purple-400 bg-clip-text text-transparent">
-                    {displayUsername}
-                  </h1>
-                  <AdminBadge size="sm" />
-                </div>
+                {/* Username, Motto, and Tags */}
+                <div className="flex-1 pt-2">
+                  {/* Username and Badge */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white via-primary to-purple-400 bg-clip-text text-transparent">
+                      {displayUsername}
+                    </h1>
+                    <AdminBadge size="sm" />
+                  </div>
+                  
+                  {/* Motto below username */}
+                  <div className="mb-4">
+                    <ProfileMotto 
+                      motto={motto}
+                      onSave={onMottoSave}
+                      isOwner={true}
+                    />
+                  </div>
 
-                {/* Bio - Centered if exists */}
-                {bio && (
-                  <p className="text-cosmic-300 text-sm leading-relaxed max-w-md mb-3">
-                    {bio}
-                  </p>
-                )}
-                
-                {/* Motto - Centered Below Username */}
-                <div className="w-full max-w-md">
-                  <ProfileMotto 
-                    motto={motto}
-                    onSave={onMottoSave}
-                    isOwner={true}
-                  />
+                  {/* Bio if exists */}
+                  {bio && (
+                    <p className="text-cosmic-300 text-sm leading-relaxed mb-4 max-w-2xl">
+                      {bio}
+                    </p>
+                  )}
+                  
+                  {/* Apple-style Tag Bubbles */}
+                  {tags && tags.length > 0 && (
+                    <div className="flex flex-wrap gap-3 mt-4">
+                      {tags.map((tag, index) => (
+                        <AppleStyleTagBubble 
+                          key={tag} 
+                          tag={tag} 
+                          index={index}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </Card>
