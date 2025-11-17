@@ -24,6 +24,7 @@ interface ProfileSectionsManagerProps {
   onCommentsUpdate: () => void;
   onCommentSubmit: (content: string, imageFile?: File | null, parentId?: string | null) => Promise<void>;
   onCommentDelete?: (commentId: string) => Promise<void>;
+  onCommentLike?: (commentId: string) => Promise<void>;
 }
 
 const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({
@@ -39,7 +40,8 @@ const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({
   onImagesUpdate,
   onCommentsUpdate,
   onCommentSubmit,
-  onCommentDelete
+  onCommentDelete,
+  onCommentLike
 }) => {
   console.log(`ProfileSectionsManager received ${comments.length} comments`);
   const [streamRefreshKey, setStreamRefreshKey] = useState(0);
@@ -113,6 +115,7 @@ const ProfileSectionsManager: React.FC<ProfileSectionsManagerProps> = ({
         onCommentsUpdate={onCommentsUpdate}
         onSubmit={onCommentSubmit}
         onDelete={onCommentDelete}
+        onLike={onCommentLike}
         sending={commentSending}
       />
     </div>

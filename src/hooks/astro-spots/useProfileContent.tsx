@@ -59,7 +59,8 @@ export const useProfileContent = (
     comments,
     submitComment,
     fetchComments,
-    deleteComment
+    deleteComment,
+    handleLike
   } = useAstroSpotComments(spotId, t);
 
   // Function to trigger a refresh of all data with rate limiting
@@ -208,7 +209,8 @@ export const useProfileContent = (
     storageChecked,
     refreshData,
     triggerRefresh,
-    deleteComment: handleCommentDelete
+    deleteComment: handleCommentDelete,
+    handleLike
   };
 };
 

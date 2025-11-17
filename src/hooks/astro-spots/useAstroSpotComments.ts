@@ -65,8 +65,39 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     try {
       console.log(`Loading comments for spot: ${spotId}`);
       const fetchedComments = await fetchComments(spotId);
-      console.log(`Loaded ${fetchedComments.length} comments`);
-      setComments(fetchedComments);
+      
+      // Fetch likes for all comments
+      if (fetchedComments.length > 0 && authUser) {
+        const commentIds = fetchedComments.map(c => c.id);
+        const { data: likesData } = await supabase
+          .from('astro_spot_comment_likes')
+          .select('comment_id, user_id')
+          .in('comment_id', commentIds);
+        
+        // Enrich comments with like data
+        const enrichedComments = fetchedComments.map(comment => {
+          const commentLikes = likesData?.filter(like => like.comment_id === comment.id) || [];
+          return {
+            ...comment,
+            likeCount: commentLikes.length,
+            isLikedByCurrentUser: commentLikes.some(like => like.user_id === authUser.id),
+            replies: comment.replies?.map(reply => {
+              const replyLikes = likesData?.filter(like => like.comment_id === reply.id) || [];
+              return {
+                ...reply,
+                likeCount: replyLikes.length,
+                isLikedByCurrentUser: replyLikes.some(like => like.user_id === authUser.id)
+              };
+            })
+          };
+        });
+        
+        console.log(`Loaded ${enrichedComments.length} comments with likes`);
+        setComments(enrichedComments);
+      } else {
+        setComments(fetchedComments);
+      }
+      
       setLoaded(true);
       return fetchedComments;
     } catch (err) {
@@ -74,7 +105,7 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
       setLoaded(true);
       return [] as Comment[];
     }
-  }, [spotId]);
+  }, [spotId, authUser]);
 
   const submitComment = async (
     content: string, 
@@ -210,13 +241,83 @@ export const useAstroSpotComments = (spotId: string, t: (key: string, fallback: 
     }
   };
 
+  const handleLike = async (commentId: string) => {
+    if (!authUser) {
+      toast.error(t('Please login to like', '请先登录'));
+      return;
+    }
+
+    try {
+      const comment = comments.find(c => 
+        c.id === commentId || c.replies?.some(r => r.id === commentId)
+      );
+      const targetComment = comment?.id === commentId 
+        ? comment 
+        : comment?.replies?.find(r => r.id === commentId);
+
+      if (!targetComment) return;
+
+      const isUnliking = targetComment.isLikedByCurrentUser;
+
+      if (isUnliking) {
+        // Unlike
+        await supabase
+          .from('astro_spot_comment_likes')
+          .delete()
+          .eq('comment_id', commentId)
+          .eq('user_id', authUser.id);
+      } else {
+        // Like
+        await supabase
+          .from('astro_spot_comment_likes')
+          .insert({
+            comment_id: commentId,
+            user_id: authUser.id
+          });
+      }
+
+      // Update local state
+      setComments(prevComments => 
+        prevComments.map(comment => {
+          if (comment.id === commentId) {
+            return {
+              ...comment,
+              isLikedByCurrentUser: !isUnliking,
+              likeCount: (comment.likeCount || 0) + (isUnliking ? -1 : 1)
+            };
+          }
+          // Check if it's a reply
+          if (comment.replies) {
+            return {
+              ...comment,
+              replies: comment.replies.map(reply => 
+                reply.id === commentId
+                  ? {
+                      ...reply,
+                      isLikedByCurrentUser: !isUnliking,
+                      likeCount: (reply.likeCount || 0) + (isUnliking ? -1 : 1)
+                    }
+                  : reply
+              )
+            };
+          }
+          return comment;
+        })
+      );
+    } catch (error: any) {
+      console.error('Error toggling like:', error);
+      toast.error(t('Failed to like comment', '点赞失败'));
+    }
+  };
+
   return {
     commentSending,
     comments,
     loaded,
     submitComment,
     fetchComments: loadComments,
-    deleteComment: deleteCommentById
+    deleteComment: deleteCommentById,
+    handleLike
   };
 };
 
