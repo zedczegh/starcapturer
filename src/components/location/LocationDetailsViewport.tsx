@@ -10,9 +10,11 @@ import LocationDetailsHeader from "./LocationDetailsHeader";
 import { Search, RefreshCcw, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LocationSearch from "./LocationSearch";
 import NavigationButtons from "./navigation/NavigationButtons";
 import CountryFlag from "./CountryFlag";
+import BortleNowTab from "./BortleNowTab";
 
 interface LocationDetailsViewportProps {
   locationData: any;
@@ -37,6 +39,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [errorState, setErrorState] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("details");
   const { t } = useLanguage();
   const isMobile = useIsMobile();
   const detailsContainerRef = useRef<HTMLDivElement>(null);
@@ -252,15 +255,39 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
         </div>
       )}
       
-      {/* Use the key to force remount when location changes */}
-      <div key={contentKey} className="content-wrapper">
-        <LocationDetailsContent 
-          locationData={locationData}
-          setLocationData={setLocationData}
-          onLocationUpdate={onLocationUpdate}
-          showFaultedMessage={true}
-        />
-      </div>
+      {/* Tabs for Details and Bortle Now */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-4">
+        <div className="flex justify-center mb-6">
+          <TabsList className="bg-background/50 backdrop-blur-sm border border-border/50">
+            <TabsTrigger value="details" className="data-[state=active]:bg-primary/20">
+              {t("Details", "详情")}
+            </TabsTrigger>
+            <TabsTrigger value="bortle-now" className="data-[state=active]:bg-primary/20">
+              {t("Bortle Now", "实时光污染")}
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent value="details">
+          {/* Use the key to force remount when location changes */}
+          <div key={contentKey} className="content-wrapper">
+            <LocationDetailsContent 
+              locationData={locationData}
+              setLocationData={setLocationData}
+              onLocationUpdate={onLocationUpdate}
+              showFaultedMessage={true}
+            />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="bortle-now">
+          <BortleNowTab
+            initialLatitude={locationData?.latitude}
+            initialLongitude={locationData?.longitude}
+            locationName={locationData?.name}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
