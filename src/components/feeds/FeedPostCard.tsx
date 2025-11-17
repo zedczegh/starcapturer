@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Heart, MessageCircle, Bookmark, Share2, MoreVertical } from 'lucide-react';
+import { Heart, MessageCircle, Bookmark, Share2, MoreVertical, Send } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { formatDistanceToNow } from 'date-fns';
 import {
   DropdownMenu,
@@ -40,13 +41,15 @@ const FeedPostCard: React.FC<FeedPostCardProps> = ({ post, onUpdate }) => {
   const [liked, setLiked] = useState(false);
   const [collected, setCollected] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
-  const [commentCount, setCommentCount] = useState(0);
+  const [comments, setComments] = useState<any[]>([]);
   const [imageUrl, setImageUrl] = useState<string>('');
+  const [showComments, setShowComments] = useState(false);
+  const [newComment, setNewComment] = useState('');
 
   useEffect(() => {
     loadImageUrl();
     loadInteractions();
-    loadCommentCount();
+    loadComments();
   }, [post.id]);
 
   const loadImageUrl = () => {
@@ -104,16 +107,25 @@ const FeedPostCard: React.FC<FeedPostCardProps> = ({ post, onUpdate }) => {
     }
   };
 
-  const loadCommentCount = async () => {
+  const loadComments = async () => {
     try {
-      const { count } = await supabase
+      const { data, error } = await supabase
         .from('post_comments')
-        .select('*', { count: 'exact', head: true })
-        .eq('post_id', post.id);
+        .select(`
+          *,
+          profiles!post_comments_user_id_fkey (
+            username,
+            avatar_url
+          )
+        `)
+        .eq('post_id', post.id)
+        .is('parent_comment_id', null)
+        .order('created_at', { ascending: false });
       
-      setCommentCount(count || 0);
+      if (error) throw error;
+      setComments(data || []);
     } catch (error) {
-      console.error('Error loading comment count:', error);
+      console.error('Error loading comments:', error);
     }
   };
 
@@ -202,7 +214,35 @@ const FeedPostCard: React.FC<FeedPostCardProps> = ({ post, onUpdate }) => {
   };
 
   const handleCommentClick = () => {
-    navigate(`/user/${post.user_id}?post=${post.id}`);
+    setShowComments(!showComments);
+  };
+
+  const handleAddComment = async () => {
+    if (!user) {
+      toast.error(t('Please sign in to comment', '请先登录以评论'));
+      return;
+    }
+
+    if (!newComment.trim()) return;
+
+    try {
+      const { error } = await supabase
+        .from('post_comments')
+        .insert({
+          post_id: post.id,
+          user_id: user.id,
+          content: newComment.trim()
+        });
+
+      if (error) throw error;
+
+      setNewComment('');
+      await loadComments();
+      toast.success(t('Comment added', '评论已添加'));
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      toast.error(t('Failed to add comment', '添加评论失败'));
+    }
   };
 
   const timeAgo = formatDistanceToNow(new Date(post.created_at), { addSuffix: true });
@@ -246,10 +286,7 @@ const FeedPostCard: React.FC<FeedPostCardProps> = ({ post, onUpdate }) => {
 
       {/* Image */}
       {imageUrl && (
-        <div 
-          className="w-full aspect-square bg-cosmic-800/30 cursor-pointer"
-          onClick={handleCommentClick}
-        >
+        <div className="w-full aspect-square bg-cosmic-800/30">
           <img
             src={imageUrl}
             alt={post.description || 'Post image'}
@@ -318,15 +355,79 @@ const FeedPostCard: React.FC<FeedPostCardProps> = ({ post, onUpdate }) => {
           </div>
         )}
 
-        {/* Comment count */}
-        {commentCount > 0 && (
+        {/* Comments Section */}
+        {comments.length > 0 && !showComments && (
           <button
             onClick={handleCommentClick}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            {t('View all', '查看全部')} {commentCount} {commentCount === 1 ? t('comment', '条评论') : t('comments', '条评论')}
+            {t('View all', '查看全部')} {comments.length} {comments.length === 1 ? t('comment', '条评论') : t('comments', '条评论')}
           </button>
         )}
+
+        {/* Comments Display */}
+        {showComments && comments.length > 0 && (
+          <div className="space-y-3 pt-2 border-t border-border/50">
+            {comments.map((comment) => (
+              <div key={comment.id} className="flex gap-2">
+                <Avatar 
+                  className="h-8 w-8 cursor-pointer"
+                  onClick={() => navigate(`/user/${comment.user_id}`)}
+                >
+                  <AvatarImage src={comment.profiles?.avatar_url || undefined} />
+                  <AvatarFallback>
+                    {comment.profiles?.username?.[0]?.toUpperCase() || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <div className="flex items-baseline gap-2">
+                    <span 
+                      className="font-semibold text-sm cursor-pointer hover:opacity-80"
+                      onClick={() => navigate(`/user/${comment.user_id}`)}
+                    >
+                      {comment.profiles?.username || t('Anonymous', '匿名用户')}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                    </span>
+                  </div>
+                  <p className="text-sm text-foreground/90">{comment.content}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Add Comment Input */}
+        <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={user?.user_metadata?.avatar_url || undefined} />
+            <AvatarFallback>
+              {user?.email?.[0]?.toUpperCase() || 'U'}
+            </AvatarFallback>
+          </Avatar>
+          <Input
+            placeholder={t('Add a comment...', '添加评论...')}
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleAddComment();
+              }
+            }}
+            className="flex-1 bg-background/50 border-border/50"
+          />
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={handleAddComment}
+            disabled={!newComment.trim()}
+            className="h-8 w-8"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );
