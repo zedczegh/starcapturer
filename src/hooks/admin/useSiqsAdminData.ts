@@ -26,10 +26,10 @@ export const useSiqsAdminData = () => {
     setError(null);
 
     try {
-      // Fetch photopoint locations
+      // Fetch photopoint locations (stored as 'search' in database)
       const { data: photopointData, error: photopointError } = await supabase
         .rpc('get_aggregated_siqs_locations', { 
-          p_source: 'photopoint',
+          p_source: 'search',
           p_limit: 100
         });
 
