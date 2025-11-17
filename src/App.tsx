@@ -20,6 +20,8 @@ import UsefulLinks from './pages/UsefulLinks';
 import ShareLocation from './pages/ShareLocation';
 import Collections from './pages/Collections';
 import Profile from './pages/Profile';
+import ProfileSettings from './pages/ProfileSettings';
+import WalletSettings from './pages/WalletSettings';
 import PreferencesPage from './pages/Preferences';
 import ManageAstroSpots from './pages/ManageAstroSpots';
 import AstroSpotProfile from './pages/AstroSpotProfile';
@@ -131,6 +133,8 @@ function AppContent() {
       <Route path="/share" element={<ShareLocation />} />
       <Route path="/collections" element={<Collections />} />
       <Route path="/profile" element={<Profile />} />
+      <Route path="/profile/settings" element={<ProfileSettings />} />
+      <Route path="/profile/wallet" element={<WalletSettings />} />
       <Route path="/profile/:id" element={<ProfileMini />} />
       <Route path="/settings" element={<PreferencesPage />} />
       <Route path="/manage-astro-spots" element={<ManageAstroSpots />} />
