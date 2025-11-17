@@ -66,7 +66,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
       if (isSharedPost || isPostInteraction || !message.text) return;
       
       // Regex to match post links
-      const postLinkRegex = /https?:\/\/[^\s]+\/profile\/([a-f0-9-]+)\?post=([a-f0-9-]+)/i;
+      const postLinkRegex = /https?:\/\/[^\s]+\/user\/([a-f0-9-]+)\?post=([a-f0-9-]+)/i;
       const match = message.text.match(postLinkRegex);
       
       if (match) {
@@ -126,9 +126,9 @@ const MessageItem: React.FC<MessageItemProps> = ({
 
   const handlePostClick = () => {
     if (metadata?.post_id && metadata?.post_owner_id) {
-      navigate(`/profile/${metadata.post_owner_id}?post=${metadata.post_id}`);
+      navigate(`/user/${metadata.post_owner_id}?post=${metadata.post_id}`);
     } else if (detectedPostLink) {
-      navigate(`/profile/${detectedPostLink.postOwnerId}?post=${detectedPostLink.postId}`);
+      navigate(`/user/${detectedPostLink.postOwnerId}?post=${detectedPostLink.postId}`);
     }
   };
 

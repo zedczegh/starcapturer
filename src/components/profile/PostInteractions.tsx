@@ -177,7 +177,7 @@ export const PostInteractions: React.FC<PostInteractionsProps> = ({
 
     try {
       // Create share link
-      const shareUrl = `${window.location.origin}/profile/${userId}?post=${postId}`;
+      const shareUrl = `${window.location.origin}/user/${userId}?post=${postId}`;
       
       // Copy to clipboard
       await navigator.clipboard.writeText(shareUrl);

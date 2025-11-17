@@ -29,7 +29,7 @@ export const MessageTextRenderer: React.FC<MessageTextRendererProps> = ({ text }
         // Check if this part is a URL
         if (part.match(urlPattern)) {
           // Check if it's an internal post link
-          const isInternalLink = part.includes(window.location.origin + '/profile/');
+          const isInternalLink = part.includes(window.location.origin + '/user/');
           
           if (isInternalLink) {
             // Extract the path for internal navigation
