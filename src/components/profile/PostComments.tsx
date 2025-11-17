@@ -237,7 +237,7 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
                       )}
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="bg-muted/50 rounded-2xl px-3 py-2 inline-block">
+                      <div className="bg-muted/50 rounded-2xl px-3 py-2 w-fit max-w-[85%]">
                         <div className="flex items-center gap-2 mb-0.5">
                           <span className="text-xs font-semibold text-foreground">
                             {comment.username || 'User'}
@@ -381,7 +381,7 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
                                 )}
                               </Avatar>
                               <div className="flex-1 min-w-0">
-                                <div className="bg-muted/30 rounded-2xl px-3 py-2 inline-block">
+                                <div className="bg-muted/30 rounded-2xl px-3 py-2 w-fit max-w-[85%]">
                                   <div className="flex items-center gap-2 mb-0.5">
                                     <span className="text-xs font-semibold text-foreground">
                                       {reply.username || 'User'}
