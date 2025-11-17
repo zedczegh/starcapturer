@@ -206,7 +206,7 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
             id="post-upload"
             type="file"
             multiple
-            accept="image/*,video/*"
+            accept="image/*,video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo,video/x-matroska"
             onChange={handleFileSelect}
             className="hidden"
             disabled={uploading || previewUrls.length >= 10}
