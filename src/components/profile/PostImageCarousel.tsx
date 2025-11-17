@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Volume2, VolumeX, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Play, Pause, Loader2 } from 'lucide-react';
 import { OptimizedImage } from '@/components/ui/optimized-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,6 @@ interface PostImageCarouselProps {
 
 export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, alt }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -57,7 +56,8 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
   
   console.log('Current item:', images[currentIndex], 'Is video?', currentIsVideo);
 
-  const togglePlayPause = () => {
+  const togglePlayPause = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (videoRef.current) {
       if (videoRef.current.paused) {
         videoRef.current.play();
@@ -65,11 +65,6 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
         videoRef.current.pause();
       }
     }
-  };
-
-  const toggleMute = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsMuted(!isMuted);
   };
 
   useEffect(() => {
@@ -114,14 +109,14 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
           className="w-full h-full"
         >
           {currentIsVideo ? (
-            <div className="relative w-full h-full bg-black" onClick={togglePlayPause}>
+            <div className="relative w-full h-full bg-black">
               <video
                 ref={videoRef}
                 src={images[currentIndex]}
-                className="w-full h-full object-cover cursor-pointer"
+                className="w-full h-full object-cover"
                 playsInline
                 loop
-                muted={isMuted}
+                muted
                 autoPlay
                 preload="auto"
                 crossOrigin="anonymous"
@@ -156,22 +151,32 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
               
               {/* Loading spinner */}
               {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none">
                   <Loader2 className="h-8 w-8 text-white animate-spin" />
                 </div>
               )}
               
-              {/* Mute/Unmute button - TikTok style */}
-              <button
-                onClick={toggleMute}
-                className="absolute bottom-4 right-4 p-2 bg-black/50 rounded-full hover:bg-black/70 transition-colors backdrop-blur-sm z-20"
-              >
-                {isMuted ? (
-                  <VolumeX className="h-5 w-5 text-white" />
-                ) : (
-                  <Volume2 className="h-5 w-5 text-white" />
-                )}
-              </button>
+              {/* Play/Pause button in center */}
+              {!isPlaying && !isLoading && (
+                <button
+                  onClick={togglePlayPause}
+                  className="absolute inset-0 flex items-center justify-center group"
+                  aria-label={isPlaying ? "Pause video" : "Play video"}
+                >
+                  <div className="p-4 bg-black/50 rounded-full hover:bg-black/70 transition-all backdrop-blur-sm group-hover:scale-110">
+                    <Play className="h-12 w-12 text-white fill-white" />
+                  </div>
+                </button>
+              )}
+              
+              {/* Invisible overlay for pause when playing */}
+              {isPlaying && !isLoading && (
+                <button
+                  onClick={togglePlayPause}
+                  className="absolute inset-0 bg-transparent"
+                  aria-label="Pause video"
+                />
+              )}
             </div>
           ) : (
             <OptimizedImage
