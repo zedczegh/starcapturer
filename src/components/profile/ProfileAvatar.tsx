@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Input } from '@/components/ui/input';
@@ -44,25 +43,25 @@ const ProfileAvatar = ({
             </div>
           </div>
         ) : (
-          <div className="w-full h-full rounded-full bg-gradient-to-br from-cosmic-700/60 to-cosmic-900/90 flex items-center justify-center shadow-2xl ring-4 ring-cosmic-800/50">
-            <User className="w-16 h-16 text-cosmic-400" />
-          </div>
+          <label htmlFor="avatar-upload" className="w-full h-full rounded-full bg-gradient-to-br from-cosmic-700/60 to-cosmic-900/90 flex items-center justify-center shadow-2xl ring-4 ring-cosmic-800/50 cursor-pointer hover:ring-primary/30 transition-all group">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Camera className="w-12 h-12 text-cosmic-400 group-hover:text-primary transition-colors" />
+            </div>
+            <Input
+              id="avatar-upload"
+              type="file"
+              accept="image/*"
+              onChange={onAvatarChange}
+              className="hidden"
+            />
+          </label>
         )}
-        
-        <label htmlFor="avatar-upload" className="absolute -bottom-2 -right-2 bg-primary hover:bg-primary/90 text-white p-3 rounded-full cursor-pointer shadow-lg shadow-primary/30 hover:shadow-primary/40 transition-all hover:scale-110">
-          <Camera className="w-6 h-6" />
-          <Input
-            id="avatar-upload"
-            type="file"
-            accept="image/*"
-            onChange={onAvatarChange}
-            className="hidden"
-          />
-        </label>
       </div>
-      <p className="text-cosmic-400 text-sm mt-3">
-        {uploadingAvatar ? t("Uploading...", "上传中...") : t("Click camera to change", "点击相机更改")}
-      </p>
+      {uploadingAvatar && (
+        <p className="text-cosmic-400 text-sm mt-3">
+          {t("Uploading...", "上传中...")}
+        </p>
+      )}
     </div>
   );
 };

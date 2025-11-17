@@ -173,10 +173,38 @@ const Profile = () => {
 
   const handleBackgroundChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setBackgroundFile(file);
-      const previewUrl = URL.createObjectURL(file);
-      setBackgroundUrl(previewUrl);
+    if (!file || !user) return;
+    
+    try {
+      setUploadingBackground(true);
+      
+      // Upload immediately to get permanent URL
+      const uploadedUrl = await uploadBackground(user.id, file);
+      
+      if (uploadedUrl) {
+        // Update database
+        const { error } = await supabase
+          .from('profiles')
+          .update({ background_image_url: uploadedUrl })
+          .eq('id', user.id);
+          
+        if (error) throw error;
+        
+        // Update state with permanent URL
+        setBackgroundUrl(uploadedUrl);
+        setBackgroundFile(null);
+        setProfile(prev => ({
+          ...prev,
+          background_image_url: uploadedUrl
+        }));
+        
+        toast.success(t("Background updated", "背景已更新"));
+      }
+    } catch (error: any) {
+      console.error('Error uploading background:', error);
+      toast.error(t("Failed to upload background", "背景上传失败"));
+    } finally {
+      setUploadingBackground(false);
     }
   };
 
@@ -239,17 +267,9 @@ const Profile = () => {
         }
       }
 
-      let newBackgroundUrl = backgroundUrl;
-      if (backgroundFile) {
-        setUploadingBackground(true);
-        newBackgroundUrl = await uploadBackground(user.id, backgroundFile);
-        setUploadingBackground(false);
-        
-        if (!newBackgroundUrl) {
-          toast.error(t("Background upload failed", "背景上传失败"));
-          // Continue anyway, we can update the other fields
-        }
-      }
+      // Background is already uploaded immediately on selection
+      // So we just use the current backgroundUrl state
+      const newBackgroundUrl = backgroundUrl;
 
       // First update the profile
       console.log("Upserting profile with:", { 
