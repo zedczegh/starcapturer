@@ -149,17 +149,28 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
   };
 
   const getFileUrl = (filePath: string) => {
+    if (!filePath) {
+      console.error('Empty file path provided');
+      return '';
+    }
     const { data } = supabase.storage.from('user-posts').getPublicUrl(filePath);
-    return data?.publicUrl || '';
+    const url = data?.publicUrl || '';
+    console.log('Generated URL for path:', filePath, 'URL:', url);
+    return url;
   };
 
   const getPostImages = (post: UserPost): string[] => {
+    console.log('Getting images for post:', post.id, 'file_type:', post.file_type);
     // Check if post has images array (new format)
     if (post.images && Array.isArray(post.images) && post.images.length > 0) {
-      return post.images.map(path => getFileUrl(path));
+      const urls = post.images.map(path => getFileUrl(path));
+      console.log('Post images URLs:', urls);
+      return urls;
     }
     // Fallback to single file_path (old format)
-    return [getFileUrl(post.file_path)];
+    const url = getFileUrl(post.file_path);
+    console.log('Post single URL:', url);
+    return [url];
   };
 
   const displayedPosts = selectedTab === 'my-feeds' ? posts : collectedPosts;
