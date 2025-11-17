@@ -16,7 +16,12 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
   const [isLoading, setIsLoading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  if (images.length === 0) return null;
+  console.log('PostImageCarousel received images:', images);
+
+  if (images.length === 0) {
+    console.log('No images to display');
+    return null;
+  }
 
   // Check if current item is a video based on file extension or URL pattern
   const isVideo = (url: string) => {
@@ -49,6 +54,8 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
   };
 
   const currentIsVideo = isVideo(images[currentIndex]);
+  
+  console.log('Current item:', images[currentIndex], 'Is video?', currentIsVideo);
 
   const togglePlayPause = () => {
     if (videoRef.current) {
@@ -107,35 +114,39 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
           className="w-full h-full"
         >
           {currentIsVideo ? (
-            <div className="relative w-full h-full" onClick={togglePlayPause}>
+            <div className="relative w-full h-full bg-black" onClick={togglePlayPause}>
               <video
                 ref={videoRef}
+                src={images[currentIndex]}
                 className="w-full h-full object-cover cursor-pointer"
                 playsInline
                 loop
                 muted={isMuted}
                 autoPlay
                 preload="auto"
-                onLoadStart={() => setIsLoading(true)}
-                onLoadedData={() => setIsLoading(false)}
-                onError={(e) => {
-                  console.error('Video load error - check if file exists in storage');
+                onLoadStart={() => {
+                  console.log('Video loading:', images[currentIndex]);
+                  setIsLoading(true);
+                }}
+                onLoadedData={() => {
+                  console.log('Video loaded successfully');
                   setIsLoading(false);
                 }}
-                onPlay={() => setIsPlaying(true)}
+                onError={(e) => {
+                  console.error('Video error:', images[currentIndex], e);
+                  setIsLoading(false);
+                }}
+                onPlay={() => {
+                  console.log('Video started playing');
+                  setIsPlaying(true);
+                }}
                 onPause={() => setIsPlaying(false)}
                 key={images[currentIndex]}
-              >
-                <source src={images[currentIndex]} type={getVideoMimeType(images[currentIndex])} />
-                <source src={images[currentIndex]} type="video/mp4" />
-                <source src={images[currentIndex]} type="video/webm" />
-                <source src={images[currentIndex]} type="video/ogg" />
-                Your browser does not support the video tag.
-              </video>
+              />
               
               {/* Loading spinner */}
               {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                   <Loader2 className="h-8 w-8 text-white animate-spin" />
                 </div>
               )}
