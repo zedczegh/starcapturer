@@ -129,7 +129,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete, o
               </div>
             )}
             
-            <div className="bg-muted/50 rounded-2xl px-4 py-2.5 max-w-full">
+            <div className="bg-muted/50 rounded-2xl px-4 py-2.5 w-fit max-w-[85%]">
               <div className="flex items-start justify-between gap-2 mb-1">
                 <span className="font-semibold text-sm text-left">{username}</span>
                 {isCommentOwner && onDelete && (
@@ -179,31 +179,22 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete, o
                   {comment.content}
                 </p>
               )}
+              
+              {commentImages.length > 0 && commentImages.map((imageUrl, index) => (
+                <img
+                  key={index}
+                  src={imageUrl}
+                  alt={`Comment attachment ${index + 1}`}
+                  className="mt-2 rounded-lg max-w-xs max-h-48 object-cover cursor-pointer"
+                  onClick={() => window.open(imageUrl, '_blank')}
+                  onError={(e) => {
+                    console.error('Failed to load comment image:', imageUrl);
+                    e.currentTarget.style.display = 'none';
+                  }}
+                  loading="lazy"
+                />
+              ))}
             </div>
-            
-            {commentImages.length > 0 && (
-              <div className={`mt-2 grid gap-2 ${commentImages.length === 1 ? 'grid-cols-1' : commentImages.length === 2 ? 'grid-cols-2' : 'grid-cols-2'} max-w-md`}>
-                {commentImages.map((imageUrl, index) => (
-                  <div 
-                    key={index}
-                    className="relative rounded-lg overflow-hidden border border-border/30 cursor-pointer hover:opacity-95 transition-opacity group/img"
-                    onClick={() => window.open(imageUrl, '_blank')}
-                  >
-                    <img
-                      src={imageUrl}
-                      alt={`Comment attachment ${index + 1}`}
-                      className="w-full h-auto object-cover"
-                      style={{ maxHeight: commentImages.length === 1 ? '300px' : '200px' }}
-                      onError={(e) => {
-                        console.error('Failed to load comment image:', imageUrl);
-                        e.currentTarget.parentElement!.style.display = 'none';
-                      }}
-                      loading="lazy"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
             
             <div className="flex items-center gap-3 mt-1 ml-1 text-xs text-muted-foreground">
               <span className="text-left">{formattedCreatedAt}</span>
@@ -275,7 +266,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete, o
                           </div>
                         )}
                         
-                        <div className="bg-muted/50 rounded-2xl px-3 py-2 max-w-full">
+                        <div className="bg-muted/30 rounded-2xl px-3 py-2 w-fit max-w-[85%]">
                           <div className="flex items-start justify-between gap-2 mb-1">
                             <span className="font-semibold text-xs text-left">
                               {reply.profiles?.username || t("Anonymous", "匿名用户")}
@@ -327,31 +318,22 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete, o
                               {reply.content}
                             </p>
                           )}
+                          
+                          {replyImages.length > 0 && replyImages.map((imageUrl, index) => (
+                            <img
+                              key={index}
+                              src={imageUrl}
+                              alt={`Reply attachment ${index + 1}`}
+                              className="mt-2 rounded-lg max-w-xs max-h-48 object-cover cursor-pointer"
+                              onClick={() => window.open(imageUrl, '_blank')}
+                              onError={(e) => {
+                                console.error('Failed to load reply image:', imageUrl);
+                                e.currentTarget.style.display = 'none';
+                              }}
+                              loading="lazy"
+                            />
+                          ))}
                         </div>
-                        
-                        {replyImages.length > 0 && (
-                          <div className={`mt-1.5 grid gap-1.5 ${replyImages.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} max-w-xs`}>
-                            {replyImages.map((imageUrl, index) => (
-                              <div 
-                                key={index}
-                                className="relative rounded-md overflow-hidden border border-border/30 cursor-pointer hover:opacity-95 transition-opacity"
-                                onClick={() => window.open(imageUrl, '_blank')}
-                              >
-                                <img
-                                  src={imageUrl}
-                                  alt={`Reply attachment ${index + 1}`}
-                                  className="w-full h-auto object-cover"
-                                  style={{ maxHeight: '150px' }}
-                                  onError={(e) => {
-                                    console.error('Failed to load reply image:', imageUrl);
-                                    e.currentTarget.parentElement!.style.display = 'none';
-                                  }}
-                                  loading="lazy"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        )}
                         
                         <div className="flex items-center gap-2 mt-1 ml-1 text-xs text-muted-foreground">
                           <span className="text-left">{getFormattedDate(reply.created_at)}</span>
