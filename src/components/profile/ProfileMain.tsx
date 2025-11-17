@@ -106,7 +106,11 @@ const ProfileMain = ({
 
           {/* Posts with Enhanced Styling */}
           <div className="transform hover:scale-[1.01] transition-transform duration-300">
-            <UserPostsManager userId={userId} isOwnProfile={true} />
+            <UserPostsManager 
+              userId={userId} 
+              isOwnProfile={true}
+              currentUserId={userId}
+            />
           </div>
         </div>
         

@@ -178,7 +178,11 @@ const ProfileMini: React.FC = () => {
 
           {/* Posts section with enhanced styling */}
           <div className="p-5 sm:p-7 md:p-9 border-b border-primary/10">
-            <UserPostsManager userId={profileId!} isOwnProfile={user?.id === profileId} />
+            <UserPostsManager 
+              userId={profileId!} 
+              isOwnProfile={user?.id === profileId}
+              currentUserId={user?.id}
+            />
           </div>
           
           {/* Spots section with enhanced styling */}
