@@ -90,27 +90,12 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-3">
       <UploadProgress 
         progress={uploadProgress} 
         fileName={imageFile?.name || ''}
         show={uploading} 
       />
-      <div className="relative">
-        <Textarea
-          value={commentText}
-          onChange={(e) => setCommentText(e.target.value)}
-          placeholder={isReply ? t("Write a reply...", "撰写回复...") : t("Add a comment...", "添加评论...")}
-          className={`${isReply ? 'min-h-20' : 'min-h-28'} resize-none bg-background/50 border-border/50 focus:border-primary/60 focus:bg-background/80 transition-all duration-200 placeholder:text-muted-foreground/60`}
-          disabled={sending}
-        />
-        {commentText.length > 0 && (
-          <div className="absolute bottom-2 right-2 text-xs text-muted-foreground/60">
-            {commentText.length}/1000
-          </div>
-        )}
-      </div>
-
       {imagePreview && (
         <div className="relative inline-block">
           <img 
@@ -128,40 +113,55 @@ const CommentInput: React.FC<CommentInputProps> = ({ onSubmit, sending, isReply 
           </Button>
         </div>
       )}
-
-      <div className="flex items-center justify-between pt-3">
-        <label className="cursor-pointer group">
-          <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all duration-200 group-hover:scale-105">
-            <ImagePlus className="h-4 w-4" />
-            <span>{t("Add Image", "添加图片")}</span>
+      <div className="relative">
+        <Textarea
+          value={commentText}
+          onChange={(e) => setCommentText(e.target.value)}
+          placeholder={isReply ? t("Write a reply...", "撰写回复...") : t("Add a comment...", "添加评论...")}
+          className={`${isReply ? 'min-h-20 pr-24 pb-10' : 'min-h-28 pr-24 pb-10'} resize-none bg-muted/50 border-border focus:border-primary/60 focus:bg-background/80 transition-all duration-200 placeholder:text-muted-foreground/60`}
+          disabled={sending}
+        />
+        {commentText.length > 0 && (
+          <div className="absolute top-2 right-2 text-xs text-muted-foreground/60">
+            {commentText.length}/1000
           </div>
-          <input 
-            type="file"
-            ref={fileInputRef}
-            className="hidden"
-            accept="image/*"
-            onChange={handleImageSelect}
-            disabled={sending}
-          />
-        </label>
-        <Button 
-          type="submit" 
-          size="sm" 
-          disabled={sending || (!commentText.trim() && !imageFile)}
-          className="min-w-20 bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-all duration-200 hover:scale-105 disabled:scale-100 shadow-sm"
-        >
-          {sending ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin mr-1" />
-              {isReply ? t("Posting...", "发布中...") : t("Posting...", "发布中...")}
-            </>
-          ) : (
-            <>
-              <Send className="h-4 w-4 mr-1" />
-              {isReply ? t("Reply", "回复") : t("Post", "发布")}
-            </>
-          )}
-        </Button>
+        )}
+        <div className="absolute bottom-2 right-2 flex gap-1">
+          <label className="cursor-pointer group">
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+              disabled={sending}
+              asChild
+            >
+              <div className="flex items-center justify-center">
+                <ImagePlus className="h-4 w-4" />
+              </div>
+            </Button>
+            <input 
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={handleImageSelect}
+              disabled={sending}
+            />
+          </label>
+          <Button 
+            type="submit" 
+            size="icon"
+            className="h-8 w-8"
+            disabled={sending || (!commentText.trim() && !imageFile)}
+          >
+            {sending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
       </div>
     </form>
   );
