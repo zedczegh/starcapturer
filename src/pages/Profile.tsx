@@ -180,9 +180,31 @@ const Profile = () => {
     }
   };
 
-  const handleRemoveBackground = () => {
-    setBackgroundFile(null);
-    setBackgroundUrl(null);
+  const handleRemoveBackground = async () => {
+    if (!user) return;
+    
+    try {
+      // Remove from database
+      const { error } = await supabase
+        .from('profiles')
+        .update({ background_image_url: null })
+        .eq('id', user.id);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setBackgroundFile(null);
+      setBackgroundUrl(null);
+      setProfile(prev => ({
+        ...prev,
+        background_image_url: null
+      }));
+      
+      toast.success(t("Background removed", "背景已移除"));
+    } catch (error: any) {
+      console.error('Error removing background:', error);
+      toast.error(t("Failed to remove background", "移除背景失败"));
+    }
   };
 
   const onSubmit = async (formData: ProfileFormValues) => {
@@ -267,9 +289,14 @@ const Profile = () => {
         ...prev,
         username: formData.username,
         avatar_url: newAvatarUrl,
+        background_image_url: newBackgroundUrl,
         bio: formData.bio,
         tags,
       }));
+      
+      // Update the background URL state to reflect the saved URL
+      setBackgroundUrl(newBackgroundUrl);
+      setBackgroundFile(null);
       
       toast.success(t("Profile updated successfully", "个人资料更新成功"));
     } catch (error: any) {
