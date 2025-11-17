@@ -30,6 +30,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const navigate = useNavigate();
   const [showUnsendDialog, setShowUnsendDialog] = useState(false);
   const [postImageUrl, setPostImageUrl] = useState<string | null>(null);
+  const [detectedPostLink, setDetectedPostLink] = useState<any>(null);
   
   const locale = language === 'zh' ? zhCN : enUS;
   const messageDate = new Date(message.created_at);
@@ -59,9 +60,75 @@ const MessageItem: React.FC<MessageItemProps> = ({
     }
   }, [isSharedPost, metadata]);
 
+  // Detect and fetch post link data from message text
+  React.useEffect(() => {
+    const detectAndFetchPostLink = async () => {
+      if (isSharedPost || isPostInteraction || !message.text) return;
+      
+      // Regex to match post links
+      const postLinkRegex = /https?:\/\/[^\s]+\/profile\/([a-f0-9-]+)\?post=([a-f0-9-]+)/i;
+      const match = message.text.match(postLinkRegex);
+      
+      if (match) {
+        const [, userId, postId] = match;
+        
+        try {
+          // Fetch post data
+          const { data: post, error: postError } = await supabase
+            .from('user_posts')
+            .select('*')
+            .eq('id', postId)
+            .single();
+          
+          if (postError) throw postError;
+          
+          // Fetch owner username
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', userId)
+            .single();
+          
+          // Get image URL
+          let imageUrl = '';
+          if (post.images && Array.isArray(post.images) && post.images.length > 0) {
+            const firstImage = post.images[0] as string;
+            if (firstImage.startsWith('http://') || firstImage.startsWith('https://')) {
+              imageUrl = firstImage;
+            } else {
+              const { data } = supabase.storage
+                .from('user-posts')
+                .getPublicUrl(firstImage);
+              imageUrl = data.publicUrl;
+            }
+          } else if (post.file_path) {
+            const { data } = supabase.storage
+              .from('user-posts')
+              .getPublicUrl(post.file_path);
+            imageUrl = data.publicUrl;
+          }
+          
+          setDetectedPostLink({
+            postId,
+            postOwnerId: userId,
+            imageUrl,
+            description: post.description || '',
+            ownerUsername: profile?.username || 'Unknown'
+          });
+        } catch (error) {
+          console.error('Error fetching post link data:', error);
+        }
+      }
+    };
+    
+    detectAndFetchPostLink();
+  }, [message.text, isSharedPost, isPostInteraction]);
+
   const handlePostClick = () => {
     if (metadata?.post_id && metadata?.post_owner_id) {
-      navigate(`/user/${metadata.post_owner_id}`, { state: { scrollToPost: metadata.post_id } });
+      navigate(`/profile/${metadata.post_owner_id}?post=${metadata.post_id}`);
+    } else if (detectedPostLink) {
+      navigate(`/profile/${detectedPostLink.postOwnerId}?post=${detectedPostLink.postId}`);
     }
   };
 
@@ -79,7 +146,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
     }
   };
 
-  const hasContent = message.text || message.image_url || message.location || isPostInteraction || isSharedPost;
+  const hasContent = message.text || message.image_url || message.location || isPostInteraction || isSharedPost || detectedPostLink;
   
   if (!hasContent) return null;
   
@@ -106,7 +173,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
             </Button>
           )}
           
-          {message.text && !isSharedPost && !isPostInteraction && (
+          {message.text && !isSharedPost && !isPostInteraction && !detectedPostLink && (
             <div className="mb-2 whitespace-pre-wrap">
               <MessageTextRenderer text={message.text} />
             </div>
@@ -175,6 +242,43 @@ const MessageItem: React.FC<MessageItemProps> = ({
                   {metadata.post_description && (
                     <p className="text-sm text-cosmic-100 font-medium line-clamp-2 leading-snug">
                       {metadata.post_description}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-1.5 text-xs text-primary/80 group-hover:text-primary transition-colors">
+                    <span className="font-medium">View post</span>
+                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* Detected Post Link Preview */}
+          {detectedPostLink && (
+            <div 
+              className="mt-2 cursor-pointer group"
+              onClick={handlePostClick}
+            >
+              <Card className="overflow-hidden border border-cosmic-600/40 hover:border-primary/40 bg-cosmic-800/30 hover:bg-cosmic-800/50 transition-all duration-200 max-w-[320px]">
+                {detectedPostLink.imageUrl && (
+                  <div className="relative w-full h-48 overflow-hidden">
+                    <img
+                      src={detectedPostLink.imageUrl}
+                      alt="Post preview"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+                <div className="p-3 space-y-1.5">
+                  <p className="text-xs text-cosmic-300 mb-1">
+                    Post by @{detectedPostLink.ownerUsername}
+                  </p>
+                  {detectedPostLink.description && (
+                    <p className="text-sm text-cosmic-100 font-medium line-clamp-2 leading-snug">
+                      {detectedPostLink.description}
                     </p>
                   )}
                   <div className="flex items-center gap-1.5 text-xs text-primary/80 group-hover:text-primary transition-colors">
