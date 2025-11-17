@@ -5,6 +5,7 @@ import { formatRelative } from 'date-fns';
 import { zhCN, enUS } from 'date-fns/locale';
 import { useLanguage } from '@/contexts/LanguageContext';
 import EmojiRenderer from '../EmojiRenderer';
+import { MessageTextRenderer } from './MessageTextRenderer';
 import { MoreVertical, CheckCheck, Check, ThumbsUp, Heart, Bookmark } from 'lucide-react';
 import UnsendDialog from './UnsendDialog';
 import { Button } from '@/components/ui/button';
@@ -107,7 +108,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
           
           {message.text && !isSharedPost && !isPostInteraction && (
             <div className="mb-2 whitespace-pre-wrap">
-              <EmojiRenderer text={message.text} />
+              <MessageTextRenderer text={message.text} />
             </div>
           )}
           
