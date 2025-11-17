@@ -20,11 +20,23 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
 
   // Check if current item is a video based on file extension or URL pattern
   const isVideo = (url: string) => {
-    const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv', '.m4v'];
+    const videoExtensions = [
+      '.mp4', '.webm', '.ogg', '.ogv', '.mov', '.avi', '.mkv', '.m4v',
+      '.flv', '.wmv', '.3gp', '.mpeg', '.mpg', '.m2v'
+    ];
     const lowerUrl = url.toLowerCase();
     return videoExtensions.some(ext => lowerUrl.includes(ext)) || 
            lowerUrl.includes('video') ||
            url.includes('/video/');
+  };
+
+  // Get MIME type from URL
+  const getVideoMimeType = (url: string): string => {
+    const lowerUrl = url.toLowerCase();
+    if (lowerUrl.includes('.webm')) return 'video/webm';
+    if (lowerUrl.includes('.ogg') || lowerUrl.includes('.ogv')) return 'video/ogg';
+    if (lowerUrl.includes('.mov') || lowerUrl.includes('.m4v')) return 'video/mp4';
+    return 'video/mp4'; // default fallback
   };
 
   const goToPrevious = () => {
@@ -82,7 +94,6 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
             <div className="relative w-full h-full" onClick={togglePlayPause}>
               <video
                 ref={videoRef}
-                src={images[currentIndex]}
                 className="w-full h-full object-cover cursor-pointer"
                 playsInline
                 loop
@@ -95,7 +106,11 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
                 onPause={() => setIsPlaying(false)}
                 key={images[currentIndex]}
               >
+                <source src={images[currentIndex]} type={getVideoMimeType(images[currentIndex])} />
                 <source src={images[currentIndex]} type="video/mp4" />
+                <source src={images[currentIndex]} type="video/webm" />
+                <source src={images[currentIndex]} type="video/ogg" />
+                Your browser does not support the video tag.
               </video>
               
               {/* Loading spinner */}
