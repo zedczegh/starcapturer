@@ -498,6 +498,7 @@ export type Database = {
           created_at: string
           date_of_birth: string | null
           id: string
+          motto: string | null
           preferred_currency: string | null
           updated_at: string
           username: string | null
@@ -509,6 +510,7 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           id: string
+          motto?: string | null
           preferred_currency?: string | null
           updated_at?: string
           username?: string | null
@@ -520,6 +522,7 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           id?: string
+          motto?: string | null
           preferred_currency?: string | null
           updated_at?: string
           username?: string | null
