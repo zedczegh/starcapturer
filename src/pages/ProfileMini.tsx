@@ -19,7 +19,6 @@ import ProfileActions from "@/components/profile/mini/ProfileActions";
 import ProfileLoadingState from "@/components/profile/mini/ProfileLoadingState";
 import ProfileNotFound from "@/components/profile/mini/ProfileNotFound";
 import { UserPostsManager } from "@/components/profile/UserPostsManager";
-import { FeaturedAlbumManager } from "@/components/profile/FeaturedAlbumManager";
 
 const ProfileMini: React.FC = () => {
   const { id: profileId } = useParams();
@@ -170,11 +169,6 @@ const ProfileMini: React.FC = () => {
               <ProfileBio bio={profile.bio} t={t} />
             </div>
           )}
-
-          {/* Featured Album with enhanced styling */}
-          <div className="p-5 sm:p-7 md:p-9 border-b border-primary/10 bg-gradient-to-br from-cosmic-900/20 to-transparent">
-            <FeaturedAlbumManager userId={profileId!} isOwnProfile={user?.id === profileId} />
-          </div>
 
           {/* Posts section with enhanced styling */}
           <div className="p-5 sm:p-7 md:p-9 border-b border-primary/10">
