@@ -5,13 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import ProfileAvatar from './ProfileAvatar';
 import ProfileMotto from './ProfileMotto';
 import { AdminBadge } from './AdminBadge';
 import { UserPostsManager } from './UserPostsManager';
 import { InstagramPostUpload } from './InstagramPostUpload';
 import ProfileTag from './ProfileTag';
-import { Settings, Wallet, Camera, X } from 'lucide-react';
+import { Settings, Wallet, Camera, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { motion } from 'framer-motion';
 
@@ -44,6 +45,7 @@ const ProfileMainNew = ({
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [tagsExpanded, setTagsExpanded] = useState(false);
 
   // Animation variants for staggered tag animations
   const containerVariants = {
@@ -72,7 +74,9 @@ const ProfileMainNew = ({
               alt="Profile Background" 
               className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105 duration-700"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-cosmic-950 via-cosmic-950/50 to-transparent"></div>
+            {/* Enhanced gradient with more bleed at bottom */}
+            <div className="absolute inset-0 bg-gradient-to-t from-cosmic-950 via-cosmic-950/80 via-50% to-transparent"></div>
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-70% to-cosmic-950/90"></div>
             
             {/* Upload Controls - Show on hover */}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center gap-4">
@@ -105,7 +109,9 @@ const ProfileMainNew = ({
           <>
             <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-purple-900/30 to-cosmic-900"></div>
             <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1200&h=400&fit=crop')] bg-cover bg-center opacity-30 transform scale-110 hover:scale-105 transition-transform duration-1000"></div>
-            <div className="absolute inset-0 bg-gradient-to-t from-cosmic-950 via-cosmic-950/50 to-transparent"></div>
+            {/* Enhanced gradient with more bleed at bottom */}
+            <div className="absolute inset-0 bg-gradient-to-t from-cosmic-950 via-cosmic-950/80 via-50% to-transparent"></div>
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-70% to-cosmic-950/90"></div>
             
             {/* Upload Button for Empty State */}
             <div className="absolute inset-0 flex items-center justify-center">
@@ -227,20 +233,44 @@ const ProfileMainNew = ({
                     </p>
                   )}
                   
-                  {/* Tags - Same style as mini profiles */}
+                  {/* Collapsible Tags Section */}
                   {tags && tags.length > 0 && (
-                    <motion.div 
-                      className="mt-2 flex flex-wrap gap-2"
-                      variants={containerVariants}
-                      initial="hidden"
-                      animate="visible"
+                    <Collapsible 
+                      open={tagsExpanded} 
+                      onOpenChange={setTagsExpanded}
+                      className="mt-2"
                     >
-                      {tags.map((tag: string) => (
-                        <motion.div key={tag} variants={itemVariants}>
-                          <ProfileTag tag={tag} size="sm" />
+                      <CollapsibleTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="flex items-center gap-2 text-cosmic-300 hover:text-white transition-colors p-0 h-auto"
+                        >
+                          <span className="text-sm font-medium">
+                            {t("Interests", "兴趣")} ({tags.length})
+                          </span>
+                          {tagsExpanded ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-3">
+                        <motion.div 
+                          className="flex flex-wrap gap-2"
+                          variants={containerVariants}
+                          initial="hidden"
+                          animate="visible"
+                        >
+                          {tags.map((tag: string) => (
+                            <motion.div key={tag} variants={itemVariants}>
+                              <ProfileTag tag={tag} size="sm" />
+                            </motion.div>
+                          ))}
                         </motion.div>
-                      ))}
-                    </motion.div>
+                      </CollapsibleContent>
+                    </Collapsible>
                   )}
                 </div>
               </div>
