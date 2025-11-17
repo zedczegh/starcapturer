@@ -44,18 +44,14 @@ const MessageItem: React.FC<MessageItemProps> = ({
 
   // Load post image for shared posts
   React.useEffect(() => {
-    if (isSharedPost && metadata?.post_file_path) {
-      const { data } = supabase.storage
-        .from('user-posts')
-        .getPublicUrl(metadata.post_file_path);
-      setPostImageUrl(data.publicUrl);
+    if (isSharedPost && metadata?.post_image_url) {
+      setPostImageUrl(metadata.post_image_url);
     }
   }, [isSharedPost, metadata]);
 
   const handlePostClick = () => {
-    if (metadata?.post_id) {
-      // Navigate to the post owner's profile (you could also create a dedicated post view)
-      navigate(`/profile/${message.sender_id}#post-${metadata.post_id}`);
+    if (metadata?.post_id && metadata?.post_owner_id) {
+      navigate(`/user/${metadata.post_owner_id}`, { state: { scrollToPost: metadata.post_id } });
     }
   };
 
@@ -148,35 +144,38 @@ const MessageItem: React.FC<MessageItemProps> = ({
             </div>
           )}
 
-          {/* Shared Post Preview */}
-          {isSharedPost && postImageUrl && (
-            <Card 
-              className="overflow-hidden cursor-pointer hover:scale-[1.02] transition-all bg-cosmic-700/40 border-cosmic-600/30 max-w-[280px]"
+          {/* Shared Post Preview - Facebook Messenger Style */}
+          {isSharedPost && (
+            <div 
+              className="mt-2 cursor-pointer group"
               onClick={handlePostClick}
             >
-              <div className="relative w-full aspect-square">
-                <img
-                  src={postImageUrl}
-                  alt="Shared post"
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-cosmic-950/80 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-3">
+              <Card className="overflow-hidden border border-cosmic-600/40 hover:border-primary/40 bg-cosmic-800/30 hover:bg-cosmic-800/50 transition-all duration-200 max-w-[320px]">
+                {postImageUrl && (
+                  <div className="relative w-full h-48 overflow-hidden">
+                    <img
+                      src={postImageUrl}
+                      alt="Shared post"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+                <div className="p-3 space-y-1.5">
                   {metadata.post_description && (
-                    <p className="text-sm text-white font-medium line-clamp-2 mb-1">
+                    <p className="text-sm text-cosmic-100 font-medium line-clamp-2 leading-snug">
                       {metadata.post_description}
                     </p>
                   )}
-                  <p className="text-xs text-cosmic-300 flex items-center gap-1">
-                    <span>Tap to view post</span>
+                  <div className="flex items-center gap-1.5 text-xs text-primary/80 group-hover:text-primary transition-colors">
+                    <span className="font-medium">View post</span>
                     <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
-                  </p>
+                  </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            </div>
           )}
         </div>
         
