@@ -100,7 +100,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
             </Button>
           )}
           
-          {message.text && (
+          {message.text && !isSharedPost && (
             <div className="mb-2 whitespace-pre-wrap">
               <EmojiRenderer text={message.text} />
             </div>
@@ -140,35 +140,41 @@ const MessageItem: React.FC<MessageItemProps> = ({
           {/* Post Interaction Notification */}
           {isPostInteraction && (
             <div 
-              className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+              className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity p-2 rounded-lg bg-cosmic-700/30"
               onClick={handlePostClick}
             >
               {getInteractionIcon()}
-              <span className="text-sm">Click to view post</span>
+              <span className="text-sm font-medium">Tap to view post</span>
             </div>
           )}
 
           {/* Shared Post Preview */}
           {isSharedPost && (
-            <Card 
-              className="mt-2 overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform bg-cosmic-800/60"
-              onClick={handlePostClick}
-            >
-              {postImageUrl && (
-                <img
-                  src={postImageUrl}
-                  alt="Shared post"
-                  className="w-full h-32 object-cover"
-                />
-              )}
-              {metadata.post_description && (
-                <div className="p-2">
-                  <p className="text-xs text-cosmic-300 line-clamp-2">
-                    {metadata.post_description}
-                  </p>
+            <div className="space-y-2">
+              <p className="text-sm opacity-90">Shared a post with you:</p>
+              <Card 
+                className="overflow-hidden cursor-pointer hover:scale-[1.01] transition-transform bg-cosmic-700/40 border-cosmic-600/30"
+                onClick={handlePostClick}
+              >
+                {postImageUrl && (
+                  <img
+                    src={postImageUrl}
+                    alt="Shared post"
+                    className="w-full h-48 object-cover"
+                  />
+                )}
+                {metadata.post_description && (
+                  <div className="p-3">
+                    <p className="text-sm text-cosmic-200 line-clamp-2">
+                      {metadata.post_description}
+                    </p>
+                  </div>
+                )}
+                <div className="px-3 pb-3 text-xs text-cosmic-400">
+                  Tap to view full post
                 </div>
-              )}
-            </Card>
+              </Card>
+            </div>
           )}
         </div>
         
