@@ -136,16 +136,16 @@ export const SpotComments: React.FC<SpotCommentsProps> = ({ spotId, currentUserI
       if (imageFile) {
         const fileExt = imageFile.name.split('.').pop();
         const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `${fileName}`;
+        const filePath = `comment_images/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('message_images')
+          .from('comment_images')
           .upload(filePath, imageFile);
 
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage
-          .from('message_images')
+          .from('comment_images')
           .getPublicUrl(filePath);
 
         imageUrl = publicUrl;
