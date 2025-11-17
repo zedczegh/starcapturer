@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import ProfileAvatar from './ProfileAvatar';
+import ProfileBackground from './ProfileBackground';
 import AstronomyTip from './AstronomyTip';
 import { AdminBadge } from './AdminBadge';
 import { UserPostsManager } from './UserPostsManager';
@@ -14,14 +15,24 @@ import { useLanguage } from '@/contexts/LanguageContext';
 const ProfileMainNew = ({
   displayUsername,
   avatarUrl,
+  backgroundUrl,
   onAvatarChange,
+  onBackgroundChange,
   onRemoveAvatar,
+  onRemoveBackground,
   uploadingAvatar,
+  uploadingBackground,
   astronomyTip,
   bio,
   userId,
   onPostsUpdate,
-  postsRefreshKey
+  postsRefreshKey,
+  register,
+  saving,
+  handleSubmit,
+  onSubmit,
+  tags,
+  setTags
 }: any) => {
   const navigate = useNavigate();
   const { t } = useLanguage();
@@ -29,11 +40,24 @@ const ProfileMainNew = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-cosmic-950 to-slate-900">
-      {/* Enhanced Cover Photo with Parallax Effect */}
+      {/* Enhanced Cover Photo with User's Background or Default */}
       <div className="relative h-[200px] sm:h-[250px] md:h-[350px] overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-purple-900/30 to-cosmic-900"></div>
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1200&h=400&fit=crop')] bg-cover bg-center opacity-30 transform scale-110 hover:scale-105 transition-transform duration-1000"></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-cosmic-950 via-cosmic-950/50 to-transparent"></div>
+        {backgroundUrl ? (
+          <>
+            <img 
+              src={backgroundUrl} 
+              alt="Profile Background" 
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-cosmic-950 via-cosmic-950/50 to-transparent"></div>
+          </>
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-purple-900/30 to-cosmic-900"></div>
+            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1200&h=400&fit=crop')] bg-cover bg-center opacity-30 transform scale-110 hover:scale-105 transition-transform duration-1000"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-cosmic-950 via-cosmic-950/50 to-transparent"></div>
+          </>
+        )}
         
         {/* Animated stars overlay */}
         <div className="absolute inset-0 opacity-20">
@@ -44,8 +68,18 @@ const ProfileMainNew = ({
       </div>
 
       <div className="container mx-auto px-3 sm:px-4 md:px-6 max-w-7xl">
+        {/* Background Image Upload Section */}
+        <div className="relative -mt-32 sm:-mt-36 mb-4 sm:mb-6 px-4">
+          <ProfileBackground
+            backgroundUrl={backgroundUrl}
+            onBackgroundChange={onBackgroundChange}
+            onRemoveBackground={onRemoveBackground}
+            uploadingBackground={uploadingBackground}
+          />
+        </div>
+
         {/* Enhanced Profile Header Section with Glow */}
-        <div className="relative -mt-20 sm:-mt-24 mb-6 sm:mb-8">
+        <div className="relative mb-6 sm:mb-8">
           <Card className="bg-cosmic-900/95 backdrop-blur-xl border border-primary/10 p-4 sm:p-6">
             <div className="flex items-center gap-4 sm:gap-6">
               {/* Profile Picture with Enhanced Glow */}
