@@ -11,21 +11,27 @@ export const uploadBackground = async (userId: string, file: File): Promise<stri
   }
 
   try {
+    const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+    console.log(`[Background Upload] Starting upload - File size: ${fileSizeMB}MB (${file.size} bytes)`);
+    
     // Check auth status first for RLS
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError) {
+      console.error('[Background Upload] Session error:', sessionError);
       toast.error('Authentication error', { description: sessionError.message });
       return null;
     }
     
     if (!sessionData.session) {
+      console.error('[Background Upload] No active session');
       toast.error('Authentication required', { description: 'Please sign in to upload a background' });
       return null;
     }
     
     // Verify the session user is the same as the requested userId
     if (sessionData.session.user.id !== userId) {
+      console.error('[Background Upload] User ID mismatch');
       toast.error('Permission error', { 
         description: 'You do not have permission to upload for this user.' 
       });
@@ -34,24 +40,31 @@ export const uploadBackground = async (userId: string, file: File): Promise<stri
     
     // Validate the file - support all image formats
     if (!file || !file.type.startsWith('image/')) {
+      console.error('[Background Upload] Invalid file type:', file?.type);
       toast.error('Invalid file type', { description: 'Please select an image file' });
       return null;
     }
 
     // Check file size - max 100MB
     const maxSize = 100 * 1024 * 1024; // 100MB in bytes
-    const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+    
+    console.log(`[Background Upload] File size check - File: ${file.size}, Max: ${maxSize}, Pass: ${file.size <= maxSize}`);
     
     if (file.size > maxSize) {
+      console.error(`[Background Upload] File too large: ${fileSizeMB}MB`);
       toast.error('File too large', { 
         description: `Maximum file size is 100MB. Your file is ${fileSizeMB}MB` 
       });
       return null;
     }
+    
+    console.log('[Background Upload] All validation checks passed');
 
     // Generate unique filename to prevent conflicts
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}/background-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    
+    console.log(`[Background Upload] Uploading to storage - Path: ${fileName}`);
     
     // Upload the file to avatars bucket (reusing existing bucket)
     const { data, error: uploadError } = await supabase.storage
@@ -60,6 +73,8 @@ export const uploadBackground = async (userId: string, file: File): Promise<stri
         upsert: true,
         contentType: file.type
       });
+      
+    console.log('[Background Upload] Upload response:', { data, error: uploadError });
       
     if (uploadError) {
       // Special handling for RLS policy violations
