@@ -97,7 +97,17 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
           // Get image URL
           let imageUrl = '';
           if (post.images && Array.isArray(post.images) && post.images.length > 0) {
-            imageUrl = post.images[0] as string;
+            const firstImage = post.images[0] as string;
+            // Check if it's already a full URL or a storage path
+            if (firstImage.startsWith('http://') || firstImage.startsWith('https://')) {
+              imageUrl = firstImage;
+            } else {
+              // It's a storage path, get public URL
+              const { data } = supabase.storage
+                .from('user-posts')
+                .getPublicUrl(firstImage);
+              imageUrl = data.publicUrl;
+            }
           } else if (post.file_path) {
             const { data } = supabase.storage
               .from('user-posts')
