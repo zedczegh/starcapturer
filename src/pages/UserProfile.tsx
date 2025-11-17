@@ -40,13 +40,25 @@ const UserProfile = () => {
       setTimeout(() => {
         const postElement = document.getElementById(`post-${scrollToPost}`);
         if (postElement) {
+          console.log('[UserProfile] Scrolling to post:', scrollToPost);
+          
+          // Scroll to center the element on screen
           postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          postElement.classList.add('ring-2', 'ring-primary', 'ring-offset-2', 'ring-offset-cosmic-950');
+          
+          // Add highlight effect with glow
+          postElement.style.transition = 'all 0.3s ease-in-out';
+          postElement.style.boxShadow = '0 0 0 3px hsl(var(--primary)), 0 0 30px hsl(var(--primary) / 0.5)';
+          postElement.style.transform = 'scale(1.01)';
+          
+          // Remove highlight after 3 seconds
           setTimeout(() => {
-            postElement.classList.remove('ring-2', 'ring-primary', 'ring-offset-2', 'ring-offset-cosmic-950');
-          }, 2000);
+            postElement.style.boxShadow = '';
+            postElement.style.transform = '';
+          }, 3000);
+        } else {
+          console.warn('[UserProfile] Post element not found:', `post-${scrollToPost}`);
         }
-      }, 500);
+      }, 1000); // Increased delay to ensure posts are rendered
     }
   }, [scrollToPost, loading]);
 
