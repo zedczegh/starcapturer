@@ -14,6 +14,12 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
 
   if (images.length === 0) return null;
 
+  // Check if current item is a video based on file extension
+  const isVideo = (url: string) => {
+    const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv'];
+    return videoExtensions.some(ext => url.toLowerCase().includes(ext));
+  };
+
   const goToPrevious = () => {
     setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
   };
@@ -24,7 +30,7 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
 
   return (
     <div className="relative w-full aspect-square bg-cosmic-900">
-      {/* Main Image */}
+      {/* Main Image or Video */}
       <AnimatePresence mode="wait">
         <motion.div
           key={currentIndex}
@@ -34,16 +40,28 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
           transition={{ duration: 0.3 }}
           className="w-full h-full"
         >
-          <OptimizedImage
-            src={images[currentIndex]}
-            alt={`${alt} - ${currentIndex + 1}`}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
+          {isVideo(images[currentIndex]) ? (
+            <video
+              src={images[currentIndex]}
+              className="w-full h-full object-cover"
+              controls
+              loop
+              playsInline
+              autoPlay
+              muted
+            />
+          ) : (
+            <OptimizedImage
+              src={images[currentIndex]}
+              alt={`${alt} - ${currentIndex + 1}`}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+          )}
         </motion.div>
       </AnimatePresence>
 
-      {/* Navigation Arrows - Only show if multiple images */}
+      {/* Navigation Arrows - Only show if multiple items */}
       {images.length > 1 && (
         <>
           {/* Left Arrow */}
@@ -51,7 +69,7 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
             variant="ghost"
             size="icon"
             onClick={goToPrevious}
-            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full h-10 w-10 backdrop-blur-sm transition-all"
+            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full h-10 w-10 backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 z-10"
           >
             <ChevronLeft className="h-6 w-6" />
           </Button>
@@ -61,13 +79,13 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
             variant="ghost"
             size="icon"
             onClick={goToNext}
-            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full h-10 w-10 backdrop-blur-sm transition-all"
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full h-10 w-10 backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 z-10"
           >
             <ChevronRight className="h-6 w-6" />
           </Button>
 
           {/* Dot Indicators */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
             {images.map((_, index) => (
               <button
                 key={index}
@@ -77,7 +95,7 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
                     ? 'w-8 bg-white' 
                     : 'w-2 bg-white/50 hover:bg-white/70'
                 }`}
-                aria-label={`Go to image ${index + 1}`}
+                aria-label={`Go to item ${index + 1}`}
               />
             ))}
           </div>
