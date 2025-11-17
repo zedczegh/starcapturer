@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Volume2, VolumeX, Loader2 } from 'lucide-react';
 import { OptimizedImage } from '@/components/ui/optimized-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,10 @@ interface PostImageCarouselProps {
 
 export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, alt }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isMuted, setIsMuted] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   if (images.length === 0) return null;
 
@@ -33,6 +37,35 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
 
   const currentIsVideo = isVideo(images[currentIndex]);
 
+  const togglePlayPause = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const toggleMute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsMuted(!isMuted);
+  };
+
+  useEffect(() => {
+    setIsPlaying(false);
+    setIsLoading(currentIsVideo);
+    if (videoRef.current && currentIsVideo) {
+      videoRef.current.play().then(() => {
+        setIsPlaying(true);
+        setIsLoading(false);
+      }).catch(() => {
+        setIsLoading(false);
+      });
+    }
+  }, [currentIndex, currentIsVideo]);
+
   return (
     <div className="relative w-full aspect-square bg-cosmic-900">
       {/* Main Image or Video */}
@@ -46,18 +79,44 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
           className="w-full h-full"
         >
           {currentIsVideo ? (
-            <video
-              src={images[currentIndex]}
-              className="w-full h-full object-cover"
-              controls
-              controlsList="nodownload"
-              preload="metadata"
-              playsInline
-              key={images[currentIndex]}
-            >
-              <source src={images[currentIndex]} type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
+            <div className="relative w-full h-full" onClick={togglePlayPause}>
+              <video
+                ref={videoRef}
+                src={images[currentIndex]}
+                className="w-full h-full object-cover cursor-pointer"
+                playsInline
+                loop
+                muted={isMuted}
+                autoPlay
+                preload="auto"
+                onLoadStart={() => setIsLoading(true)}
+                onLoadedData={() => setIsLoading(false)}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                key={images[currentIndex]}
+              >
+                <source src={images[currentIndex]} type="video/mp4" />
+              </video>
+              
+              {/* Loading spinner */}
+              {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                  <Loader2 className="h-8 w-8 text-white animate-spin" />
+                </div>
+              )}
+              
+              {/* Mute/Unmute button - TikTok style */}
+              <button
+                onClick={toggleMute}
+                className="absolute bottom-4 right-4 p-2 bg-black/50 rounded-full hover:bg-black/70 transition-colors backdrop-blur-sm z-20"
+              >
+                {isMuted ? (
+                  <VolumeX className="h-5 w-5 text-white" />
+                ) : (
+                  <Volume2 className="h-5 w-5 text-white" />
+                )}
+              </button>
+            </div>
           ) : (
             <OptimizedImage
               src={images[currentIndex]}
