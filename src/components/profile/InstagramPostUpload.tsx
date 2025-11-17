@@ -82,7 +82,7 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
             file_type: file.type,
             file_size: file.size,
             description: description,
-            category: category,
+            category: 'general',
           });
 
         if (dbError) throw dbError;
@@ -183,22 +183,6 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
                 className="min-h-[100px] bg-cosmic-800/40 border-primary/20 focus:border-primary/40 resize-none"
                 disabled={uploading}
               />
-            </div>
-
-            {/* Category */}
-            <div>
-              <Select value={category} onValueChange={setCategory} disabled={uploading}>
-                <SelectTrigger className="bg-cosmic-800/40 border-primary/20">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="general">General</SelectItem>
-                  <SelectItem value="astrophotography">Astrophotography</SelectItem>
-                  <SelectItem value="equipment">Equipment</SelectItem>
-                  <SelectItem value="location">Location</SelectItem>
-                  <SelectItem value="processing">Processing</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             {/* Post Button */}

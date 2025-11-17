@@ -52,31 +52,31 @@ const ProfileMainNew = ({
               {/* Profile Picture with Enhanced Glow - Clickable for Featured Album */}
               <div className="flex-shrink-0 mx-auto sm:mx-0 relative">
                 <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse"></div>
-                <button 
-                  onClick={() => setFeaturedAlbumOpen(true)}
-                  className="relative group"
-                >
+                <div className="relative">
                   <ProfileAvatar 
                     avatarUrl={avatarUrl}
                     onAvatarChange={onAvatarChange}
                     onRemoveAvatar={onRemoveAvatar}
                     uploadingAvatar={uploadingAvatar}
                   />
-                  <div className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                    <span className="text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button 
+                    onClick={() => setFeaturedAlbumOpen(true)}
+                    className="absolute inset-0 rounded-full bg-black/0 hover:bg-black/20 transition-colors flex items-center justify-center group"
+                  >
+                    <span className="text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity font-medium">
                       View Album
                     </span>
-                  </div>
-                </button>
+                  </button>
+                </div>
               </div>
               
               {/* Enhanced Name and Info Section */}
               <div className="flex-1 pb-2 text-center sm:text-left">
-                <div className="flex flex-col sm:flex-row items-center sm:items-center gap-3 mb-3">
-                  <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-white via-primary to-purple-400 bg-clip-text text-transparent">
+                <div className="flex flex-col sm:flex-row items-center sm:items-center gap-2 mb-3">
+                  <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white via-primary to-purple-400 bg-clip-text text-transparent">
                     {displayUsername}
                   </h1>
-                  <AdminBadge size="lg" />
+                  <AdminBadge size="md" />
                 </div>
                 {bio && (
                   <p className="text-cosmic-200 text-base sm:text-lg leading-relaxed max-w-2xl mb-2">
@@ -128,6 +128,7 @@ const ProfileMainNew = ({
           <UserPostsManager 
             userId={userId} 
             isOwnProfile={true}
+            currentUserId={userId}
             key={postsRefreshKey}
           />
         </div>
