@@ -69,7 +69,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
     }
   };
 
-  const hasContent = message.text || message.image_url || message.location || isPostInteraction || isSharedPost;
+  const hasContent = message.message || message.image_url || message.location || isPostInteraction || isSharedPost;
   
   if (!hasContent) return null;
   
@@ -96,9 +96,9 @@ const MessageItem: React.FC<MessageItemProps> = ({
             </Button>
           )}
           
-          {message.text && !isSharedPost && !isPostInteraction && (
+          {message.message && !isSharedPost && !isPostInteraction && (
             <div className="mb-2 whitespace-pre-wrap">
-              <EmojiRenderer text={message.text} />
+              <EmojiRenderer text={message.message} />
             </div>
           )}
           
