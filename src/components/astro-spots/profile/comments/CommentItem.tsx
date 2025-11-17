@@ -79,7 +79,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
 
   const getCommentImageUrl = (imagePath: string) => {
     if (imagePath.startsWith('http')) return imagePath;
-    const { data } = supabase.storage.from('comment-images').getPublicUrl(imagePath);
+    const { data } = supabase.storage.from('message_images').getPublicUrl(imagePath);
     return data?.publicUrl || imagePath;
   };
 
@@ -128,7 +128,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
               </div>
             )}
             
-            <div className="bg-muted/50 rounded-2xl px-4 py-2.5 inline-block max-w-full">
+            <div className="bg-muted/50 rounded-2xl px-4 py-2.5 max-w-full">
               <div className="flex items-start justify-between gap-2 mb-1">
                 <span className="font-semibold text-sm text-left">{username}</span>
                 {isCommentOwner && onDelete && (
@@ -261,7 +261,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
                           </div>
                         )}
                         
-                        <div className="bg-muted/50 rounded-2xl px-3 py-2 inline-block max-w-full">
+                        <div className="bg-muted/50 rounded-2xl px-3 py-2 max-w-full">
                           <div className="flex items-start justify-between gap-2 mb-1">
                             <span className="font-semibold text-xs text-left">
                               {reply.profiles?.username || t("Anonymous", "匿名用户")}
