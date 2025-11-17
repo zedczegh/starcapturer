@@ -8,6 +8,7 @@ import { Trash2, Loader2, Image } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OptimizedImage } from '@/components/ui/optimized-components';
 import { PostInteractions } from './PostInteractions';
+import { PostComments } from './PostComments';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface UserPost {
@@ -214,6 +215,14 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
                   <PostInteractions 
                     postId={post.id}
                     userId={post.user_id}
+                    currentUserId={currentUserId}
+                  />
+                </div>
+
+                {/* Comments */}
+                <div className="px-4 py-2 border-t border-primary/10">
+                  <PostComments 
+                    postId={post.id}
                     currentUserId={currentUserId}
                   />
                 </div>
