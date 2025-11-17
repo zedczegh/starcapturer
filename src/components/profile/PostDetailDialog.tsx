@@ -1,11 +1,12 @@
 import React from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash2, X } from 'lucide-react';
 import { PostImageCarousel } from './PostImageCarousel';
 import { PostInteractions } from './PostInteractions';
 import { PostComments } from './PostComments';
 import { motion } from 'framer-motion';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 interface PostDetailDialogProps {
   open: boolean;
@@ -34,7 +35,10 @@ export const PostDetailDialog: React.FC<PostDetailDialogProps> = ({
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0 bg-cosmic-900/95 backdrop-blur-xl border border-primary/20">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0 bg-cosmic-900/95 backdrop-blur-xl border border-primary/20" aria-describedby={undefined}>
+        <VisuallyHidden>
+          <DialogTitle>{post.description || 'Post details'}</DialogTitle>
+        </VisuallyHidden>
         <div className="relative">
           {/* Close button */}
           <Button

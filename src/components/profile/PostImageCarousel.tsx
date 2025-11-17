@@ -102,7 +102,7 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
   }, [currentIndex, currentIsVideo, images]);
 
   return (
-    <div className="relative w-full aspect-square bg-cosmic-900">
+    <div className="relative w-full aspect-square bg-cosmic-900 group">
       {/* Main Image or Video */}
       <AnimatePresence mode="wait">
         <motion.div
