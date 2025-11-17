@@ -98,26 +98,22 @@ export async function findBestViewingLocations(
     );
     
     // Limit the number of locations to process for performance
+    // Reduced from limit * 3 to limit * 1.5 for faster initial load
     const locationsToProcess = certifiedOnly 
       ? sortedByDistance // Process all certified locations
-      : sortedByDistance.slice(0, limit * 3);
+      : sortedByDistance.slice(0, Math.ceil(limit * 1.5));
     
-    // Calculate SIQS for each location
-    const locationsWithSiqs = await batchCalculateSiqs(locationsToProcess);
-    
-    // Sort by SIQS (highest first) and limit to requested number
-    const sortedLocations = locationsWithSiqs
-      .filter(loc => isSiqsGreaterThan(loc.siqs, 0))
-      .sort((a, b) => (getSiqsScore(b.siqs) || 0) - (getSiqsScore(a.siqs) || 0))
-      .slice(0, limit);
+    // Return locations immediately without SIQS for faster initial display
+    // SIQS will be calculated progressively in the UI layer
+    const finalLocations = locationsToProcess.slice(0, limit);
     
     // Update cache
     locationCache.set(cacheKey, {
-      locations: sortedLocations,
+      locations: finalLocations,
       timestamp: Date.now()
     });
     
-    return sortedLocations;
+    return finalLocations;
   } catch (error) {
     console.error("Error finding best viewing locations:", error);
     return [];
