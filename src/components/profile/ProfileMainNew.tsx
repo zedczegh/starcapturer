@@ -9,7 +9,7 @@ import ProfileMotto from './ProfileMotto';
 import { AdminBadge } from './AdminBadge';
 import { UserPostsManager } from './UserPostsManager';
 import { InstagramPostUpload } from './InstagramPostUpload';
-import { Settings, Wallet, Plus, Camera, X } from 'lucide-react';
+import { Settings, Wallet, Camera, X } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const ProfileMainNew = ({
@@ -127,73 +127,66 @@ const ProfileMainNew = ({
       <div className="container mx-auto px-3 sm:px-4 md:px-6 max-w-7xl">
         {/* Enhanced Profile Header Section with Glow */}
         <div className="relative -mt-20 sm:-mt-24 mb-6 sm:mb-8">
-          <Card className="bg-cosmic-900/95 backdrop-blur-xl border border-primary/10 p-4 sm:p-6">
-            <div className="flex items-center gap-4 sm:gap-6">
-              {/* Profile Picture with Enhanced Glow */}
-              <div className="flex-shrink-0 relative">
-                <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse"></div>
-                <div className="relative">
-                  <ProfileAvatar 
-                    avatarUrl={avatarUrl}
-                    onAvatarChange={onAvatarChange}
-                    onRemoveAvatar={onRemoveAvatar}
-                    uploadingAvatar={uploadingAvatar}
+          <div className="max-w-4xl mx-auto">
+            <Card className="bg-cosmic-900/95 backdrop-blur-xl border border-primary/10 p-4 sm:p-6">
+              <div className="flex items-center gap-4 sm:gap-6">
+                {/* Profile Picture with Enhanced Glow */}
+                <div className="flex-shrink-0 relative">
+                  <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse"></div>
+                  <div className="relative">
+                    <ProfileAvatar 
+                      avatarUrl={avatarUrl}
+                      onAvatarChange={onAvatarChange}
+                      onRemoveAvatar={onRemoveAvatar}
+                      uploadingAvatar={uploadingAvatar}
+                    />
+                  </div>
+                </div>
+                
+                {/* Name and Info Section */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-white via-primary to-purple-400 bg-clip-text text-transparent truncate">
+                      {displayUsername}
+                    </h1>
+                    <AdminBadge size="sm" />
+                  </div>
+                  {bio && (
+                    <p className="text-cosmic-300 text-sm leading-relaxed line-clamp-2 mb-2">
+                      {bio}
+                    </p>
+                  )}
+                  <ProfileMotto 
+                    motto={motto}
+                    onSave={onMottoSave}
+                    isOwner={true}
                   />
                 </div>
-              </div>
-              
-              {/* Name and Info Section */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2">
-                  <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-white via-primary to-purple-400 bg-clip-text text-transparent truncate">
-                    {displayUsername}
-                  </h1>
-                  <AdminBadge size="sm" />
-                </div>
-                {bio && (
-                  <p className="text-cosmic-300 text-sm leading-relaxed line-clamp-2 mb-2">
-                    {bio}
-                  </p>
-                )}
-                <ProfileMotto 
-                  motto={motto}
-                  onSave={onMottoSave}
-                  isOwner={true}
-                />
-              </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-2 flex-shrink-0">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setUploadDialogOpen(true)}
-                  className="h-10 w-10 rounded-full bg-primary/20 hover:bg-primary/30 border border-primary/30"
-                  title={t('Create Post', '创建帖子')}
-                >
-                  <Plus className="h-5 w-5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigate('/profile/settings')}
-                  className="h-10 w-10 rounded-full hover:bg-cosmic-800/50"
-                  title={t('Settings', '设置')}
-                >
-                  <Settings className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigate('/profile/wallet')}
-                  className="h-10 w-10 rounded-full hover:bg-cosmic-800/50"
-                  title={t('Wallet', '钱包')}
-                >
-                  <Wallet className="h-4 w-4" />
-                </Button>
+                {/* Action Buttons */}
+                <div className="flex gap-2 flex-shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigate('/profile/settings')}
+                    className="h-10 w-10 rounded-full hover:bg-cosmic-800/50"
+                    title={t('Settings', '设置')}
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigate('/profile/wallet')}
+                    className="h-10 w-10 rounded-full hover:bg-cosmic-800/50"
+                    title={t('Wallet', '钱包')}
+                  >
+                    <Wallet className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          </div>
         </div>
 
         {/* Content Area - Instagram-like Layout */}
@@ -204,6 +197,7 @@ const ProfileMainNew = ({
             isOwnProfile={true}
             currentUserId={userId}
             key={postsRefreshKey}
+            onCreatePost={() => setUploadDialogOpen(true)}
           />
         </div>
       </div>
