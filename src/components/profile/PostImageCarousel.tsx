@@ -26,11 +26,9 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
       '.flv', '.wmv', '.3gp', '.mpeg', '.mpg', '.m2v'
     ];
     const lowerUrl = url.toLowerCase();
-    const isVid = videoExtensions.some(ext => lowerUrl.includes(ext)) || 
+    return videoExtensions.some(ext => lowerUrl.includes(ext)) || 
            lowerUrl.includes('video') ||
            url.includes('/video/');
-    console.log('Checking if video:', url, 'Result:', isVid);
-    return isVid;
   };
 
   // Get MIME type from URL
@@ -54,12 +52,11 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
 
   const togglePlayPause = () => {
     if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
+      if (videoRef.current.paused) {
         videoRef.current.play();
+      } else {
+        videoRef.current.pause();
       }
-      setIsPlaying(!isPlaying);
     }
   };
 
@@ -69,22 +66,33 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
   };
 
   useEffect(() => {
-    console.log('Carousel: currentIndex changed to', currentIndex, 'URL:', images[currentIndex], 'isVideo:', currentIsVideo);
     setIsPlaying(false);
     setIsLoading(currentIsVideo);
+    
     if (videoRef.current && currentIsVideo) {
-      console.log('Attempting to play video:', images[currentIndex]);
-      videoRef.current.load(); // Force reload
-      videoRef.current.play().then(() => {
-        console.log('Video playing successfully');
-        setIsPlaying(true);
-        setIsLoading(false);
-      }).catch((error) => {
-        console.error('Video play error:', error);
-        setIsLoading(false);
-      });
+      const video = videoRef.current;
+      
+      // Reset video element
+      video.pause();
+      video.currentTime = 0;
+      video.load();
+      
+      // Small delay to ensure video is ready
+      const playTimeout = setTimeout(() => {
+        video.play()
+          .then(() => {
+            setIsPlaying(true);
+            setIsLoading(false);
+          })
+          .catch((error) => {
+            console.error('Video play error:', error);
+            setIsLoading(false);
+          });
+      }, 100);
+      
+      return () => clearTimeout(playTimeout);
     }
-  }, [currentIndex, currentIsVideo]);
+  }, [currentIndex, currentIsVideo, images]);
 
   return (
     <div className="relative w-full aspect-square bg-cosmic-900">
@@ -108,26 +116,14 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
                 muted={isMuted}
                 autoPlay
                 preload="auto"
-                onLoadStart={() => {
-                  console.log('Video load started');
-                  setIsLoading(true);
-                }}
-                onLoadedData={() => {
-                  console.log('Video data loaded');
-                  setIsLoading(false);
-                }}
+                onLoadStart={() => setIsLoading(true)}
+                onLoadedData={() => setIsLoading(false)}
                 onError={(e) => {
-                  console.error('Video error:', e, 'Source:', images[currentIndex]);
+                  console.error('Video load error - check if file exists in storage');
                   setIsLoading(false);
                 }}
-                onPlay={() => {
-                  console.log('Video playing');
-                  setIsPlaying(true);
-                }}
-                onPause={() => {
-                  console.log('Video paused');
-                  setIsPlaying(false);
-                }}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
                 key={images[currentIndex]}
               >
                 <source src={images[currentIndex]} type={getVideoMimeType(images[currentIndex])} />
