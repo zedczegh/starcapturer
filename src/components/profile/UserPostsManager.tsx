@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Trash2, Loader2, Image, Edit, Plus, Share2, Play } from 'lucide-react';
+import { Trash2, Loader2, Image, Edit, Plus, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OptimizedImage } from '@/components/ui/optimized-components';
 import { PostInteractions } from './PostInteractions';
@@ -12,7 +12,6 @@ import { PostComments } from './PostComments';
 import { EditPostDialog } from './EditPostDialog';
 import { PostImageCarousel } from './PostImageCarousel';
 import { ShareCardGenerator } from './ShareCardGenerator';
-import { PostDetailDialog } from './PostDetailDialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface UserPost {
@@ -47,7 +46,6 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState<string>('my-feeds');
   const [editingPost, setEditingPost] = useState<UserPost | null>(null);
-  const [selectedPost, setSelectedPost] = useState<UserPost | null>(null);
   const [username, setUsername] = useState<string>('user');
 
   useEffect(() => {
@@ -222,101 +220,80 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-1 md:gap-2">
+        <div className="space-y-4">
           <AnimatePresence mode="popLayout">
-            {displayedPosts.map((post, index) => {
-              const images = getPostImages(post);
-              const firstImage = images[0] || '';
-              const isVideo = firstImage.toLowerCase().includes('.mp4') || 
-                             firstImage.toLowerCase().includes('.webm') ||
-                             firstImage.toLowerCase().includes('video');
-              
-              return (
-                <motion.div
-                  key={post.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ delay: index * 0.02 }}
-                  className="relative aspect-square bg-cosmic-900 cursor-pointer group overflow-hidden rounded-sm"
-                  onClick={() => setSelectedPost(post)}
-                >
-                  {/* Thumbnail */}
-                  {isVideo ? (
-                    <video
-                      src={firstImage}
-                      className="w-full h-full object-cover"
-                      muted
-                      playsInline
-                    />
-                  ) : (
-                    <img
-                      src={firstImage}
-                      alt={post.description || post.file_name}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                  )}
-                  
-                  {/* Video indicator and hover overlay */}
-                  {isVideo && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="bg-black/60 rounded-full p-3">
-                        <Play className="h-8 w-8 text-white fill-white" />
-                      </div>
+            {displayedPosts.map((post, index) => (
+              <motion.div
+                key={post.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ delay: index * 0.05 }}
+                className="bg-cosmic-800/40 backdrop-blur-xl border border-primary/10 rounded-lg overflow-hidden group"
+              >
+                {/* Post Images Carousel */}
+                <div className="relative">
+                  <PostImageCarousel 
+                    images={getPostImages(post)}
+                    alt={post.description || post.file_name}
+                  />
+                  {isOwnProfile && selectedTab === 'my-feeds' && (
+                    <div className="absolute top-2 right-2 flex gap-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setEditingPost(post)}
+                        className="backdrop-blur-md"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(post.id, post.file_path)}
+                        className="backdrop-blur-md"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   )}
-                  
-                  {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {images.length > 1 && (
-                      <div className="absolute top-2 right-2 bg-black/70 px-2 py-1 rounded-md text-xs text-white">
-                        1/{images.length}
-                      </div>
-                    )}
+                </div>
+
+                {/* Post Description */}
+                {post.description && (
+                  <div className="px-4 py-3">
+                    <p className="text-cosmic-200 text-sm">{post.description}</p>
                   </div>
-                </motion.div>
-              );
-            })}
+                )}
+
+                {/* Post Interactions */}
+                <div className="px-2 py-2 border-t border-primary/10">
+                  <div className="flex items-center justify-between">
+                    <PostInteractions 
+                      postId={post.id}
+                      userId={post.user_id}
+                      currentUserId={currentUserId}
+                    />
+                    <ShareCardGenerator
+                      postId={post.id}
+                      imageUrl={getFileUrl(getPostImages(post)[0])}
+                      description={post.description}
+                      username={username}
+                    />
+                  </div>
+                </div>
+
+                {/* Comments */}
+                <div className="px-4 py-2 border-t border-primary/10">
+                  <PostComments 
+                    postId={post.id}
+                    currentUserId={currentUserId}
+                  />
+                </div>
+              </motion.div>
+            ))}
           </AnimatePresence>
         </div>
-      )}
-      
-      {/* Post Detail Dialog */}
-      {selectedPost && (
-        <PostDetailDialog
-          open={!!selectedPost}
-          onOpenChange={(open) => !open && setSelectedPost(null)}
-          post={{
-            ...selectedPost,
-            images: getPostImages(selectedPost)
-          }}
-          isOwnProfile={isOwnProfile && selectedTab === 'my-feeds'}
-          currentUserId={currentUserId || null}
-          onEdit={() => {
-            setEditingPost(selectedPost);
-            setSelectedPost(null);
-          }}
-          onDelete={() => {
-            handleDelete(selectedPost.id, selectedPost.file_path);
-            setSelectedPost(null);
-          }}
-        />
-      )}
-      
-      {/* Edit Post Dialog */}
-      {editingPost && (
-        <EditPostDialog
-          postId={editingPost.id}
-          currentDescription={editingPost.description || ''}
-          currentImages={getPostImages(editingPost)}
-          open={!!editingPost}
-          onOpenChange={(open) => !open && setEditingPost(null)}
-          onUpdateComplete={() => {
-            loadPosts();
-            setEditingPost(null);
-          }}
-        />
       )}
     </Card>
   );

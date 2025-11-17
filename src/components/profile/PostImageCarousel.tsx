@@ -84,8 +84,8 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
       video.currentTime = 0;
       video.load();
       
-      // Attempt to play video
-      const attemptPlay = () => {
+      // Small delay to ensure video is ready
+      const playTimeout = setTimeout(() => {
         video.play()
           .then(() => {
             setIsPlaying(true);
@@ -95,21 +95,14 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
             console.error('Video play error:', error);
             setIsLoading(false);
           });
-      };
-
-      // Try to play immediately and also on loadeddata event
-      video.addEventListener('loadeddata', attemptPlay);
-      const playTimeout = setTimeout(attemptPlay, 100);
+      }, 100);
       
-      return () => {
-        video.removeEventListener('loadeddata', attemptPlay);
-        clearTimeout(playTimeout);
-      };
+      return () => clearTimeout(playTimeout);
     }
   }, [currentIndex, currentIsVideo, images]);
 
   return (
-    <div className="relative w-full aspect-square bg-cosmic-900 group">
+    <div className="relative w-full aspect-square bg-cosmic-900">
       {/* Main Image or Video */}
       <AnimatePresence mode="wait">
         <motion.div
