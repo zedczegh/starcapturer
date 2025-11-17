@@ -50,6 +50,7 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
   const [selectedTab, setSelectedTab] = useState<string>('my-feeds');
   const [editingPost, setEditingPost] = useState<UserPost | null>(null);
   const [username, setUsername] = useState<string>('user');
+  const [openComments, setOpenComments] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadPosts();
@@ -194,6 +195,18 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
     return [getFileUrl(post.file_path)];
   };
 
+  const toggleComments = (postId: string) => {
+    setOpenComments(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(postId)) {
+        newSet.delete(postId);
+      } else {
+        newSet.add(postId);
+      }
+      return newSet;
+    });
+  };
+
   const displayedPosts = selectedTab === 'my-feeds' ? posts : collectedPosts;
 
   if (loading) {
@@ -311,18 +324,24 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
 
                 {/* Post Interactions */}
                 <div className="px-2 py-2 border-t border-primary/10">
-                  <div className="flex items-center justify-between">
-                    <PostInteractions 
-                      postId={post.id}
-                      userId={post.user_id}
-                      currentUserId={currentUserId}
-                    />
+                  <PostInteractions 
+                    postId={post.id}
+                    userId={post.user_id}
+                    currentUserId={currentUserId}
+                    onCommentClick={() => toggleComments(post.id)}
+                    showComments={openComments.has(post.id)}
+                  />
+                </div>
+
+                {/* Comments Section */}
+                {openComments.has(post.id) && (
+                  <div className="border-t border-primary/10">
                     <PostComments 
                       postId={post.id}
                       currentUserId={currentUserId}
                     />
                   </div>
-                </div>
+                )}
               </motion.div>
             ))}
           </AnimatePresence>

@@ -30,13 +30,11 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [showComments, setShowComments] = useState(false);
+  const showComments = true; // Always show when rendered
 
   useEffect(() => {
-    if (showComments) {
-      loadComments();
-    }
-  }, [postId, showComments]);
+    loadComments();
+  }, [postId]);
 
   const loadComments = async () => {
     setLoading(true);
@@ -109,19 +107,8 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
   };
 
   return (
-    <div className="space-y-3">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => setShowComments(!showComments)}
-        className="gap-2 text-cosmic-300 hover:text-primary"
-      >
-        <MessageCircle className="h-4 w-4" />
-        <span className="text-xs">{comments.length}</span>
-      </Button>
-
-      {showComments && (
-        <div className="space-y-3 pt-2 border-t border-primary/10">
+    <div className="w-full">
+      <div className="px-4 py-3 space-y-3">
           {/* Comments List */}
           {loading ? (
             <div className="flex justify-center py-4">
@@ -188,7 +175,6 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
             </div>
           )}
         </div>
-      )}
-    </div>
-  );
-};
+      </div>
+    );
+  };
