@@ -396,27 +396,29 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
                                 {currentUserId ? 'U' : '?'}
                               </AvatarFallback>
                             </Avatar>
-                            <div className="flex-1 flex flex-col gap-2">
+                            <div className="flex-1 relative">
                               <Textarea
                                 value={replyText}
                                 onChange={(e) => setReplyText(e.target.value)}
                                 placeholder={t('Write a reply...', '写回复...')}
-                                className="min-h-[60px] resize-none text-sm"
+                                className="min-h-[80px] resize-none text-sm pr-32 pb-10"
                               />
-                              <div className="flex items-center gap-2">
+                              <div className="absolute bottom-2 right-2 flex gap-1">
                                 <Button
-                                  size="sm"
+                                  size="icon"
                                   variant="ghost"
+                                  className="h-7 w-7"
                                   onClick={() => setShowReplyEmojiPicker(!showReplyEmojiPicker)}
                                 >
-                                  <Smile className="h-4 w-4" />
+                                  <Smile className="h-3.5 w-3.5" />
                                 </Button>
                                 <Button
-                                  size="sm"
+                                  size="icon"
                                   variant="ghost"
+                                  className="h-7 w-7"
                                   onClick={() => replyFileInputRef.current?.click()}
                                 >
-                                  <ImageIcon className="h-4 w-4" />
+                                  <ImageIcon className="h-3.5 w-3.5" />
                                 </Button>
                                 <input
                                   ref={replyFileInputRef}
@@ -425,9 +427,9 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
                                   className="hidden"
                                   onChange={(e) => handleImageSelect(e, true)}
                                 />
-                                <div className="flex-1" />
                                 <Button
-                                  size="sm"
+                                  size="icon"
+                                  className="h-7 w-7"
                                   onClick={() => handleSubmitComment(comment.id)}
                                   disabled={submitting || (!replyText.trim() && !replyImage)}
                                 >
@@ -438,8 +440,9 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
                                   )}
                                 </Button>
                                 <Button
-                                  size="sm"
+                                  size="icon"
                                   variant="ghost"
+                                  className="h-7 w-7"
                                   onClick={() => {
                                     setReplyingTo(null);
                                     setReplyText('');
@@ -447,11 +450,11 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
                                     setReplyImagePreview(null);
                                   }}
                                 >
-                                  <X className="h-4 w-4" />
+                                  <X className="h-3.5 w-3.5" />
                                 </Button>
                               </div>
                               {showReplyEmojiPicker && (
-                                <div className="absolute z-50 mt-12">
+                                <div className="absolute z-50 bottom-full mb-2">
                                   <EmojiPicker onEmojiClick={(emoji) => onEmojiClick(emoji, true)} />
                                 </div>
                               )}
@@ -542,12 +545,12 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
                   </button>
                 </div>
               )}
-              <div className="flex gap-2 items-end">
+              <div className="relative">
                 <Textarea
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   placeholder={t('Write a comment...', '写评论...')}
-                  className="min-h-[60px] bg-cosmic-950/50 border-primary/20 resize-none text-sm flex-1"
+                  className="min-h-[80px] bg-muted/50 border-border resize-none text-sm pr-28 pb-10"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
@@ -555,10 +558,11 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
                     }
                   }}
                 />
-                <div className="flex flex-col gap-1">
+                <div className="absolute bottom-2 right-2 flex gap-1">
                   <Button
                     size="icon"
                     variant="ghost"
+                    className="h-8 w-8"
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                   >
                     <Smile className="h-4 w-4" />
@@ -566,6 +570,7 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
                   <Button
                     size="icon"
                     variant="ghost"
+                    className="h-8 w-8"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <ImageIcon className="h-4 w-4" />
@@ -579,9 +584,9 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
                   />
                   <Button
                     size="icon"
+                    className="h-8 w-8"
                     onClick={() => handleSubmitComment(null)}
                     disabled={submitting || (!newComment.trim() && !selectedImage)}
-                    className="flex-shrink-0"
                   >
                     {submitting ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -592,7 +597,7 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
                 </div>
               </div>
               {showEmojiPicker && (
-                <div className="absolute z-50">
+                <div className="absolute z-50 bottom-16">
                   <EmojiPicker onEmojiClick={(emoji) => onEmojiClick(emoji, false)} />
                 </div>
               )}
