@@ -1,21 +1,23 @@
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
 import { Camera, X } from 'lucide-react';
-import { User } from 'lucide-react';
 
 interface ProfileAvatarProps {
   avatarUrl: string | null;
   onAvatarChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemoveAvatar: () => void;
   uploadingAvatar: boolean;
+  avatarUploadProgress?: number;
 }
 
 const ProfileAvatar = ({ 
   avatarUrl, 
   onAvatarChange, 
   onRemoveAvatar,
-  uploadingAvatar 
+  uploadingAvatar,
+  avatarUploadProgress = 0
 }: ProfileAvatarProps) => {
   const { t } = useLanguage();
 
@@ -57,10 +59,16 @@ const ProfileAvatar = ({
           </label>
         )}
       </div>
-      {uploadingAvatar && (
-        <p className="text-cosmic-400 text-sm mt-3">
-          {t("Uploading...", "上传中...")}
-        </p>
+      {uploadingAvatar && avatarUploadProgress > 0 && (
+        <div className="mt-3 w-full max-w-[200px]">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-cosmic-400 text-sm">
+              {t("Uploading...", "上传中...")}
+            </p>
+            <span className="text-sm font-medium text-primary">{avatarUploadProgress}%</span>
+          </div>
+          <Progress value={avatarUploadProgress} className="h-2" />
+        </div>
       )}
     </div>
   );
