@@ -10,6 +10,9 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { sortLocationsBySiqs } from "@/utils/siqsHelpers";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Import the newly created components
 import ProfileHeader from "@/components/profile/mini/ProfileHeader";
@@ -33,6 +36,7 @@ const ProfileMini: React.FC = () => {
   const [loadingSpots, setLoadingSpots] = useState(false);
   const [realTimeSiqs, setRealTimeSiqs] = useState<Record<string, number | null>>({});
   const [loadingSiqs, setLoadingSiqs] = useState<Record<string, boolean>>({});
+  const [activeTab, setActiveTab] = useState<'posts' | 'spots'>('posts');
   
   // Check if we came from messages to hide the "Send message" button
   const isFromMessages = location.state?.fromMessages;
@@ -170,30 +174,42 @@ const ProfileMini: React.FC = () => {
             </div>
           )}
 
-          {/* Posts section with enhanced styling */}
-          <div className="p-5 sm:p-7 md:p-9 border-b border-primary/10">
-            <UserPostsManager 
-              userId={profileId!} 
-              isOwnProfile={user?.id === profileId}
-              currentUserId={user?.id}
-            />
+          {/* Toggle Tabs */}
+          <div className="p-5 sm:p-7 md:p-9">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'posts' | 'spots')} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-cosmic-800/40 border-primary/20 mb-6">
+                <TabsTrigger value="posts" className="data-[state=active]:bg-primary/20">
+                  {t('Posts', '帖子')}
+                </TabsTrigger>
+                <TabsTrigger value="spots" className="data-[state=active]:bg-primary/20">
+                  {t('Community Spots', '社区观星点')}
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="posts" className="mt-0">
+                <UserPostsManager 
+                  userId={profileId!} 
+                  isOwnProfile={user?.id === profileId}
+                  currentUserId={user?.id}
+                />
+              </TabsContent>
+
+              <TabsContent value="spots" className="mt-0">
+                <ProfileAstroSpots 
+                  sortedAstroSpots={sortedAstroSpots}
+                  loadingSpots={loadingSpots}
+                  realTimeSiqs={realTimeSiqs}
+                  profileId={profileId!}
+                  navigate={navigate}
+                  handleSiqsCalculated={handleSiqsCalculated}
+                  t={t}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
           
-          {/* Spots section with enhanced styling */}
-          <div className="p-5 sm:p-7 md:p-9 bg-cosmic-900/30">
-            <ProfileAstroSpots 
-              sortedAstroSpots={sortedAstroSpots}
-              loadingSpots={loadingSpots}
-              realTimeSiqs={realTimeSiqs}
-              profileId={profileId}
-              navigate={navigate}
-              handleSiqsCalculated={handleSiqsCalculated}
-              t={t}
-            />
-          </div>
-          
-          {/* Enhanced Actions section with sticky bottom */}
-          <div className="sticky bottom-0 p-5 sm:p-7 md:p-9 bg-cosmic-900/98 backdrop-blur-2xl border-t border-primary/20 shadow-lg">
+          {/* Enhanced Actions section */}
+          <div className="p-5 sm:p-7 md:p-9 bg-cosmic-900/50 border-t border-primary/20">
             <ProfileActions
               isFromMessages={isFromMessages}
               user={user}
