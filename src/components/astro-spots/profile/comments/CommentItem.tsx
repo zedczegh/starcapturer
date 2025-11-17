@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Trash2, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { Trash2, ChevronDown, ChevronUp, Loader2, Heart } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from '@/integrations/supabase/client';
 import CommentInput from "./CommentInput";
@@ -24,9 +24,10 @@ interface CommentItemProps {
   comment: Comment;
   onReply: (content: string, imageFile: File | null, parentId: string) => Promise<void>;
   onDelete?: (commentId: string) => Promise<void>;
+  onLike?: (commentId: string) => Promise<void>;
 }
 
-const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete }) => {
+const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete, onLike }) => {
   const { t } = useLanguage();
   const { user: authUser } = useAuth();
   const [showReplyInput, setShowReplyInput] = useState(false);
@@ -206,6 +207,19 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
             
             <div className="flex items-center gap-3 mt-1 ml-1 text-xs text-muted-foreground">
               <span className="text-left">{formattedCreatedAt}</span>
+              {onLike && (
+                <button
+                  onClick={() => onLike(comment.id)}
+                  className={`flex items-center gap-1 text-xs font-semibold transition-colors ${
+                    comment.isLikedByCurrentUser 
+                      ? 'text-red-500 hover:text-red-600' 
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Heart className={`h-3 w-3 ${comment.isLikedByCurrentUser ? 'fill-current' : ''}`} />
+                  {comment.likeCount! > 0 && <span>{comment.likeCount}</span>}
+                </button>
+              )}
               {authUser && (
                 <Button 
                   variant="ghost" 
@@ -341,6 +355,19 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onReply, onDelete })
                         
                         <div className="flex items-center gap-2 mt-1 ml-1 text-xs text-muted-foreground">
                           <span className="text-left">{getFormattedDate(reply.created_at)}</span>
+                          {onLike && (
+                            <button
+                              onClick={() => onLike(reply.id)}
+                              className={`flex items-center gap-1 text-xs font-semibold transition-colors ${
+                                reply.isLikedByCurrentUser 
+                                  ? 'text-red-500 hover:text-red-600' 
+                                  : 'text-muted-foreground hover:text-foreground'
+                              }`}
+                            >
+                              <Heart className={`h-2.5 w-2.5 ${reply.isLikedByCurrentUser ? 'fill-current' : ''}`} />
+                              {reply.likeCount! > 0 && <span>{reply.likeCount}</span>}
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

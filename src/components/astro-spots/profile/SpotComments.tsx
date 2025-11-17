@@ -18,6 +18,7 @@ interface SpotCommentsProps {
   onCommentsUpdate: () => void;
   onSubmit?: (content: string, imageFile?: File | null, parentId?: string | null) => Promise<void>;
   onDelete?: (commentId: string) => Promise<void>;
+  onLike?: (commentId: string) => Promise<void>;
   sending: boolean;
 }
 
@@ -28,6 +29,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
   onCommentsUpdate,
   onSubmit,
   onDelete,
+  onLike,
   sending
 }) => {
   const { t } = useLanguage();
@@ -100,6 +102,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
                 comment={comment}
                 onReply={handleReplySubmit}
                 onDelete={onDelete}
+                onLike={onLike}
               />
             ))}
           </motion.div>
@@ -123,6 +126,7 @@ const SpotComments: React.FC<SpotCommentsProps> = ({
         onSubmit={handleCommentSubmit}
         onReply={handleReplySubmit}
         onDelete={onDelete}
+        onLike={onLike}
         sending={sending}
       />
     </div>

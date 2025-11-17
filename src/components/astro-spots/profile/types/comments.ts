@@ -12,5 +12,7 @@ export interface Comment {
   };
   parent_id?: string | null;
   replies?: Comment[];
+  likeCount?: number;
+  isLikedByCurrentUser?: boolean;
 }
 
