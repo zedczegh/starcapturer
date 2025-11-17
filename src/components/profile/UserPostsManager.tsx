@@ -153,6 +153,13 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
       console.error('Empty file path provided');
       return '';
     }
+    
+    // Check if it's already a full URL
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+      console.log('Path is already a URL:', filePath);
+      return filePath;
+    }
+    
     const { data } = supabase.storage.from('user-posts').getPublicUrl(filePath);
     const url = data?.publicUrl || '';
     console.log('Generated URL for path:', filePath, 'URL:', url);
