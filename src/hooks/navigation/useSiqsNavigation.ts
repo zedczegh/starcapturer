@@ -20,23 +20,12 @@ export const useSiqsNavigation = () => {
       e.stopPropagation();
     }
     
-    // Navigate to the calculator page
-    navigate("/calculator", { replace: true });
+    // Navigate to community page (home)
+    navigate("/", { replace: true });
     
-    // After a short delay, scroll to calculator section
+    // Scroll to top of page
     setTimeout(() => {
-      const calculatorSection = document.getElementById("calculator-section");
-      if (calculatorSection) {
-        calculatorSection.scrollIntoView({ behavior: "smooth" });
-      }
-      
-      // After a short delay, trigger location request automatically
-      setTimeout(() => {
-        const useLocationButton = document.querySelector('[data-location-button="true"]');
-        if (useLocationButton && useLocationButton instanceof HTMLButtonElement) {
-          useLocationButton.click();
-        }
-      }, 300);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }, 100);
   }, [navigate]);
 
