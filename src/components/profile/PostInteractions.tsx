@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ThumbsUp, Heart, Share2, Bookmark, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { SharePostDialog } from './SharePostDialog';
+
 
 interface PostInteractionsProps {
   postId: string;
@@ -47,7 +47,6 @@ export const PostInteractions: React.FC<PostInteractionsProps> = ({
     collected: false
   });
   const [loading, setLoading] = useState(false);
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
 
   useEffect(() => {
@@ -170,12 +169,36 @@ export const PostInteractions: React.FC<PostInteractionsProps> = ({
     }
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
     if (!currentUserId) {
       toast.error(t('Please login to share', '请先登录'));
       return;
     }
-    setShareDialogOpen(true);
+
+    try {
+      // Create share link
+      const shareUrl = `${window.location.origin}/profile/${userId}?post=${postId}`;
+      
+      // Copy to clipboard
+      await navigator.clipboard.writeText(shareUrl);
+      
+      // Record share interaction
+      await supabase
+        .from('post_interactions')
+        .insert({
+          post_id: postId,
+          user_id: currentUserId,
+          interaction_type: 'share'
+        });
+
+      toast.success(t('Link copied! Paste it in any chat', '链接已复制！粘贴到任何聊天中'));
+      
+      // Refresh counts
+      await loadInteractions();
+    } catch (error: any) {
+      console.error('Share error:', error);
+      toast.error(t('Failed to copy link', '复制链接失败'));
+    }
   };
 
   return (
@@ -236,15 +259,6 @@ export const PostInteractions: React.FC<PostInteractionsProps> = ({
         </Button>
       </div>
 
-      {currentUserId && (
-        <SharePostDialog
-          open={shareDialogOpen}
-          onOpenChange={setShareDialogOpen}
-          postId={postId}
-          postOwnerId={userId}
-          currentUserId={currentUserId}
-        />
-      )}
     </>
   );
 };
