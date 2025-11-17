@@ -25,6 +25,9 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
     <>
       <nav className="hidden md:flex items-center space-x-6">
         <NavLink to="/" active={location.pathname === "/"}>
+          {t("Feeds", "动态")}
+        </NavLink>
+        <NavLink to="/community" active={location.pathname === "/community"}>
           {t("Community", "社区")}
         </NavLink>
         <NavLink to="/photo-points" active={location.pathname === "/photo-points"}>
