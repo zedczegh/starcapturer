@@ -45,13 +45,6 @@ const MobileNav: React.FC<MobileNavProps> = ({
           label={t("Location", "位置")} 
           active={location.pathname.startsWith('/location/')} 
         />
-
-        <MobileNavButton 
-          to="/share" 
-          icon={<Smartphone className="h-5 w-5 stroke-[1.5]" />} 
-          label={t("Bortle", "光污染")} 
-          active={location.pathname === "/share"} 
-        />
       </div>
     </div>
   );
