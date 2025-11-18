@@ -16,6 +16,7 @@ import { Settings, Wallet, Camera, X, ChevronDown, ChevronUp, Menu, History } fr
 import { useLanguage } from '@/contexts/LanguageContext';
 import { motion } from 'framer-motion';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const ProfileMainNew = ({
   displayUsername,
@@ -205,50 +206,49 @@ const ProfileMainNew = ({
                   {/* Hamburger Menu - Top Right of Username - Only show on own profile */}
                   {!viewMode && (
                     <div className="absolute -right-2 -top-1">
-                      <Sheet>
-                        <SheetTrigger asChild>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-10 w-10 rounded-full bg-cosmic-900/80 backdrop-blur-xl border border-primary/20 hover:bg-cosmic-800/80"
+                            className="h-10 w-10 rounded-full bg-gradient-to-br from-cosmic-800/90 to-cosmic-900/90 backdrop-blur-xl border border-primary/30 hover:border-primary/50 hover:from-cosmic-700/90 hover:to-cosmic-800/90 transition-all duration-300 shadow-lg hover:shadow-primary/20"
                           >
-                            <Menu className="h-5 w-5" />
+                            <Menu className="h-5 w-5 text-primary" />
                           </Button>
-                        </SheetTrigger>
-                        <SheetContent side="left" className="bg-cosmic-900/95 backdrop-blur-xl border-primary/20">
-                          <SheetHeader>
-                            <SheetTitle className="text-xl bg-gradient-to-r from-white to-primary bg-clip-text text-transparent">
-                              {t('Menu', '菜单')}
-                            </SheetTitle>
-                          </SheetHeader>
-                          <div className="mt-8 space-y-4">
-                            <Button
-                              variant="ghost"
-                              className="w-full justify-start text-base"
-                              onClick={() => navigate('/activity-history')}
-                            >
-                              <History className="mr-3 h-5 w-5" />
-                              {t('Activity History', '活动历史')}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              className="w-full justify-start text-base"
-                              onClick={() => navigate('/profile/settings')}
-                            >
-                              <Settings className="mr-3 h-5 w-5" />
-                              {t('Settings', '设置')}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              className="w-full justify-start text-base"
-                              onClick={() => navigate('/profile/wallet')}
-                            >
-                              <Wallet className="mr-3 h-5 w-5" />
-                              {t('Wallet', '钱包')}
-                            </Button>
-                          </div>
-                        </SheetContent>
-                      </Sheet>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent 
+                          align="end" 
+                          className="w-56 bg-gradient-to-br from-cosmic-800/95 to-cosmic-900/95 backdrop-blur-xl border border-primary/30 shadow-2xl shadow-primary/20"
+                        >
+                          <DropdownMenuItem
+                            onClick={() => navigate('/activity-history')}
+                            className="cursor-pointer py-3 hover:bg-primary/20 focus:bg-primary/20 transition-colors"
+                          >
+                            <History className="mr-3 h-5 w-5 text-primary" />
+                            <span className="text-base">{t('Activity History', '活动历史')}</span>
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuSeparator className="bg-primary/20" />
+                          
+                          <DropdownMenuItem
+                            onClick={() => navigate('/profile/settings')}
+                            className="cursor-pointer py-3 hover:bg-primary/20 focus:bg-primary/20 transition-colors"
+                          >
+                            <Settings className="mr-3 h-5 w-5 text-primary" />
+                            <span className="text-base">{t('Settings', '设置')}</span>
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuSeparator className="bg-primary/20" />
+                          
+                          <DropdownMenuItem
+                            onClick={() => navigate('/profile/wallet')}
+                            className="cursor-pointer py-3 hover:bg-primary/20 focus:bg-primary/20 transition-colors"
+                          >
+                            <Wallet className="mr-3 h-5 w-5 text-primary" />
+                            <span className="text-base">{t('Wallet', '钱包')}</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   )}
                 </div>
