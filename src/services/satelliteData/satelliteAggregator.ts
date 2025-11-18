@@ -1,11 +1,11 @@
 /**
  * Satellite Data Aggregator
- * Combines multiple satellite sources with intelligent weighting
+ * Combines multiple data sources with intelligent weighting
+ * Uses population density as primary method with fallbacks
  */
 
 import { BortleDataSource, fuseBortleScales, filterOutliers } from "@/utils/bortleCalculation/dataFusion";
-import { fetchVIIRSData, fetchWorldAtlasData } from "./viirsService";
-import { fetchGlobalRadianceData } from "./globalRadianceService";
+import { getPopulationBasedBortle, getRemoteAreaBortle } from "./populationDensityService";
 
 export interface SatelliteDataResult {
   bortleScale: number;
@@ -17,49 +17,48 @@ export interface SatelliteDataResult {
 }
 
 /**
- * Aggregate satellite data from multiple sources
- * Returns the best possible Bortle scale estimate from satellite data
+ * Aggregate data from multiple sources with population density as primary
+ * Returns the best possible Bortle scale estimate
  */
 export async function getSatelliteBasedBortleScale(
   latitude: number,
-  longitude: number
+  longitude: number,
+  locationName?: string
 ): Promise<SatelliteDataResult | null> {
-  const satelliteSources: BortleDataSource[] = [];
+  const dataSources: BortleDataSource[] = [];
   
-  // Fetch from all available satellite sources in parallel
-  const [viirsData, worldAtlasData, globalRadianceData] = await Promise.allSettled([
-    fetchVIIRSData(latitude, longitude),
-    fetchWorldAtlasData(latitude, longitude),
-    fetchGlobalRadianceData(latitude, longitude)
-  ]);
-  
-  // Collect successful results
-  if (viirsData.status === 'fulfilled' && viirsData.value) {
-    satelliteSources.push(viirsData.value);
+  // Primary: Population density-based calculation (most reliable)
+  try {
+    const populationBortle = await getPopulationBasedBortle(latitude, longitude);
+    if (populationBortle) {
+      dataSources.push(populationBortle);
+      console.log(`Population-based data: Bortle ${populationBortle.bortleScale} (${(populationBortle.confidence * 100).toFixed(0)}% confidence)`);
+    }
+  } catch (error) {
+    console.warn('Population-based calculation failed:', error);
   }
   
-  if (worldAtlasData.status === 'fulfilled' && worldAtlasData.value) {
-    satelliteSources.push(worldAtlasData.value);
+  // Fallback: Remote area estimation
+  if (dataSources.length === 0) {
+    const remoteEstimate = getRemoteAreaBortle(latitude, longitude, locationName);
+    dataSources.push(remoteEstimate);
+    console.log(`Using remote area estimation: Bortle ${remoteEstimate.bortleScale}`);
   }
   
-  if (globalRadianceData.status === 'fulfilled' && globalRadianceData.value) {
-    satelliteSources.push(globalRadianceData.value);
-  }
-  
-  // If we have no satellite data, return null
-  if (satelliteSources.length === 0) {
-    console.log('No satellite data available for this location');
+  // If we still have no data, return null
+  if (dataSources.length === 0) {
+    console.log('No data sources available for this location');
     return null;
   }
   
-  console.log(`Collected ${satelliteSources.length} satellite data sources`);
+  console.log(`Collected ${dataSources.length} data sources`);
   
   // Filter outliers if we have multiple sources
-  const filteredSources = satelliteSources.length >= 2
-    ? filterOutliers(satelliteSources, 3.0)
-    : satelliteSources;
+  const filteredSources = dataSources.length >= 2
+    ? filterOutliers(dataSources, 3.0)
+    : dataSources;
   
-  // Fuse the satellite data
+  // Fuse the data
   const fusedResult = fuseBortleScales(filteredSources, {
     useTemporalDecay: true,
     minConfidence: 0.7 // Higher minimum for satellite data
@@ -71,11 +70,11 @@ export async function getSatelliteBasedBortleScale(
   
   // Determine data quality based on confidence and number of sources
   let dataQuality: 'excellent' | 'good' | 'fair' | 'poor';
-  if (fusedResult.confidence >= 0.9 && satelliteSources.length >= 2) {
+  if (fusedResult.confidence >= 0.85 && dataSources.length >= 2) {
     dataQuality = 'excellent';
-  } else if (fusedResult.confidence >= 0.8) {
+  } else if (fusedResult.confidence >= 0.75) {
     dataQuality = 'good';
-  } else if (fusedResult.confidence >= 0.7) {
+  } else if (fusedResult.confidence >= 0.60) {
     dataQuality = 'fair';
   } else {
     dataQuality = 'poor';
@@ -83,15 +82,16 @@ export async function getSatelliteBasedBortleScale(
   
   // Extract metadata from sources
   const metadata: Record<string, any> = {
-    sourceCount: satelliteSources.length,
+    sourceCount: dataSources.length,
     filteredSourceCount: filteredSources.length,
     timestamp: new Date().toISOString()
   };
   
-  // Include radiance if available from VIIRS
-  const viirsSource = satelliteSources.find(s => s.source === 'viirs_satellite');
-  if (viirsSource?.metadata?.radiance) {
-    metadata.radiance = viirsSource.metadata.radiance;
+  // Include population data if available
+  const popSource = dataSources.find(s => s.source === 'population_density');
+  if (popSource?.metadata) {
+    metadata.nearestCity = popSource.metadata.nearestCity;
+    metadata.distance = popSource.metadata.distance;
   }
   
   return {

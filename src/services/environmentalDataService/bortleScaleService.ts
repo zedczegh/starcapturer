@@ -53,28 +53,27 @@ export const getBortleScaleData = async (
   const dataSources: BortleDataSource[] = [];
   
   try {
-    // Source 1: Real satellite data (VIIRS + World Atlas) - Highest scientific accuracy
+    // Source 1: Population density-based calculation (Highest accuracy for urban areas)
     try {
-      console.log("Fetching satellite data from VIIRS, World Atlas, and Dark Sky Preserves...");
-      const satelliteResult = await getSatelliteBasedBortleScale(latitude, longitude);
+      console.log("Calculating Bortle scale from population density and geographic data...");
+      const populationResult = await getSatelliteBasedBortleScale(latitude, longitude, locationName);
       
-      if (satelliteResult && satelliteResult.bortleScale) {
-        console.log(`Satellite data available: ${satelliteResult.bortleScale} (quality: ${satelliteResult.dataQuality}, sources: ${satelliteResult.sources.join(', ')})`);
+      if (populationResult && populationResult.bortleScale) {
+        console.log(`Population-based data: ${populationResult.bortleScale} (quality: ${populationResult.dataQuality}, confidence: ${(populationResult.confidence * 100).toFixed(0)}%)`);
         
         dataSources.push({
-          bortleScale: satelliteResult.bortleScale,
-          confidence: satelliteResult.confidence,
-          source: 'satellite_composite',
+          bortleScale: populationResult.bortleScale,
+          confidence: populationResult.confidence,
+          source: 'population_analysis',
           timestamp: Date.now(),
           metadata: {
-            ...satelliteResult.metadata,
-            dataQuality: satelliteResult.dataQuality,
-            satelliteSources: satelliteResult.sources
+            ...populationResult.metadata,
+            dataQuality: populationResult.dataQuality
           }
         });
       }
     } catch (error) {
-      console.warn("Satellite data unavailable:", error);
+      console.warn("Population-based analysis unavailable:", error);
     }
     
     // Source 2: Star count data (high accuracy for user photos)
