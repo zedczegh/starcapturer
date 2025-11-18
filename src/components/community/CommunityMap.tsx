@@ -32,7 +32,7 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
   onLocationUpdate
 }) => {
   const { position: userPosition, updatePosition } = useUserGeolocation();
-  const [lightPollutionOpacity, setLightPollutionOpacity] = useState(0.7);
+  const [lightPollutionOpacity, setLightPollutionOpacity] = useState(0.6);
   const [darkSkyLocations, setDarkSkyLocations] = useState<any[]>([]);
   const [combinedMode, setCombinedMode] = useState(false);
 
@@ -64,22 +64,22 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
         center={center}
         zoom={zoom}
         scrollWheelZoom={true}
-        style={{ height: "100%", width: "100%", background: "#0a0e1a" }}
+        style={{ height: "100%", width: "100%", background: "#1a1f2e" }}
         worldCopyJump
         attributionControl={false}
       >
-        {/* Base Map Layer - Dark theme for better light pollution visibility */}
+        {/* Base Map Layer */}
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
           maxZoom={19}
         />
         
-        {/* Light Pollution Overlay Layer - Always Visible */}
+        {/* Light Pollution Overlay Layer - 2024 VIIRS Data */}
         <TileLayer
-          url="https://djlorenz.github.io/astronomy/lp2020/overlay/tiles/{z}/{x}/{y}.png"
+          url="https://www.lightpollutionmap.info/tiles/VIIRS_2024/{z}/{x}/{y}.png"
           opacity={lightPollutionOpacity}
           maxZoom={19}
-          attribution='Light pollution data © <a href="https://djlorenz.github.io/astronomy/lp2020/">David Lorenz</a>'
+          attribution='Light pollution © <a href="https://www.lightpollutionmap.info">lightpollutionmap.info</a>'
         />
 
         {/* Dark Sky Heat Map Layer - Only in Combined Mode */}
@@ -142,6 +142,7 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
           <div className="text-xs text-cosmic-400 mt-1 text-center">
             {Math.round(lightPollutionOpacity * 100)}%
           </div>
+          <p className="text-xs text-cosmic-500 mt-2">VIIRS 2024 Satellite Data</p>
         </div>
       </div>
 
@@ -158,7 +159,8 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
             </div>
           </div>
           <div className="mt-2 pt-2 border-t border-cosmic-700">
-            <p className="text-xs text-cosmic-400">Data: VIIRS 2022 Satellite</p>
+            <p className="text-xs text-cosmic-400">VIIRS 2024 Satellite Data</p>
+            <p className="text-xs text-cosmic-500">Updated annually</p>
           </div>
         </div>
       </div>
