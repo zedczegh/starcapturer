@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import BackButton from '@/components/navigation/BackButton';
 import CheckInOutManager from '@/components/bookings/CheckInOutManager';
+import NavBar from '@/components/NavBar';
 
 // Define the extended reservation type with check-in/out fields
 type ReservationWithProfile = {
@@ -292,7 +293,17 @@ const MyReservations = () => {
   }
 
   return (
-    <div className="min-h-screen bg-cosmic-900 text-gray-100">
+    <div className="min-h-screen relative">
+      {backgroundUrl && (
+        <div className="fixed inset-0 z-0">
+          <img src={backgroundUrl} alt="Background" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-60% to-slate-900"></div>
+          <div className="absolute inset-0 bg-slate-900/60"></div>
+        </div>
+      )}
+      <div className="relative z-10 min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-cosmic-900"
+           style={{ backgroundColor: backgroundUrl ? 'transparent' : undefined }}>
+      <NavBar />
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
@@ -439,6 +450,7 @@ const MyReservations = () => {
             ))}
           </div>
         )}
+      </div>
       </div>
     </div>
   );
