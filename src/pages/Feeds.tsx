@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import NavBar from '@/components/NavBar';
-import { Loader2, Image } from 'lucide-react';
+import { Loader2, Image, Users, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { PostInteractions } from '@/components/profile/PostInteractions';
@@ -10,8 +10,11 @@ import { PostComments } from '@/components/profile/PostComments';
 import { PostImageCarousel } from '@/components/profile/PostImageCarousel';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { navigateToUserProfile } from '@/utils/navigation';
+import { ParsedPostContent } from '@/utils/postContentParser';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface Post {
   id: string;
@@ -32,19 +35,22 @@ const Feeds: React.FC = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [openComments, setOpenComments] = useState<Set<string>>(new Set());
+  const [feedFilter, setFeedFilter] = useState<'all' | 'following'>('all');
 
   useEffect(() => {
-    fetchPosts();
-  }, []);
+    const hashtag = searchParams.get('hashtag');
+    fetchPosts(hashtag || undefined);
+  }, [feedFilter, searchParams, user]);
 
-  const fetchPosts = async () => {
+  const fetchPosts = async (hashtag?: string) => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('user_posts')
         .select(`
           *,
@@ -52,7 +58,32 @@ const Feeds: React.FC = () => {
             username,
             avatar_url
           )
-        `)
+        `);
+
+      // Filter by following if enabled and user is logged in
+      if (feedFilter === 'following' && user?.id) {
+        const { data: followingData } = await supabase
+          .from('user_follows')
+          .select('following_id')
+          .eq('follower_id', user.id);
+
+        const followingIds = followingData?.map(f => f.following_id) || [];
+        
+        if (followingIds.length === 0) {
+          setPosts([]);
+          setLoading(false);
+          return;
+        }
+
+        query = query.in('user_id', followingIds);
+      }
+
+      // Filter by hashtag if provided
+      if (hashtag) {
+        query = query.ilike('description', `%#${hashtag}%`);
+      }
+
+      const { data, error } = await query
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -64,6 +95,14 @@ const Feeds: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleHashtagClick = (hashtag: string) => {
+    setSearchParams({ hashtag });
+  };
+
+  const clearHashtagFilter = () => {
+    setSearchParams({});
   };
 
   const getFileUrl = (filePath: string) => {
@@ -109,6 +148,46 @@ const Feeds: React.FC = () => {
             {t("Explore posts from the community", "探索社区动态")}
           </p>
         </div>
+
+        {/* Filter Tabs */}
+        <div className="mb-6">
+          <Tabs value={feedFilter} onValueChange={(v) => setFeedFilter(v as 'all' | 'following')} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 bg-cosmic-800/60 backdrop-blur-xl border border-primary/20">
+              <TabsTrigger 
+                value="all" 
+                className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary gap-2"
+              >
+                <Globe className="h-4 w-4" />
+                {t("All Posts", "所有动态")}
+              </TabsTrigger>
+              <TabsTrigger 
+                value="following" 
+                className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary gap-2"
+                disabled={!user}
+              >
+                <Users className="h-4 w-4" />
+                {t("Following", "关注")}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {/* Hashtag Filter Display */}
+        {searchParams.get('hashtag') && (
+          <div className="mb-4 flex items-center gap-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
+            <span className="text-sm text-foreground">
+              {t("Filtering by:", "筛选：")} <span className="font-semibold text-primary">#{searchParams.get('hashtag')}</span>
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearHashtagFilter}
+              className="ml-auto text-xs"
+            >
+              {t("Clear", "清除")}
+            </Button>
+          </div>
+        )}
 
         {loading ? (
           <div className="flex justify-center items-center py-20">
@@ -167,7 +246,12 @@ const Feeds: React.FC = () => {
                               {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
                             </span>
                           </div>
-                          <p className="text-cosmic-200 text-sm text-left">{post.description}</p>
+                          <p className="text-cosmic-200 text-sm text-left">
+                            <ParsedPostContent 
+                              content={post.description} 
+                              onHashtagClick={handleHashtagClick}
+                            />
+                          </p>
                         </div>
                       </div>
                     </div>
