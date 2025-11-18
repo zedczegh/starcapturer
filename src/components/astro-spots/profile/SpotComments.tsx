@@ -9,6 +9,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { formatDistanceToNow } from 'date-fns';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import { useNavigate } from 'react-router-dom';
+import { navigateToUserProfile } from '@/utils/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Comment {
   id: string;
@@ -34,6 +36,7 @@ interface SpotCommentsProps {
 export const SpotComments: React.FC<SpotCommentsProps> = ({ spotId, currentUserId }) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(false);
@@ -317,7 +320,7 @@ export const SpotComments: React.FC<SpotCommentsProps> = ({ spotId, currentUserI
                   <div className="flex gap-1.5 items-start">
                     <Avatar 
                       className="h-8 w-8 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                      onClick={() => navigate(`/user/${comment.user_id}`)}
+                      onClick={() => navigateToUserProfile(navigate, comment.user_id, user?.id)}
                     >
                       {comment.avatar_url ? (
                         <AvatarImage src={comment.avatar_url} alt={comment.username} />
@@ -332,7 +335,7 @@ export const SpotComments: React.FC<SpotCommentsProps> = ({ spotId, currentUserI
                         <div className="flex items-center gap-2 mb-0.5">
                           <span 
                             className="text-xs font-semibold text-foreground cursor-pointer hover:text-primary transition-colors"
-                            onClick={() => navigate(`/user/${comment.user_id}`)}
+                            onClick={() => navigateToUserProfile(navigate, comment.user_id, user?.id)}
                           >
                             {comment.username || 'User'}
                           </span>
@@ -472,7 +475,7 @@ export const SpotComments: React.FC<SpotCommentsProps> = ({ spotId, currentUserI
                             <div key={reply.id} className="flex gap-1.5 items-start">
                               <Avatar 
                                 className="h-7 w-7 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                                onClick={() => navigate(`/user/${reply.user_id}`)}
+                                onClick={() => navigateToUserProfile(navigate, reply.user_id, user?.id)}
                               >
                                 {reply.avatar_url ? (
                                   <AvatarImage src={reply.avatar_url} alt={reply.username} />
@@ -487,7 +490,7 @@ export const SpotComments: React.FC<SpotCommentsProps> = ({ spotId, currentUserI
                                   <div className="flex items-center gap-2 mb-0.5">
                                     <span 
                                       className="text-xs font-semibold text-foreground cursor-pointer hover:text-primary transition-colors"
-                                      onClick={() => navigate(`/user/${reply.user_id}`)}
+                                      onClick={() => navigateToUserProfile(navigate, reply.user_id, user?.id)}
                                     >
                                       {reply.username || 'User'}
                                     </span>
