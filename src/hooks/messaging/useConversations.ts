@@ -111,9 +111,28 @@ export const useConversations = () => {
         return;
       }
 
+      // Filter out self-messages and post interaction notifications
+      const filteredMessages = messagesData.filter(msg => {
+        // Exclude self-messages
+        if (msg.sender_id === msg.receiver_id) return false;
+        
+        // Exclude post interaction notifications
+        const metadata = msg.metadata as any;
+        if (metadata?.type === 'post_interaction') return false;
+        
+        return true;
+      });
+
+      if (filteredMessages.length === 0) {
+        console.log("No valid messages found after filtering");
+        setConversations([]);
+        setLoading(false);
+        return;
+      }
+
       // Extract unique user IDs from messages - using a Set for better performance
       const uniqueUserIds = new Set<string>();
-      messagesData.forEach(msg => {
+      filteredMessages.forEach(msg => {
         if (msg.sender_id !== user.id) uniqueUserIds.add(msg.sender_id);
         if (msg.receiver_id !== user.id) uniqueUserIds.add(msg.receiver_id);
       });
@@ -144,7 +163,7 @@ export const useConversations = () => {
       const conversationsMap = new Map<string, ConversationPartner>();
 
       // Process messages in reverse chronological order
-      messagesData.forEach(msg => {
+      filteredMessages.forEach(msg => {
         const partnerId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
         
         if (!conversationsMap.has(partnerId)) {

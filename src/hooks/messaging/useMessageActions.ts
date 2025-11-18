@@ -33,6 +33,15 @@ export const useMessageActions = (
         return;
       }
 
+      // Prevent self-messaging
+      if (user.id === receiverId) {
+        toast.error(
+          t("Cannot send message to yourself", "不能给自己发消息"),
+          t("Please select another user", "请选择其他用户")
+        );
+        return;
+      }
+
       setSending(true);
       try {
         let finalMessage = messageText;
