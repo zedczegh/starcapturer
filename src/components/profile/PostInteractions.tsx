@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ThumbsUp, Heart, Share2, Bookmark, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { PostInteractionViewers } from './PostInteractionViewers';
 
 
 interface PostInteractionsProps {
@@ -48,6 +49,7 @@ export const PostInteractions: React.FC<PostInteractionsProps> = ({
   });
   const [loading, setLoading] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
+  const [showInteractionViewers, setShowInteractionViewers] = useState(false);
 
   useEffect(() => {
     loadInteractions();
@@ -201,6 +203,8 @@ export const PostInteractions: React.FC<PostInteractionsProps> = ({
     }
   };
 
+  const totalInteractions = counts.likes + counts.hearts + counts.shares + counts.collects;
+
   return (
     <>
       <div className="flex items-center gap-1 w-full justify-around">
@@ -259,6 +263,20 @@ export const PostInteractions: React.FC<PostInteractionsProps> = ({
         </Button>
       </div>
 
+      {totalInteractions > 0 && (
+        <button
+          onClick={() => setShowInteractionViewers(true)}
+          className="w-full text-center py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {totalInteractions} {totalInteractions === 1 ? 'interaction' : 'interactions'}
+        </button>
+      )}
+
+      <PostInteractionViewers
+        postId={postId}
+        isOpen={showInteractionViewers}
+        onClose={() => setShowInteractionViewers(false)}
+      />
     </>
   );
 };
