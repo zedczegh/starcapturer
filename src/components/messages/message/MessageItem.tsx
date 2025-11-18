@@ -6,7 +6,7 @@ import { zhCN, enUS } from 'date-fns/locale';
 import { useLanguage } from '@/contexts/LanguageContext';
 import EmojiRenderer from '../EmojiRenderer';
 import { MessageTextRenderer } from './MessageTextRenderer';
-import { MoreVertical, CheckCheck, Check, ThumbsUp, Heart, Bookmark } from 'lucide-react';
+import { MoreVertical, CheckCheck, Check, ThumbsUp, Heart, Reply, Smile } from 'lucide-react';
 import UnsendDialog from './UnsendDialog';
 import { Button } from '@/components/ui/button';
 import LocationShareCard from '../LocationShareCard';
@@ -31,6 +31,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const [showUnsendDialog, setShowUnsendDialog] = useState(false);
   const [postImageUrl, setPostImageUrl] = useState<string | null>(null);
   const [detectedPostLink, setDetectedPostLink] = useState<any>(null);
+  const [showReactions, setShowReactions] = useState(false);
   
   const locale = language === 'zh' ? zhCN : enUS;
   const messageDate = new Date(message.created_at);
@@ -140,10 +141,15 @@ const MessageItem: React.FC<MessageItemProps> = ({
       case 'heart':
         return <Heart className="h-4 w-4 text-red-400 fill-current" />;
       case 'collect':
-        return <Bookmark className="h-4 w-4 text-yellow-400 fill-current" />;
+        return <Smile className="h-4 w-4 text-yellow-400 fill-current" />;
       default:
         return null;
     }
+  };
+
+  const handleReaction = (reactionType: string) => {
+    console.log(`Reaction ${reactionType} for message ${message.id}`);
+    // TODO: Implement reaction storage
   };
 
   const hasContent = message.text || message.image_url || message.location || isPostInteraction || isSharedPost || detectedPostLink;
@@ -151,8 +157,52 @@ const MessageItem: React.FC<MessageItemProps> = ({
   if (!hasContent) return null;
   
   return (
-    <div className={`flex ${isSender ? 'justify-end' : 'justify-start'} mb-4`}>
-      <div className="max-w-[75%]">
+    <div 
+      className={`flex ${isSender ? 'justify-end' : 'justify-start'} mb-4`}
+      onMouseEnter={() => setShowReactions(true)}
+      onMouseLeave={() => setShowReactions(false)}
+    >
+      <div className="max-w-[75%] relative">
+        {/* Reaction buttons */}
+        {showReactions && !isSharedPost && !isPostInteraction && (
+          <div 
+            className={`absolute -top-8 ${isSender ? 'right-0' : 'left-0'} flex items-center gap-1 bg-cosmic-900/95 backdrop-blur-sm border border-primary/20 rounded-full px-2 py-1 shadow-lg animate-in fade-in slide-in-from-top-2 duration-200`}
+          >
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 rounded-full hover:bg-primary/20 transition-colors"
+              onClick={() => handleReaction('reply')}
+            >
+              <Reply className="h-3.5 w-3.5 text-cosmic-200" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 rounded-full hover:bg-primary/20 transition-colors"
+              onClick={() => handleReaction('like')}
+            >
+              <ThumbsUp className="h-3.5 w-3.5 text-cosmic-200" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 rounded-full hover:bg-primary/20 transition-colors"
+              onClick={() => handleReaction('heart')}
+            >
+              <Heart className="h-3.5 w-3.5 text-cosmic-200" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 rounded-full hover:bg-primary/20 transition-colors"
+              onClick={() => handleReaction('smile')}
+            >
+              <Smile className="h-3.5 w-3.5 text-cosmic-200" />
+            </Button>
+          </div>
+        )}
+        
         <div
           className={`relative group rounded-2xl p-3 ${
             isSender
