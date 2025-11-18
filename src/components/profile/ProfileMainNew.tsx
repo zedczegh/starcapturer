@@ -69,6 +69,20 @@ const ProfileMainNew = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-cosmic-950 to-slate-900">
+      {/* Back Button - Only show when viewing other profiles */}
+      {viewMode && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate(-1)}
+          className="fixed top-20 left-4 z-50 h-10 w-10 rounded-full bg-cosmic-900/80 backdrop-blur-xl border border-primary/20 hover:border-primary/40 hover:bg-cosmic-800/80 transition-all duration-300 shadow-lg"
+          title={t('Go Back', '返回')}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </Button>
+      )}
 
       {/* Enhanced Cover Photo */}
       <div className="relative h-[250px] sm:h-[300px] md:h-[400px] overflow-hidden group">

@@ -166,39 +166,53 @@ const MessageItem: React.FC<MessageItemProps> = ({
         {/* Reaction buttons */}
         {showReactions && !isSharedPost && !isPostInteraction && (
           <div 
-            className={`absolute -top-8 ${isSender ? 'right-0' : 'left-0'} flex items-center gap-1 bg-cosmic-900/95 backdrop-blur-sm border border-primary/20 rounded-full px-2 py-1 shadow-lg animate-in fade-in slide-in-from-top-2 duration-200`}
+            className={`absolute -top-8 ${isSender ? 'right-0' : 'left-0'} flex items-center gap-1 bg-cosmic-900/95 backdrop-blur-sm border border-primary/20 rounded-full px-2 py-1 shadow-lg z-10`}
+            onMouseEnter={() => setShowReactions(true)}
+            onMouseLeave={() => setShowReactions(false)}
           >
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 p-0 rounded-full hover:bg-primary/20 transition-colors"
-              onClick={() => handleReaction('reply')}
+              className="h-7 w-7 p-0 rounded-full hover:bg-blue-500/20 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleReaction('reply');
+              }}
             >
-              <Reply className="h-3.5 w-3.5 text-cosmic-200" />
+              <Reply className="h-3.5 w-3.5 text-blue-400" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 p-0 rounded-full hover:bg-primary/20 transition-colors"
-              onClick={() => handleReaction('like')}
+              className="h-7 w-7 p-0 rounded-full hover:bg-blue-500/20 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleReaction('like');
+              }}
             >
-              <ThumbsUp className="h-3.5 w-3.5 text-cosmic-200" />
+              <ThumbsUp className="h-3.5 w-3.5 text-blue-400" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 p-0 rounded-full hover:bg-primary/20 transition-colors"
-              onClick={() => handleReaction('heart')}
+              className="h-7 w-7 p-0 rounded-full hover:bg-red-500/20 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleReaction('heart');
+              }}
             >
-              <Heart className="h-3.5 w-3.5 text-cosmic-200" />
+              <Heart className="h-3.5 w-3.5 text-red-400" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 p-0 rounded-full hover:bg-primary/20 transition-colors"
-              onClick={() => handleReaction('smile')}
+              className="h-7 w-7 p-0 rounded-full hover:bg-yellow-500/20 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleReaction('smile');
+              }}
             >
-              <Smile className="h-3.5 w-3.5 text-cosmic-200" />
+              <Smile className="h-3.5 w-3.5 text-yellow-400" />
             </Button>
           </div>
         )}
