@@ -68,7 +68,6 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
     },
     { icon: Calendar, label: t('My Reservations', '我的预订'), path: '/my-reservations' },
     { icon: Info, label: t('About SIQS', '关于SIQS'), path: '/about' },
-    { icon: Settings, label: t('Settings', '设置'), path: '/settings' },
   ];
 
   return (

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { User } from 'lucide-react';
 import { UseFormRegister } from 'react-hook-form';
-import ProfileBenefits from './ProfileBenefits';
+import PreferencesForm from '@/components/preferences/PreferencesForm';
 import ProfileTagsSelector from './ProfileTagsSelector';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -93,13 +93,13 @@ const ProfileForm = ({ register, loading, onSubmit, tags, setTags }: ProfileForm
           <ProfileTagsSelector selectedTags={tags} onChange={handleTagChange} disabled={loading} />
         </div>
 
-        {/* Benefits Section */}
+        {/* Preferences Section */}
         <div className="space-y-6">
           <h3 className="text-xl font-semibold text-white flex items-center gap-2">
             <div className="w-1 h-6 bg-gradient-to-b from-primary to-[#8A6FD6] rounded-full"></div>
-            {t("Profile Benefits", "个人资料优势")}
+            {t("Preferences", "偏好设置")}
           </h3>
-          <ProfileBenefits />
+          <PreferencesForm />
         </div>
 
         {/* Save Button */}

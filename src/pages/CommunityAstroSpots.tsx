@@ -21,6 +21,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { supabase } from "@/integrations/supabase/client";
 
 // Default map center coordinates
 const DEFAULT_CENTER: [number, number] = [30, 104];
@@ -32,6 +33,25 @@ const CommunityAstroSpots: React.FC = () => {
   const { titleVariants, lineVariants, descVariants } = useAnimationVariants();
   const [activeView, setActiveView] = useState<PhotoPointsViewMode>('calculated');
   const [showMap, setShowMap] = useState(true);
+  const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
+
+  // Load user's background image
+  useEffect(() => {
+    const loadBackground = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('background_image_url')
+          .eq('id', user.id)
+          .single();
+        if (profile?.background_image_url) {
+          setBackgroundUrl(profile.background_image_url);
+        }
+      }
+    };
+    loadBackground();
+  }, []);
 
   // Use custom hook to handle all data and interactions
   const {
@@ -124,8 +144,23 @@ const CommunityAstroSpots: React.FC = () => {
   };
 
   return (
-    <PhotoPointsLayout pageTitle={t("Meteo Spots Community | Meteotinary", "趣小众社区 | 趣小众")}>
-      <div className="max-w-5xl mx-auto pt-10 px-4 pb-14">
+    <div className="min-h-screen relative">
+      {/* Background Image */}
+      {backgroundUrl && (
+        <div className="fixed inset-0 z-0">
+          <img 
+            src={backgroundUrl} 
+            alt="Background" 
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-60% to-cosmic-950"></div>
+          <div className="absolute inset-0 bg-cosmic-950/60"></div>
+        </div>
+      )}
+      
+      <div className="relative z-10">
+        <PhotoPointsLayout pageTitle={t("Meteo Spots Community | Meteotinary", "趣小众社区 | 趣小众")}>
+          <div className="max-w-5xl mx-auto pt-10 px-4 pb-14">
         {/* Header Section */}
         <CommunitySpotHeader 
           titleVariants={titleVariants} 
@@ -223,7 +258,9 @@ const CommunityAstroSpots: React.FC = () => {
           />
         )}
       </div>
-    </PhotoPointsLayout>
+        </PhotoPointsLayout>
+      </div>
+    </div>
   );
 };
 

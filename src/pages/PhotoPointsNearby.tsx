@@ -15,10 +15,12 @@ import { prepareLocationForNavigation } from '@/utils/locationNavigation';
 import { isSiqsGreaterThan } from '@/utils/siqsHelpers';
 import { getAllObscuraLocations } from '@/services/obscuraLocationsService';
 import { getAllMountainLocations } from '@/services/mountainLocationsService';
+import { supabase } from '@/integrations/supabase/client';
 
 const PhotoPointsNearby: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
   
   const {
     activeView,
@@ -118,6 +120,24 @@ const PhotoPointsNearby: React.FC = () => {
     loadMountainLocations();
   }, []);
 
+  // Load user's background image
+  useEffect(() => {
+    const loadBackground = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('background_image_url')
+          .eq('id', user.id)
+          .single();
+        if (profile?.background_image_url) {
+          setBackgroundUrl(profile.background_image_url);
+        }
+      }
+    };
+    loadBackground();
+  }, []);
+
   // Update search radius when view changes, but avoid unnecessary refreshes
   useEffect(() => {
     if (locationInitialized && effectiveLocation) {
@@ -186,7 +206,22 @@ const PhotoPointsNearby: React.FC = () => {
   
   
   return (
-    <PhotoPointsLayout>
+    <div className="min-h-screen relative">
+      {/* Background Image */}
+      {backgroundUrl && (
+        <div className="fixed inset-0 z-0">
+          <img 
+            src={backgroundUrl} 
+            alt="Background" 
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-60% to-cosmic-950"></div>
+          <div className="absolute inset-0 bg-cosmic-950/60"></div>
+        </div>
+      )}
+      
+      <div className="relative z-10">
+        <PhotoPointsLayout>
       <PhotoPointsHeader 
         userLocation={effectiveLocation}
         locationLoading={locationLoading}
@@ -253,7 +288,9 @@ const PhotoPointsNearby: React.FC = () => {
         loadMoreClickCount={loadMoreClickCount}
         maxLoadMoreClicks={maxLoadMoreClicks}
       />
-    </PhotoPointsLayout>
+        </PhotoPointsLayout>
+      </div>
+    </div>
   );
 };
 

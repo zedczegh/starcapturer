@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -11,12 +11,14 @@ import AstroSpotGrid from '@/components/astro-spots/AstroSpotGrid';
 import { useAstroSpots } from '@/hooks/astro-spots/useAstroSpots';
 import { useNotifications } from '@/hooks/useNotifications';
 import LocationStatusMessage from "@/components/location/LocationStatusMessage";
+import { supabase } from '@/integrations/supabase/client';
 
 const ManageAstroSpots = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { markAstroSpotsAsViewed } = useNotifications();
+  const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
   
   const {
     spots,
@@ -35,6 +37,24 @@ const ManageAstroSpots = () => {
       markAstroSpotsAsViewed();
     }
   }, [user, markAstroSpotsAsViewed]);
+
+  // Load user's background image
+  useEffect(() => {
+    const loadBackground = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('background_image_url')
+          .eq('id', authUser.id)
+          .single();
+        if (profile?.background_image_url) {
+          setBackgroundUrl(profile.background_image_url);
+        }
+      }
+    };
+    loadBackground();
+  }, []);
 
   // Auto-refresh when user changes to prevent cached data from previous user
   useEffect(() => {
@@ -59,7 +79,17 @@ const ManageAstroSpots = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-cosmic-900 relative">
+    <div className="min-h-screen relative">
+      {backgroundUrl && (
+        <div className="fixed inset-0 z-0">
+          <img src={backgroundUrl} alt="Background" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-60% to-slate-900"></div>
+          <div className="absolute inset-0 bg-slate-900/60"></div>
+        </div>
+      )}
+      <div className="relative z-10 min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-cosmic-900"
+           style={{ backgroundColor: backgroundUrl ? 'transparent' : undefined }}
+      >
       <NavBar />
       <div className="container mx-auto px-4 py-8 pt-16 md:pt-20 min-h-screen">
         <div className="mb-8">
@@ -94,6 +124,7 @@ const ManageAstroSpots = () => {
         </div>
       </div>
       <AstroFooter />
+      </div>
     </div>
   );
 };
