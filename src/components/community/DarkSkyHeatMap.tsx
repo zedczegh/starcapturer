@@ -20,7 +20,10 @@ const DarkSkyHeatMap: React.FC<DarkSkyHeatMapProps> = ({
   const map = useMap();
 
   useEffect(() => {
-    if (!map || !locations || locations.length === 0) return;
+    if (!map || !locations || locations.length === 0) {
+      console.log("DarkSkyHeatMap: Skipping render - no map or locations");
+      return;
+    }
 
     // Convert locations to heat map points [lat, lng, intensity]
     const heatPoints = locations
@@ -40,8 +43,9 @@ const DarkSkyHeatMap: React.FC<DarkSkyHeatMapProps> = ({
         return [loc.latitude, loc.longitude, weight] as [number, number, number];
       });
 
-    // Create heat layer
-    const heatLayer = (L as any).heatLayer(heatPoints, {
+    // Create heat layer with error handling
+    try {
+      const heatLayer = (L as any).heatLayer(heatPoints, {
       radius: 35,
       blur: 25,
       maxZoom: 10,
@@ -56,12 +60,17 @@ const DarkSkyHeatMap: React.FC<DarkSkyHeatMapProps> = ({
       }
     }).addTo(map);
 
-    // Set opacity
-    heatLayer.setOptions({ minOpacity: intensity * 0.3, maxOpacity: intensity });
+      // Set opacity
+      heatLayer.setOptions({ minOpacity: intensity * 0.3, maxOpacity: intensity });
 
-    return () => {
-      map.removeLayer(heatLayer);
-    };
+      return () => {
+        if (map && heatLayer) {
+          map.removeLayer(heatLayer);
+        }
+      };
+    } catch (error) {
+      console.error("Error creating heat layer:", error);
+    }
   }, [map, locations, intensity]);
 
   return null;
