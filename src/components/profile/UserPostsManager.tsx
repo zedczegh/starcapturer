@@ -14,6 +14,8 @@ import { PostImageCarousel } from './PostImageCarousel';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatDistanceToNow } from 'date-fns';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { navigateToUserProfile } from '@/utils/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UserPost {
   id: string;
@@ -46,6 +48,7 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
   const { t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [posts, setPosts] = useState<UserPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingPost, setEditingPost] = useState<UserPost | null>(null);
@@ -329,7 +332,7 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
                     <div className="flex items-start gap-3">
                       <Avatar 
                         className="h-8 w-8 border border-primary/20 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                        onClick={() => navigate(`/user/${userId}`)}
+                        onClick={() => navigateToUserProfile(navigate, userId, user?.id)}
                       >
                         <AvatarImage src={post.avatar_url || ''} alt={post.username} />
                         <AvatarFallback className="bg-primary/20 text-primary">
@@ -340,7 +343,7 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
                         <div className="flex items-center gap-2 mb-1">
                           <span 
                             className="text-sm font-medium text-foreground cursor-pointer hover:text-primary transition-colors"
-                            onClick={() => navigate(`/user/${userId}`)}
+                            onClick={() => navigateToUserProfile(navigate, userId, user?.id)}
                           >
                             {post.username || 'User'}
                           </span>

@@ -11,6 +11,7 @@ import { PostImageCarousel } from '@/components/profile/PostImageCarousel';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { navigateToUserProfile } from '@/utils/navigation';
 
 interface Post {
   id: string;
@@ -147,7 +148,7 @@ const Feeds: React.FC = () => {
                       <div className="flex items-start gap-3">
                         <Avatar 
                           className="h-8 w-8 border border-primary/20 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
-                          onClick={() => navigate(`/user/${post.user_id}`)}
+                          onClick={() => navigateToUserProfile(navigate, post.user_id, user?.id)}
                         >
                           <AvatarImage src={post.profiles?.avatar_url || ''} alt={post.profiles?.username || 'User'} />
                           <AvatarFallback className="bg-primary/20 text-primary">
@@ -158,7 +159,7 @@ const Feeds: React.FC = () => {
                           <div className="flex items-center gap-2 mb-1">
                             <span 
                               className="text-sm font-medium text-foreground cursor-pointer hover:text-primary transition-colors"
-                              onClick={() => navigate(`/user/${post.user_id}`)}
+                              onClick={() => navigateToUserProfile(navigate, post.user_id, user?.id)}
                             >
                               {post.profiles?.username || 'User'}
                             </span>

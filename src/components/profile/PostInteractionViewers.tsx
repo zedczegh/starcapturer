@@ -13,6 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, Heart, ThumbsUp, Share2, Bookmark } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { navigateToUserProfile } from '@/utils/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PostInteractionViewersProps {
   postId: string;
@@ -36,6 +38,7 @@ export const PostInteractionViewers: React.FC<PostInteractionViewersProps> = ({
   onClose,
 }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const { data: interactions, isLoading } = useQuery({
     queryKey: ['post-interaction-viewers', postId],
@@ -81,7 +84,7 @@ export const PostInteractionViewers: React.FC<PostInteractionViewersProps> = ({
   }, [interactions]);
 
   const handleUserClick = (userId: string) => {
-    navigate(`/user/${userId}`);
+    navigateToUserProfile(navigate, userId, user?.id);
     onClose();
   };
 
