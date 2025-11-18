@@ -19,8 +19,9 @@ export interface LightPollutionRegion {
   };
 }
 
-// Grid resolution in degrees (2 degrees = ~220km at equator)
-const GRID_RESOLUTION = 2;
+// Grid resolution in degrees (0.25 degrees = ~27km at equator)
+// This provides town-level granularity
+const GRID_RESOLUTION = 0.25;
 
 /**
  * Generate a global grid of coordinates for light pollution calculation
@@ -169,17 +170,128 @@ export const initializeGlobalLightPollutionData = async (
     return existingData;
   }
 
-  console.log('Calculating global light pollution data...');
+  console.log('Calculating initial global light pollution data...');
   const grid = generateGlobalGrid();
   
-  // For initial implementation, calculate a subset of strategic locations
-  // Full global calculation would take too long
+  // Calculate a smaller initial sample for quick display
   const strategicLocations = grid.filter((coord, index) => 
-    index % 5 === 0 // Sample every 5th point for faster initial load
+    index % 20 === 0 // Sample every 20th point for faster initial load
   );
 
   const regions = await calculateBortleScaleForRegions(strategicLocations, onProgress);
   saveLightPollutionRegions(regions);
   
   return regions;
+};
+
+/**
+ * Get calculation progress from localStorage
+ */
+export const getCalculationProgress = (): {
+  processedCount: number;
+  totalCount: number;
+  isComplete: boolean;
+  lastProcessedIndex: number;
+} => {
+  try {
+    const data = localStorage.getItem('lightPollutionProgress');
+    if (!data) {
+      return { processedCount: 0, totalCount: 0, isComplete: false, lastProcessedIndex: 0 };
+    }
+    return JSON.parse(data);
+  } catch {
+    return { processedCount: 0, totalCount: 0, isComplete: false, lastProcessedIndex: 0 };
+  }
+};
+
+/**
+ * Save calculation progress to localStorage
+ */
+export const saveCalculationProgress = (
+  processedCount: number,
+  totalCount: number,
+  isComplete: boolean,
+  lastProcessedIndex: number
+): void => {
+  try {
+    localStorage.setItem('lightPollutionProgress', JSON.stringify({
+      processedCount,
+      totalCount,
+      isComplete,
+      lastProcessedIndex,
+      timestamp: Date.now()
+    }));
+  } catch (error) {
+    console.error('Error saving calculation progress:', error);
+  }
+};
+
+/**
+ * Background calculation service that progressively calculates all regions
+ */
+export const startBackgroundCalculation = (
+  onProgress?: (current: number, total: number, percentage: number) => void,
+  onComplete?: () => void
+): () => void => {
+  let isRunning = true;
+  
+  const processNextBatch = async () => {
+    if (!isRunning) return;
+
+    const progress = getCalculationProgress();
+    const grid = generateGlobalGrid();
+    const totalPoints = grid.length;
+
+    if (progress.isComplete || progress.lastProcessedIndex >= totalPoints) {
+      console.log('Background calculation already complete');
+      onComplete?.();
+      return;
+    }
+
+    // Process in small batches to avoid blocking
+    const BATCH_SIZE = 10;
+    const startIndex = progress.lastProcessedIndex;
+    const endIndex = Math.min(startIndex + BATCH_SIZE, totalPoints);
+    const batch = grid.slice(startIndex, endIndex);
+
+    console.log(`Processing batch ${startIndex}-${endIndex} of ${totalPoints}`);
+
+    // Load existing regions
+    const existingRegions = loadLightPollutionRegions() || [];
+    
+    // Calculate new regions for this batch
+    const newRegions = await calculateBortleScaleForRegions(batch);
+    
+    // Merge with existing regions
+    const allRegions = [...existingRegions, ...newRegions];
+    saveLightPollutionRegions(allRegions);
+
+    // Update progress
+    const processedCount = endIndex;
+    const percentage = Math.round((processedCount / totalPoints) * 100);
+    const isComplete = endIndex >= totalPoints;
+    
+    saveCalculationProgress(processedCount, totalPoints, isComplete, endIndex);
+    onProgress?.(processedCount, totalPoints, percentage);
+
+    if (isComplete) {
+      console.log('Background calculation complete!');
+      onComplete?.();
+    } else {
+      // Schedule next batch using requestIdleCallback for true background processing
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => processNextBatch(), { timeout: 5000 });
+      } else {
+        setTimeout(() => processNextBatch(), 100);
+      }
+    }
+  };
+
+  // Start processing
+  processNextBatch();
+
+  // Return cleanup function
+  return () => {
+    isRunning = false;
+  };
 };
