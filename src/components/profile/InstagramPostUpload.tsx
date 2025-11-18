@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { loadImageFromFile, validateImageFile } from '@/utils/imageProcessingUtils';
 
 interface InstagramPostUploadProps {
   userId: string;
@@ -122,7 +123,7 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
@@ -138,11 +139,13 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
       return;
     }
 
-    Array.from(files).forEach(file => {
+    const fileArray = Array.from(files);
+    
+    for (const file of fileArray) {
       // Validate file type (images and videos)
       if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
         toast.error(`File "${file.name}" must be an image or video`);
-        return;
+        continue;
       }
       
       // Check file size based on type
@@ -152,12 +155,34 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
       
       if (file.size > maxSize) {
         toast.error(`${isVideo ? 'Video' : 'Image'} "${file.name}" exceeds ${maxSizeMB}MB limit`);
-        return;
+        continue;
       }
       
       validFiles.push(file);
-      urls.push(URL.createObjectURL(file));
-    });
+      
+      // Handle TIFF/RAW files specially
+      const fileName = file.name.toLowerCase();
+      const isTiffOrRaw = fileName.endsWith('.tiff') || fileName.endsWith('.tif') || 
+                          fileName.endsWith('.cr2') || fileName.endsWith('.nef') || 
+                          fileName.endsWith('.arw') || fileName.endsWith('.dng') ||
+                          fileName.endsWith('.raw') || fileName.endsWith('.orf') ||
+                          fileName.endsWith('.rw2') || fileName.endsWith('.pef') ||
+                          fileName.endsWith('.raf');
+      
+      if (isTiffOrRaw) {
+        try {
+          toast.info(`Processing ${file.name}...`);
+          const { dataUrl } = await loadImageFromFile(file, { enableDownscale: true, maxResolution: 2048 });
+          urls.push(dataUrl);
+        } catch (error) {
+          console.error(`Failed to process ${file.name}:`, error);
+          toast.error(`Failed to process ${file.name}`);
+          validFiles.pop(); // Remove the file we just added
+        }
+      } else {
+        urls.push(URL.createObjectURL(file));
+      }
+    }
 
     setSelectedFiles(prev => [...prev, ...validFiles]);
     setPreviewUrls(prev => [...prev, ...urls]);
