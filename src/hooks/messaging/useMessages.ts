@@ -49,7 +49,8 @@ export const useMessages = () => {
           created_at: msg.created_at,
           image_url: msg.image_url,
           location: extractedLocation, // Use extracted location data
-          read: msg.read // Include read status for checkmark functionality
+          read: msg.read, // Include read status for checkmark functionality
+          metadata: msg.metadata // Include metadata
         };
       }
     }
@@ -62,7 +63,8 @@ export const useMessages = () => {
       created_at: msg.created_at,
       image_url: msg.image_url,
       location: locationData, // Use parsed location data
-      read: msg.read // Include read status for checkmark functionality
+      read: msg.read, // Include read status for checkmark functionality
+      metadata: msg.metadata // Include metadata for shared posts and other special message types
     };
   }, []);
   
@@ -118,6 +120,14 @@ export const useMessages = () => {
       
       console.log("Fetched messages:", messagesData.length);
       
+      // Filter out post interaction notifications
+      const filteredMessages = messagesData.filter(msg => {
+        const metadata = msg.metadata as any;
+        return metadata?.type !== 'post_interaction';
+      });
+      
+      console.log("Messages after filtering:", filteredMessages.length);
+      
       // Only proceed if this is still the active conversation
       if (activePartnerRef.current !== conversationPartnerId) {
         console.log("Partner ID changed during fetch, discarding results");
@@ -125,7 +135,7 @@ export const useMessages = () => {
       }
       
       // Transform the messages to the expected format using the memoized parser
-      const formattedMessages = messagesData.map(parseMessageData);
+      const formattedMessages = filteredMessages.map(parseMessageData);
       
       // Update cache
       optimizedCache.setCachedItem(cacheKey, formattedMessages, MESSAGE_CACHE_TTL);
@@ -134,8 +144,8 @@ export const useMessages = () => {
       setMessages(formattedMessages);
       
       // Mark messages as read in a non-blocking way
-      if (messagesData && messagesData.length > 0) {
-        const messagesToUpdate = messagesData
+      if (filteredMessages && filteredMessages.length > 0) {
+        const messagesToUpdate = filteredMessages
           .filter(msg => msg.receiver_id === user.id && !msg.read)
           .map(msg => msg.id);
         
