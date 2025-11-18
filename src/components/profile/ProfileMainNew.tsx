@@ -171,7 +171,7 @@ const ProfileMainNew = ({
 
       <div className="container mx-auto px-3 sm:px-4 md:px-6 max-w-7xl">
         {/* Avatar positioned below background */}
-        <div className="relative -mt-16 sm:-mt-20 mb-4 flex justify-center">
+        <div className="relative -mt-24 sm:-mt-28 mb-0 flex justify-center z-10">
           <div className="relative">
             <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse"></div>
             <div className="relative">
@@ -186,8 +186,8 @@ const ProfileMainNew = ({
           </div>
         </div>
 
-        {/* Enhanced Profile Header Section */}
-        <div className="relative mb-6 sm:mb-8">
+        {/* Enhanced Profile Header Section - Overlapping with avatar */}
+        <div className="relative -mt-12 sm:-mt-16 mb-6 sm:mb-8">
           <div className="max-w-4xl mx-auto">
             <Card className="bg-cosmic-900/10 backdrop-blur-xl border border-primary/10 p-6 sm:p-8 relative">
               {/* Settings & Wallet Icons - Below cover photo - Only show on own profile */}
