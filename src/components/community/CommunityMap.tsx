@@ -32,7 +32,7 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
   onLocationUpdate
 }) => {
   const { position: userPosition, updatePosition } = useUserGeolocation();
-  const [lightPollutionOpacity, setLightPollutionOpacity] = useState(0.5);
+  const [lightPollutionOpacity, setLightPollutionOpacity] = useState(0.7);
   const [darkSkyLocations, setDarkSkyLocations] = useState<any[]>([]);
   const [combinedMode, setCombinedMode] = useState(false);
 
@@ -64,22 +64,22 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
         center={center}
         zoom={zoom}
         scrollWheelZoom={true}
-        style={{ height: "100%", width: "100%", background: "#010e1a" }}
+        style={{ height: "100%", width: "100%", background: "#0a0e1a" }}
         worldCopyJump
         attributionControl={false}
       >
-        {/* Base Map Layer */}
+        {/* Base Map Layer - Dark theme for better light pollution visibility */}
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           maxZoom={19}
         />
         
         {/* Light Pollution Overlay Layer - Always Visible */}
         <TileLayer
-          url="https://tiles.lightpollutionmap.info/VIIRS_2022/{z}/{x}/{y}.png"
+          url="https://djlorenz.github.io/astronomy/lp2020/overlay/tiles/{z}/{x}/{y}.png"
           opacity={lightPollutionOpacity}
           maxZoom={19}
-          attribution='Light pollution data © <a href="https://lightpollutionmap.info">lightpollutionmap.info</a>'
+          attribution='Light pollution data © <a href="https://djlorenz.github.io/astronomy/lp2020/">David Lorenz</a>'
         />
 
         {/* Dark Sky Heat Map Layer - Only in Combined Mode */}
