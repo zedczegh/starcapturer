@@ -13,7 +13,7 @@ import { EditPostDialog } from './EditPostDialog';
 import { PostImageCarousel } from './PostImageCarousel';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatDistanceToNow } from 'date-fns';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 interface UserPost {
   id: string;
@@ -45,6 +45,7 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
 }) => {
   const { t } = useLanguage();
   const location = useLocation();
+  const navigate = useNavigate();
   const [posts, setPosts] = useState<UserPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingPost, setEditingPost] = useState<UserPost | null>(null);
@@ -326,7 +327,10 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
                 {post.description && (
                   <div className="px-4 py-3">
                     <div className="flex items-start gap-3">
-                      <Avatar className="h-8 w-8 border border-primary/20">
+                      <Avatar 
+                        className="h-8 w-8 border border-primary/20 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                        onClick={() => navigate(`/user/${userId}`)}
+                      >
                         <AvatarImage src={post.avatar_url || ''} alt={post.username} />
                         <AvatarFallback className="bg-primary/20 text-primary">
                           {post.username?.[0]?.toUpperCase() || 'U'}
@@ -334,7 +338,10 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-medium text-foreground">
+                          <span 
+                            className="text-sm font-medium text-foreground cursor-pointer hover:text-primary transition-colors"
+                            onClick={() => navigate(`/user/${userId}`)}
+                          >
                             {post.username || 'User'}
                           </span>
                           <span className="text-xs text-muted-foreground">
