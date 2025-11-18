@@ -116,18 +116,8 @@ const Collections = () => {
   if (!authChecked) return <PageLoader />;
 
   if (!user) {
-  return (
-    <div className="min-h-screen relative">
-      {backgroundUrl && (
-        <div className="fixed inset-0 z-0">
-          <img src={backgroundUrl} alt="Background" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-60% to-slate-900"></div>
-          <div className="absolute inset-0 bg-slate-900/60"></div>
-        </div>
-      )}
-      <div className="relative z-10 min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-cosmic-900"
-           style={{ backgroundColor: backgroundUrl ? 'transparent' : undefined }}
-      >
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-cosmic-900">
         <NavBar />
         <div className="container mx-auto px-4 py-8 pt-16 md:pt-20">
           <LocationStatusMessage
@@ -170,9 +160,18 @@ const Collections = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-cosmic-900">
-      <NavBar />
-      <TooltipProvider>
+    <div className="min-h-screen relative">
+      {backgroundUrl && (
+        <div className="fixed inset-0 z-0">
+          <img src={backgroundUrl} alt="Background" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-60% to-slate-900"></div>
+          <div className="absolute inset-0 bg-slate-900/60"></div>
+        </div>
+      )}
+      <div className="relative z-10 min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-cosmic-900"
+           style={{ backgroundColor: backgroundUrl ? 'transparent' : undefined }}>
+        <NavBar />
+        <TooltipProvider>
         <main className="container mx-auto px-4 py-8 pt-16 md:pt-20 flex-grow">
           <div className="mb-8">
             <div className="flex justify-between items-center mb-2">
@@ -359,6 +358,7 @@ const Collections = () => {
           </Tabs>
         </main>
       </TooltipProvider>
+      </div>
     </div>
   );
 };
