@@ -2,13 +2,14 @@ import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { X, Image as ImageIcon, Upload, Loader2 } from 'lucide-react';
+import { X, Image as ImageIcon, Upload, Loader2, AtSign } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { loadImageFromFile, validateImageFile } from '@/utils/imageProcessingUtils';
+import { UserSearchDialog } from './UserSearchDialog';
 
 interface InstagramPostUploadProps {
   userId: string;
@@ -26,6 +27,7 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
   const [uploading, setUploading] = useState(false);
   const [transcodingProgress, setTranscodingProgress] = useState<number>(0);
   const [transcodingStatus, setTranscodingStatus] = useState<string>('');
+  const [userSearchOpen, setUserSearchOpen] = useState(false);
   const ffmpegRef = useRef<FFmpeg | null>(null);
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
 
@@ -219,6 +221,12 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
     setPreviewUrls(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleSelectUser = (user: { username: string | null }) => {
+    if (user.username) {
+      setDescription(prev => `${prev}@${user.username} `);
+    }
+  };
+
   const handleUpload = async () => {
     if (selectedFiles.length === 0) {
       toast.error('Please select at least one file');
@@ -392,16 +400,39 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
             animate={{ opacity: 1, y: 0 }}
             className="space-y-3"
           >
-            {/* Description */}
+            {/* Description with Mention Button */}
             <div>
-              <Textarea
-                placeholder="Write a caption..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="min-h-[100px] bg-cosmic-800/40 border-primary/20 focus:border-primary/40 resize-none"
-                disabled={uploading}
-              />
+              <div className="relative">
+                <Textarea
+                  placeholder="Write a caption... Use @ to mention users and # for hashtags"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="min-h-[100px] bg-cosmic-800/40 border-primary/20 focus:border-primary/40 resize-none pr-12"
+                  disabled={uploading}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setUserSearchOpen(true)}
+                  className="absolute bottom-2 right-2 h-8 w-8"
+                  disabled={uploading}
+                  title="Mention a user"
+                >
+                  <AtSign className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Tip: Use @username to mention users and #hashtag for topics
+              </p>
             </div>
+
+            {/* User Search Dialog */}
+            <UserSearchDialog
+              isOpen={userSearchOpen}
+              onClose={() => setUserSearchOpen(false)}
+              onSelectUser={handleSelectUser}
+            />
 
             {/* Post Button */}
             <Button
