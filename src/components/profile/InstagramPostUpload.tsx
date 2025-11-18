@@ -174,6 +174,16 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
           toast.info(`Processing ${file.name}...`);
           const { dataUrl } = await loadImageFromFile(file, { enableDownscale: true, maxResolution: 2048 });
           urls.push(dataUrl);
+          
+          // Convert TIFF/RAW to JPEG for Supabase compatibility
+          const response = await fetch(dataUrl);
+          const blob = await response.blob();
+          const jpegFile = new File(
+            [blob], 
+            file.name.replace(/\.(tiff?|cr2|nef|arw|dng|raw|orf|rw2|pef|raf)$/i, '.jpg'),
+            { type: 'image/jpeg' }
+          );
+          validFiles[validFiles.length - 1] = jpegFile; // Replace with JPEG version
         } catch (error) {
           console.error(`Failed to process ${file.name}:`, error);
           toast.error(`Failed to process ${file.name}`);
