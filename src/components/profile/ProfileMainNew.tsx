@@ -12,7 +12,7 @@ import { AdminBadge } from './AdminBadge';
 import { UserPostsManager } from './UserPostsManager';
 import { InstagramPostUpload } from './InstagramPostUpload';
 import ProfileTag from './ProfileTag';
-import { Settings, Wallet, Camera, X, ChevronDown, ChevronUp, Menu, History } from 'lucide-react';
+import { Settings, Wallet, Camera, X, ChevronDown, ChevronUp, Menu, History, MessageCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { motion } from 'framer-motion';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -202,6 +202,21 @@ const ProfileMainNew = ({
                     {displayUsername}
                   </h1>
                   <AdminBadge />
+                  
+                  {/* Message Button - When viewing other profiles */}
+                  {viewMode && userId && (
+                    <div className="absolute -right-2 -top-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => navigate(`/messages?user=${userId}`)}
+                        className="h-10 w-10 rounded-full bg-gradient-to-br from-cosmic-800/90 to-cosmic-900/90 backdrop-blur-xl border border-primary/30 hover:border-primary/50 hover:from-cosmic-700/90 hover:to-cosmic-800/90 transition-all duration-300 shadow-lg hover:shadow-primary/20"
+                        title={t('Message User', '发消息')}
+                      >
+                        <MessageCircle className="h-5 w-5 text-primary" />
+                      </Button>
+                    </div>
+                  )}
                   
                   {/* Hamburger Menu - Top Right of Username - Only show on own profile */}
                   {!viewMode && (
