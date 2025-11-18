@@ -2,6 +2,7 @@
 import { fetchLightPollutionData } from "@/lib/api";
 import { estimateBortleScaleByLocation, findClosestKnownLocation } from "@/utils/locationUtils";
 import { fuseBortleScales, gaussianProcessInterpolation, filterOutliers, BortleDataSource } from "@/utils/bortleCalculation/dataFusion";
+import { getSatelliteBasedBortleScale } from "@/services/satelliteData/satelliteAggregator";
 
 // Default timeout for light pollution API requests (in milliseconds)
 const DEFAULT_TIMEOUT = 5000;
@@ -52,7 +53,31 @@ export const getBortleScaleData = async (
   const dataSources: BortleDataSource[] = [];
   
   try {
-    // Source 1: Star count data (highest accuracy)
+    // Source 1: Real satellite data (VIIRS + World Atlas) - Highest scientific accuracy
+    try {
+      console.log("Fetching satellite data from VIIRS, World Atlas, and Dark Sky Preserves...");
+      const satelliteResult = await getSatelliteBasedBortleScale(latitude, longitude);
+      
+      if (satelliteResult && satelliteResult.bortleScale) {
+        console.log(`Satellite data available: ${satelliteResult.bortleScale} (quality: ${satelliteResult.dataQuality}, sources: ${satelliteResult.sources.join(', ')})`);
+        
+        dataSources.push({
+          bortleScale: satelliteResult.bortleScale,
+          confidence: satelliteResult.confidence,
+          source: 'satellite_composite',
+          timestamp: Date.now(),
+          metadata: {
+            ...satelliteResult.metadata,
+            dataQuality: satelliteResult.dataQuality,
+            satelliteSources: satelliteResult.sources
+          }
+        });
+      }
+    } catch (error) {
+      console.warn("Satellite data unavailable:", error);
+    }
+    
+    // Source 2: Star count data (high accuracy for user photos)
     try {
       const { getStarCountBortleScale } = await import('@/utils/starAnalysis');
       const starBortleScale = await getStarCountBortleScale(latitude, longitude);
@@ -70,7 +95,7 @@ export const getBortleScaleData = async (
       console.warn("Star count analysis unavailable:", error);
     }
     
-    // Source 2: Terrain-corrected data
+    // Source 3: Terrain-corrected data
     try {
       const { getTerrainCorrectedBortleScale } = await import('@/utils/terrainCorrection');
       const terrainCorrectedScale = await getTerrainCorrectedBortleScale(latitude, longitude, locationName);
@@ -88,7 +113,7 @@ export const getBortleScaleData = async (
       console.warn("Terrain correction unavailable:", error);
     }
     
-    // Source 3: Database lookup
+    // Source 4: Database lookup
     const { findClosestLocation } = await import("@/data/locationDatabase");
     const closestLocation = findClosestLocation(latitude, longitude);
     
@@ -111,7 +136,7 @@ export const getBortleScaleData = async (
   }
   
   try {
-    // Source 4: API light pollution data
+    // Source 5: Legacy API light pollution data
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
     
@@ -139,7 +164,7 @@ export const getBortleScaleData = async (
     console.error("Error fetching light pollution data:", error);
   }
   
-  // Source 5: Known locations utility
+  // Source 6: Known locations utility
   try {
     const closestKnownLocation = findClosestKnownLocation(latitude, longitude);
     if (closestKnownLocation && 
