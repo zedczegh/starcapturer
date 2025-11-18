@@ -6,6 +6,7 @@ import { X, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { loadImageFromFile } from '@/utils/imageProcessingUtils';
 
 interface EditPostDialogProps {
   open: boolean;
@@ -30,7 +31,7 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
   const [newPreviewUrls, setNewPreviewUrls] = useState<string[]>([]);
   const [updating, setUpdating] = useState(false);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
@@ -38,14 +39,39 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
     const validFiles: File[] = [];
     const urls: string[] = [];
 
-    Array.from(files).forEach(file => {
+    const fileArray = Array.from(files);
+    
+    for (const file of fileArray) {
       if (file.size > maxSize) {
         toast.error(`File "${file.name}" exceeds 300MB limit`);
-        return;
+        continue;
       }
+      
       validFiles.push(file);
-      urls.push(URL.createObjectURL(file));
-    });
+      
+      // Handle TIFF/RAW files specially
+      const fileName = file.name.toLowerCase();
+      const isTiffOrRaw = fileName.endsWith('.tiff') || fileName.endsWith('.tif') || 
+                          fileName.endsWith('.cr2') || fileName.endsWith('.nef') || 
+                          fileName.endsWith('.arw') || fileName.endsWith('.dng') ||
+                          fileName.endsWith('.raw') || fileName.endsWith('.orf') ||
+                          fileName.endsWith('.rw2') || fileName.endsWith('.pef') ||
+                          fileName.endsWith('.raf');
+      
+      if (isTiffOrRaw) {
+        try {
+          toast.info(`Processing ${file.name}...`);
+          const { dataUrl } = await loadImageFromFile(file, { enableDownscale: true, maxResolution: 2048 });
+          urls.push(dataUrl);
+        } catch (error) {
+          console.error(`Failed to process ${file.name}:`, error);
+          toast.error(`Failed to process ${file.name}`);
+          validFiles.pop(); // Remove the file we just added
+        }
+      } else {
+        urls.push(URL.createObjectURL(file));
+      }
+    }
 
     setNewFiles(prev => [...prev, ...validFiles]);
     setNewPreviewUrls(prev => [...prev, ...urls]);
