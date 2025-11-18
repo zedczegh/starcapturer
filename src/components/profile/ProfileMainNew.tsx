@@ -192,7 +192,7 @@ const ProfileMainNew = ({
             <Card className="bg-cosmic-900/10 backdrop-blur-xl border border-primary/10 p-6 sm:p-8 relative">
               {/* Settings & Wallet Icons - Below cover photo - Only show on own profile */}
               {!viewMode && (
-                <div className="absolute top-4 right-4 flex gap-2">
+                <div className="absolute top-4 right-4 flex gap-2 z-20">
                   <Button
                     variant="ghost"
                     size="icon"
