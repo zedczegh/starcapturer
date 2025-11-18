@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useMessaging } from '@/hooks/useMessaging';
 import { ConversationPartner } from './useConversations';
 import { useToast } from '@/hooks/use-toast';
@@ -7,6 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 export const useMessageConversation = () => {
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { t } = useLanguage();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
@@ -46,9 +47,9 @@ export const useMessageConversation = () => {
     fetchConversations();
   }, [fetchConversations]);
   
-  // Handle incoming selectedUserId from navigation state
+  // Handle incoming selectedUserId from navigation state or URL query params
   useEffect(() => {
-    const selectedUserId = location.state?.selectedUserId;
+    const selectedUserId = location.state?.selectedUserId || searchParams.get('user');
     const timestamp = location.state?.timestamp || Date.now();
     
     // Skip if no selected user or it's the same as the previous one
@@ -91,7 +92,7 @@ export const useMessageConversation = () => {
         handleSelectConversation(placeholderConversation);
       }
     }
-  }, [location.state, localConversations, fetchConversations]);
+  }, [location.state, searchParams, localConversations, fetchConversations]);
   
   const handleSelectConversation = useCallback((conversation: ConversationPartner) => {
     setActiveConversation(conversation);

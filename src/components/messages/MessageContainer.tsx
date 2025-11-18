@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card } from "@/components/ui/card";
 import ConversationList from "@/components/messages/ConversationList";
@@ -46,22 +45,14 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
   const messageListRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
 
-  // Using CSS visibility instead of conditional rendering to prevent layout shifts
   const conversationListVisible = !activeConversation || !isMobile;
   const messagesVisible = activeConversation || !isMobile;
-
-  // Determine if we should show a loading skeleton
   const showMessageSkeleton = loading && activeConversation && messages.length === 0;
 
   return (
     <div className={`flex flex-col md:flex-row gap-4 ${isMobile ? 'h-[calc(100vh-5rem)]' : 'h-[80vh]'} scrollbar-hide`}>
       <Card 
-        className={`md:flex md:w-1/3 glassmorphism overflow-hidden flex-col
-          border border-cosmic-800/30 shadow-xl backdrop-blur-lg
-          ${isMobile ? 
-            (conversationListVisible ? 'flex h-full max-h-[calc(100vh-5rem)]' : 'hidden') : 
-            'flex'}
-        `}
+        className={`md:flex md:w-1/3 overflow-hidden flex-col bg-cosmic-800/40 backdrop-blur-xl border border-primary/10 shadow-xl ${isMobile ? (conversationListVisible ? 'flex h-full max-h-[calc(100vh-5rem)]' : 'hidden') : 'flex'}`}
       >
         <ConversationList 
           conversations={conversations}
@@ -76,12 +67,7 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
       </Card>
       
       <Card 
-        className={`md:flex md:w-2/3 glassmorphism overflow-hidden flex flex-col
-          border border-cosmic-800/30 shadow-xl backdrop-blur-lg relative h-full
-          ${isMobile ? 
-            (messagesVisible ? 'flex h-full max-h-[calc(100vh-5rem)]' : 'hidden') : 
-            'flex'}
-        `}
+        className={`md:flex md:w-2/3 overflow-hidden flex flex-col bg-cosmic-800/40 backdrop-blur-xl border border-primary/10 shadow-xl relative h-full ${isMobile ? (messagesVisible ? 'flex h-full max-h-[calc(100vh-5rem)]' : 'hidden') : 'flex'}`}
         ref={messageListRef}
         data-active-conversation-id={activeConversation?.id || ''}
       >

@@ -209,7 +209,12 @@ const ProfileMainNew = ({
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => navigate(`/messages?user=${userId}`)}
+                        onClick={() => navigate('/messages', { 
+                          state: { 
+                            selectedUserId: userId,
+                            timestamp: Date.now()
+                          }
+                        })}
                         className="h-10 w-10 rounded-full bg-gradient-to-br from-cosmic-800/90 to-cosmic-900/90 backdrop-blur-xl border border-primary/30 hover:border-primary/50 hover:from-cosmic-700/90 hover:to-cosmic-800/90 transition-all duration-300 shadow-lg hover:shadow-primary/20"
                         title={t('Message User', '发消息')}
                       >
