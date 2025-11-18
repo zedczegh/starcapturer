@@ -1,6 +1,7 @@
 
 import { fetchLightPollutionData } from "@/lib/api";
 import { estimateBortleScaleByLocation, findClosestKnownLocation } from "@/utils/locationUtils";
+import { fuseBortleScales, gaussianProcessInterpolation, filterOutliers, BortleDataSource } from "@/utils/bortleCalculation/dataFusion";
 
 // Default timeout for light pollution API requests (in milliseconds)
 const DEFAULT_TIMEOUT = 5000;
@@ -47,75 +48,70 @@ export const getBortleScaleData = async (
     return cachedBortleData.bortleScale;
   }
   
+  // Collect data from multiple sources
+  const dataSources: BortleDataSource[] = [];
+  
   try {
-    // Check for star count data first (highest accuracy)
+    // Source 1: Star count data (highest accuracy)
     try {
       const { getStarCountBortleScale } = await import('@/utils/starAnalysis');
       const starBortleScale = await getStarCountBortleScale(latitude, longitude);
       
       if (starBortleScale !== null) {
-        console.log("Using star count data for Bortle scale:", starBortleScale);
-        
-        // Cache the data with source information
-        setCachedData(bortleCacheKey, { 
-          bortleScale: starBortleScale, 
+        console.log("Star count data available:", starBortleScale);
+        dataSources.push({
+          bortleScale: starBortleScale,
+          confidence: 0.95,
           source: 'star_count',
-          confidence: 'high'
+          timestamp: Date.now()
         });
-        
-        return starBortleScale;
       }
     } catch (error) {
       console.warn("Star count analysis unavailable:", error);
     }
     
-    // Next try terrain-corrected data for enhanced accuracy
+    // Source 2: Terrain-corrected data
     try {
       const { getTerrainCorrectedBortleScale } = await import('@/utils/terrainCorrection');
       const terrainCorrectedScale = await getTerrainCorrectedBortleScale(latitude, longitude, locationName);
       
       if (terrainCorrectedScale !== null) {
-        console.log("Using terrain-corrected Bortle scale:", terrainCorrectedScale);
-        
-        // Cache the data with source information
-        setCachedData(bortleCacheKey, { 
-          bortleScale: terrainCorrectedScale, 
+        console.log("Terrain-corrected data available:", terrainCorrectedScale);
+        dataSources.push({
+          bortleScale: terrainCorrectedScale,
+          confidence: 0.90,
           source: 'terrain_corrected',
-          confidence: 'high'
+          timestamp: Date.now()
         });
-        
-        return terrainCorrectedScale;
       }
     } catch (error) {
       console.warn("Terrain correction unavailable:", error);
     }
     
-    // Try direct database lookup (still high accuracy)
+    // Source 3: Database lookup
     const { findClosestLocation } = await import("@/data/locationDatabase");
     const closestLocation = findClosestLocation(latitude, longitude);
     
     if (closestLocation && typeof closestLocation.bortleScale === 'number' && 
         closestLocation.bortleScale >= 1 && closestLocation.bortleScale <= 9 && 
         closestLocation.distance < 100) {
-      console.log("Using database Bortle scale:", closestLocation.bortleScale, "for", closestLocation.name);
+      console.log("Database data available:", closestLocation.bortleScale);
       
-      // Cache the valid Bortle scale data
-      setCachedData(bortleCacheKey, { 
-        bortleScale: closestLocation.bortleScale, 
+      // Confidence decreases with distance
+      const distanceConfidence = Math.max(0.5, 1 - (closestLocation.distance / 100));
+      dataSources.push({
+        bortleScale: closestLocation.bortleScale,
+        confidence: 0.85 * distanceConfidence,
         source: 'database',
-        name: closestLocation.name,
-        distance: closestLocation.distance,
-        confidence: 'high'
+        timestamp: Date.now()
       });
-      
-      return closestLocation.bortleScale;
     }
   } catch (error) {
     console.error("Error using local database for Bortle scale:", error);
   }
   
   try {
-    // Attempt to fetch Bortle scale from our API implementation with timeout
+    // Source 4: API light pollution data
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
     
@@ -131,22 +127,19 @@ export const getBortleScaleData = async (
         lightPollutionData.bortleScale >= 1 && 
         lightPollutionData.bortleScale <= 9) {
       
-      console.log("Using API Bortle scale:", lightPollutionData.bortleScale);
-      
-      // Cache the valid Bortle scale data
-      setCachedData(bortleCacheKey, { 
+      console.log("API data available:", lightPollutionData.bortleScale);
+      dataSources.push({
         bortleScale: lightPollutionData.bortleScale,
+        confidence: 0.70,
         source: 'api',
-        confidence: 'medium'
+        timestamp: Date.now()
       });
-      
-      return lightPollutionData.bortleScale;
     }
   } catch (error) {
     console.error("Error fetching light pollution data:", error);
   }
   
-  // If still no valid data, use our backup utility
+  // Source 5: Known locations utility
   try {
     const closestKnownLocation = findClosestKnownLocation(latitude, longitude);
     if (closestKnownLocation && 
@@ -155,43 +148,69 @@ export const getBortleScaleData = async (
         closestKnownLocation.bortleScale <= 9 && 
         closestKnownLocation.distance < 100) {
       
-      console.log("Using utility Bortle scale:", closestKnownLocation.bortleScale);
-      
-      setCachedData(bortleCacheKey, { 
+      console.log("Known location data available:", closestKnownLocation.bortleScale);
+      const distanceConfidence = Math.max(0.4, 1 - (closestKnownLocation.distance / 100));
+      dataSources.push({
         bortleScale: closestKnownLocation.bortleScale,
+        confidence: 0.75 * distanceConfidence,
         source: 'utility',
-        distance: closestKnownLocation.distance,
-        confidence: 'medium'
+        timestamp: Date.now()
       });
-      
-      return closestKnownLocation.bortleScale;
     }
   } catch (error) {
     console.error("Error using fallback utility for Bortle scale:", error);
   }
   
-  // Last resort: Use location-based estimation but only if we have a location name
-  // and make it clear this is an estimate
+  // Fuse multiple data sources using advanced algorithm
+  if (dataSources.length > 0) {
+    console.log(`Fusing ${dataSources.length} data sources:`, dataSources.map(s => `${s.source}(${s.bortleScale})`).join(', '));
+    
+    // Filter outliers if we have multiple sources
+    const filteredSources = dataSources.length >= 3 
+      ? filterOutliers(dataSources)
+      : dataSources;
+    
+    const fusedResult = fuseBortleScales(filteredSources, {
+      useTemporalDecay: true,
+      minConfidence: 0.3
+    });
+    
+    if (fusedResult) {
+      console.log(`Fused Bortle scale: ${fusedResult.bortleScale} (confidence: ${fusedResult.confidence.toFixed(2)})`);
+      console.log(`Sources used: ${fusedResult.sources.join(', ')}`);
+      
+      setCachedData(bortleCacheKey, { 
+        bortleScale: fusedResult.bortleScale,
+        confidence: fusedResult.confidence,
+        sources: fusedResult.sources,
+        source: 'fused',
+        timestamp: Date.now()
+      });
+      
+      return fusedResult.bortleScale;
+    }
+  }
+  
+  // Last resort: Use location-based estimation
   if (locationName && locationName.length > 3) {
     try {
       const estimatedScale = estimateBortleScaleByLocation(locationName, latitude, longitude);
       
-      // Only use estimation if it seems valid
       if (estimatedScale >= 1 && estimatedScale <= 9) {
         console.log("Using estimated Bortle scale:", estimatedScale);
         
-        // Cache the estimated data
         setCachedData(bortleCacheKey, { 
           bortleScale: estimatedScale, 
           estimated: true,
           source: 'estimation',
-          confidence: 'low'
+          confidence: 0.50,
+          timestamp: Date.now()
         });
         
         if (!displayOnly && setStatusMessage) {
           setStatusMessage(language === 'en'
-            ? "Unable to get accurate light pollution data. Using estimate based on location name."
-            : "无法获取准确的光污染数据。使用基于位置名称的估算。");
+            ? "Using estimate based on location name. Upload a night sky photo for better accuracy."
+            : "使用基于位置名称的估算。上传夜空照片以获得更高的准确性。");
         }
         
         return estimatedScale;
@@ -204,18 +223,17 @@ export const getBortleScaleData = async (
   // If we get here, we couldn't determine the Bortle scale
   if (!displayOnly && setStatusMessage) {
     setStatusMessage(language === 'en'
-      ? "Unable to determine light pollution level for this location."
-      : "无法确定此位置的光污染水平。");
+      ? "Unable to determine light pollution level. Try uploading a night sky photo."
+      : "无法确定光污染水平。请尝试上传夜空照片。");
   }
   
-  // Store the fact that we don't know the Bortle scale
   setCachedData(bortleCacheKey, { 
     bortleScale: null, 
     unknown: true,
     source: 'unknown',
-    confidence: 'none'
+    confidence: 0,
+    timestamp: Date.now()
   });
   
-  // Return null to indicate unknown Bortle scale
   return null;
 };
