@@ -12,7 +12,6 @@ import { ExternalLink } from "lucide-react";
 import { getDisplaySiqs } from '@/utils/unifiedSiqsDisplay';
 import UserAvatarDisplay from "@/components/photoPoints/cards/UserAvatarDisplay";
 import { getProgressColor } from "@/components/siqs/utils/progressColor";
-import { getBortleColor } from "@/utils/bortleScaleColors";
 
 function createCommunityMarkerIcon(isHovered: boolean, isMobile: boolean, markerColor: string): L.DivIcon {
   const size = isMobile ? (isHovered ? 28 : 20) : (isHovered ? 32 : 26);
@@ -148,15 +147,13 @@ const CommunityMapMarker: React.FC<CommunityMapMarkerProps> = ({
   const spotSiqs = (spot as any).realTimeSiqs ?? getDisplaySiqs(spot.siqs);
   const displayScore = stabilizedScore ?? realTimeSiqs ?? spotSiqs ?? 0;
   
-  // Calculate marker color: prioritize Bortle scale, then SIQS score
-  // Use Bortle scale color if available, otherwise use SIQS color
-  const markerColor = spot.bortleScale
-    ? getBortleColor(spot.bortleScale)
-    : displayScore > 0
-      ? getProgressColor(displayScore) 
-      : (loadingSiqs && !stabilizedScore) 
-        ? 'rgba(100,116,139,0.7)' // Neutral gray during loading
-        : 'rgba(30,174,219,0.93)'; // Default cyan if no score
+  // Calculate marker color based on SIQS score
+  // Use a more neutral color during loading to avoid flickering
+  const markerColor = displayScore > 0
+    ? getProgressColor(displayScore) 
+    : (loadingSiqs && !stabilizedScore) 
+      ? 'rgba(100,116,139,0.7)' // Neutral gray during loading
+      : 'rgba(30,174,219,0.93)'; // Default cyan if no score
   
   // Create icon with dynamic color
   const icon = createCommunityMarkerIcon(isHovered, isMobile, markerColor);
