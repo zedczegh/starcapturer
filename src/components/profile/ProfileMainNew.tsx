@@ -67,9 +67,9 @@ const ProfileMainNew = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-cosmic-950 to-slate-900">
-      {/* Enhanced Cover Photo with Curved Bottom Edge */}
-      <div className="relative h-[250px] sm:h-[300px] md:h-[400px] overflow-visible group">
-        <div className="absolute inset-0 overflow-hidden rounded-b-[50%_80px]">
+      {/* Enhanced Cover Photo */}
+      <div className="relative h-[250px] sm:h-[300px] md:h-[400px] overflow-hidden group">
+        <div className="absolute inset-0 overflow-hidden">
         {backgroundUrl ? (
           <>
             <img 
@@ -169,26 +169,30 @@ const ProfileMainNew = ({
         </div>
       </div>
 
-      <div className="container mx-auto px-3 sm:px-4 md:px-6 max-w-7xl">
-        {/* Avatar positioned in the curve */}
-        <div className="relative -mt-16 sm:-mt-20 mb-4 flex justify-center">
-          <div className="relative">
-            <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse"></div>
+      {/* Content section with curved top edge that cuts into background */}
+      <div className="relative -mt-20 sm:-mt-24 md:-mt-32">
+        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-slate-950 via-cosmic-950 to-slate-900 rounded-t-[50%_80px]"></div>
+        
+        <div className="container mx-auto px-3 sm:px-4 md:px-6 max-w-7xl relative">
+          {/* Avatar positioned in the curve cutout */}
+          <div className="relative pt-8 pb-4 flex justify-center">
             <div className="relative">
-              <ProfileAvatar 
-                avatarUrl={avatarUrl}
-                onAvatarChange={onAvatarChange}
-                onRemoveAvatar={onRemoveAvatar}
-                uploadingAvatar={uploadingAvatar}
-                avatarUploadProgress={avatarUploadProgress}
-              />
+              <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse"></div>
+              <div className="relative">
+                <ProfileAvatar 
+                  avatarUrl={avatarUrl}
+                  onAvatarChange={onAvatarChange}
+                  onRemoveAvatar={onRemoveAvatar}
+                  uploadingAvatar={uploadingAvatar}
+                  avatarUploadProgress={avatarUploadProgress}
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Enhanced Profile Header Section */}
-        <div className="relative mb-6 sm:mb-8">
-          <div className="max-w-4xl mx-auto">
+          {/* Enhanced Profile Header Section */}
+          <div className="relative mb-6 sm:mb-8">
+            <div className="max-w-4xl mx-auto">
             <Card className="bg-cosmic-900/10 backdrop-blur-xl border border-primary/10 p-6 sm:p-8 relative">
               {/* Settings & Wallet Icons - Below cover photo - Only show on own profile */}
               {!viewMode && (
@@ -281,11 +285,11 @@ const ProfileMainNew = ({
                   )}
                 </div>
             </Card>
+            </div>
           </div>
-        </div>
 
-        {/* Content Area - Instagram-like Layout */}
-        <div className="max-w-4xl mx-auto pb-12">
+          {/* Content Area - Instagram-like Layout */}
+          <div className="max-w-4xl mx-auto pb-12">
           {/* Posts Grid */}
           <UserPostsManager 
             userId={userId} 
@@ -294,6 +298,7 @@ const ProfileMainNew = ({
             key={postsRefreshKey}
             onCreatePost={() => setUploadDialogOpen(true)}
           />
+          </div>
         </div>
       </div>
 
