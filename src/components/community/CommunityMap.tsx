@@ -32,9 +32,14 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
   onLocationUpdate
 }) => {
   const { position: userPosition, updatePosition } = useUserGeolocation();
-  const [lightPollutionOpacity, setLightPollutionOpacity] = useState(0.6);
+  const [lightPollutionOpacity, setLightPollutionOpacity] = useState(0.7);
   const [darkSkyLocations, setDarkSkyLocations] = useState<any[]>([]);
   const [combinedMode, setCombinedMode] = useState(false);
+
+  // Log when component mounts
+  useEffect(() => {
+    console.log('CommunityMap mounted with light pollution opacity:', lightPollutionOpacity);
+  }, []);
 
   useEffect(() => {
     const fetchDarkSkyLocations = async () => {
@@ -74,12 +79,12 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
           maxZoom={19}
         />
         
-        {/* Light Pollution Overlay Layer - VIIRS 2022 (Latest Available) */}
+        {/* Light Pollution Overlay - djlorenz.github.io (Working Source) */}
         <TileLayer
-          url="https://tiles.lightpollutionmap.info/VIIRS_2022/{z}/{x}/{y}.png"
+          url="https://djlorenz.github.io/astronomy/lp2022/overlay/tiles/{z}/{x}/{y}.png"
           opacity={lightPollutionOpacity}
           maxZoom={19}
-          attribution='Light pollution data © <a href="https://www.lightpollutionmap.info">lightpollutionmap.info</a> VIIRS 2022'
+          attribution='Light pollution © David Lorenz'
         />
 
         {/* Dark Sky Heat Map Layer - Only in Combined Mode */}
