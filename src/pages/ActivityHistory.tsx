@@ -26,7 +26,7 @@ const ActivityHistory = () => {
         .from('post_interactions')
         .select(`
           *,
-          user_posts(id, description, file_path, user_id)
+          user_posts(id, description, file_path, user_id, profiles!user_posts_user_id_fkey(username, avatar_url))
         `)
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false })
@@ -46,7 +46,7 @@ const ActivityHistory = () => {
         .from('post_comments')
         .select(`
           *,
-          user_posts(id, description, file_path, user_id)
+          user_posts(id, description, file_path, user_id, profiles!user_posts_user_id_fkey(username, avatar_url))
         `)
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false })
@@ -66,7 +66,7 @@ const ActivityHistory = () => {
         .from('astro_spot_comments')
         .select(`
           *,
-          user_astro_spots(id, name, user_id)
+          user_astro_spots(id, name, user_id, profiles(username, avatar_url))
         `)
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false })
@@ -96,7 +96,7 @@ const ActivityHistory = () => {
         .from('post_interactions')
         .select(`
           *,
-          user_posts(id, description, file_path, user_id),
+          user_posts(id, description, file_path, user_id, profiles!user_posts_user_id_fkey(username, avatar_url)),
           profiles!post_interactions_user_id_fkey(username, avatar_url)
         `)
         .in('post_id', postIds)
@@ -127,7 +127,7 @@ const ActivityHistory = () => {
         .from('post_comments')
         .select(`
           *,
-          user_posts(id, description, file_path, user_id),
+          user_posts(id, description, file_path, user_id, profiles!user_posts_user_id_fkey(username, avatar_url)),
           profiles!post_comments_user_id_fkey(username, avatar_url)
         `)
         .in('post_id', postIds)
@@ -158,8 +158,8 @@ const ActivityHistory = () => {
         .from('astro_spot_comments')
         .select(`
           *,
-          user_astro_spots(id, name, user_id),
-          profiles(username, avatar_url)
+          user_astro_spots(id, name, user_id, profiles(username, avatar_url)),
+          profiles!astro_spot_comments_user_id_fkey(username, avatar_url)
         `)
         .in('spot_id', spotIds)
         .neq('user_id', user?.id)
@@ -172,18 +172,64 @@ const ActivityHistory = () => {
     enabled: !!user?.id
   });
 
+  const handleNavigateToContent = (item: any, type: string) => {
+    if (type === 'post-interaction' || type === 'post-comment') {
+      const postId = item.post_id || item.user_posts?.id;
+      const postOwnerId = isMyActivity ? item.user_posts?.user_id : user?.id;
+      
+      if (postOwnerId && postId) {
+        // Navigate to the user's profile with the post ID as hash
+        navigate(`/user/${postOwnerId}#post-${postId}`);
+        
+        // Scroll to the post after navigation
+        setTimeout(() => {
+          const postElement = document.getElementById(`post-${postId}`);
+          if (postElement) {
+            postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 500);
+      }
+    } else if (type === 'spot-comment') {
+      const spotId = item.spot_id || item.user_astro_spots?.id;
+      if (spotId) {
+        navigate(`/astro-spot/${spotId}#comments`);
+      }
+    }
+  };
+
+  const isMyActivity = activeTab === 'my-activity';
+
   const renderActivityItem = (item: any, type: string) => {
-    const isMyActivity = activeTab === 'my-activity';
+    // Determine which avatar and username to show
+    let displayAvatar = null;
+    let displayUsername = '';
+    
+    if (isMyActivity) {
+      // Show the post/spot owner's avatar and username
+      if (type === 'spot-comment') {
+        displayAvatar = item.user_astro_spots?.profiles?.avatar_url;
+        displayUsername = item.user_astro_spots?.profiles?.username || 'Unknown';
+      } else {
+        displayAvatar = item.user_posts?.profiles?.avatar_url;
+        displayUsername = item.user_posts?.profiles?.username || 'Unknown';
+      }
+    } else {
+      // Show the interactor's avatar and username
+      displayAvatar = item.profiles?.avatar_url;
+      displayUsername = item.profiles?.username || 'Someone';
+    }
     
     return (
-      <Card key={item.id} className="p-4 mb-3 bg-cosmic-900/20 backdrop-blur-xl border-primary/10 hover:border-primary/30 transition-colors">
+      <Card 
+        key={item.id} 
+        className="p-4 mb-3 bg-cosmic-900/20 backdrop-blur-xl border-primary/10 hover:border-primary/30 transition-all cursor-pointer"
+        onClick={() => handleNavigateToContent(item, type)}
+      >
         <div className="flex items-start gap-3">
-          {!isMyActivity && (
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={item.profiles?.avatar_url} />
-              <AvatarFallback>{item.profiles?.username?.[0] || '?'}</AvatarFallback>
-            </Avatar>
-          )}
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={displayAvatar} />
+            <AvatarFallback>{displayUsername?.[0]?.toUpperCase() || '?'}</AvatarFallback>
+          </Avatar>
           
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
@@ -192,21 +238,53 @@ const ActivityHistory = () => {
               {type === 'spot-comment' && <MapPin className="h-4 w-4 text-green-400" />}
               
               <span className="text-sm text-cosmic-300">
-                {!isMyActivity && <span className="font-medium text-foreground">{item.profiles?.username || 'Someone'} </span>}
-                {type === 'post-interaction' && (
+                {isMyActivity ? (
                   <>
-                    {item.interaction_type === 'like' && t('liked your post', '点赞了你的帖子')}
-                    {item.interaction_type === 'heart' && t('loved your post', '喜欢了你的帖子')}
-                    {item.interaction_type === 'collect' && t('collected your post', '收藏了你的帖子')}
+                    {type === 'post-interaction' && (
+                      <>
+                        {item.interaction_type === 'like' && t('You liked a post by', '你点赞了')}
+                        {item.interaction_type === 'heart' && t('You loved a post by', '你喜欢了')}
+                        {item.interaction_type === 'collect' && t('You collected a post by', '你收藏了')}
+                        {' '}
+                        <span className="font-medium text-foreground">{displayUsername}</span>
+                      </>
+                    )}
+                    {type === 'post-comment' && (
+                      <>
+                        {t('You commented on', '你评论了')}
+                        {' '}
+                        <span className="font-medium text-foreground">{displayUsername}</span>
+                        {t("'s post", '的帖子')}
+                      </>
+                    )}
+                    {type === 'spot-comment' && (
+                      <>
+                        {t('You commented on', '你评论了')}
+                        {' '}
+                        <span className="font-medium text-foreground">{displayUsername}</span>
+                        {t("'s astro spot", '的观星点')}
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <span className="font-medium text-foreground">{displayUsername} </span>
+                    {type === 'post-interaction' && (
+                      <>
+                        {item.interaction_type === 'like' && t('liked your post', '点赞了你的帖子')}
+                        {item.interaction_type === 'heart' && t('loved your post', '喜欢了你的帖子')}
+                        {item.interaction_type === 'collect' && t('collected your post', '收藏了你的帖子')}
+                      </>
+                    )}
+                    {type === 'post-comment' && t('commented on your post', '评论了你的帖子')}
+                    {type === 'spot-comment' && t('commented on your astro spot', '评论了你的观星点')}
                   </>
                 )}
-                {type === 'post-comment' && t('commented on your post', '评论了你的帖子')}
-                {type === 'spot-comment' && t('commented on your astro spot', '评论了你的观星点')}
               </span>
             </div>
             
             {item.content && (
-              <p className="text-sm text-cosmic-200 mb-2">{item.content}</p>
+              <p className="text-sm text-cosmic-200 mb-2 line-clamp-2">{item.content}</p>
             )}
             
             <p className="text-xs text-cosmic-400">
