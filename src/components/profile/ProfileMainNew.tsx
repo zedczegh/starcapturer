@@ -76,9 +76,8 @@ const ProfileMainNew = ({
               alt="Profile Background" 
               className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105 duration-700"
             />
-            {/* Enhanced gradient with more bleed at bottom */}
-            <div className="absolute inset-0 bg-gradient-to-t from-cosmic-950 via-cosmic-950/80 via-50% to-transparent"></div>
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-60% to-cosmic-950"></div>
+            {/* Gradient from bottom to preserve image visibility */}
+            <div className="absolute inset-0 bg-gradient-to-t from-cosmic-950 via-cosmic-950/50 via-30% to-transparent"></div>
             
             {/* Upload Controls - Only show on own profile */}
             {isOwnProfile && !viewMode && (

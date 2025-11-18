@@ -297,8 +297,7 @@ const MyReservations = () => {
       {backgroundUrl && (
         <div className="fixed inset-0 z-0">
           <img src={backgroundUrl} alt="Background" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-60% to-slate-900"></div>
-          <div className="absolute inset-0 bg-slate-900/60"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/30 via-20% to-transparent"></div>
         </div>
       )}
       <div className="relative z-10 min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-cosmic-900"
