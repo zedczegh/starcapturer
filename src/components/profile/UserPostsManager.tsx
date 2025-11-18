@@ -13,6 +13,7 @@ import { EditPostDialog } from './EditPostDialog';
 import { PostImageCarousel } from './PostImageCarousel';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { formatDistanceToNow } from 'date-fns';
+import { useLocation } from 'react-router-dom';
 
 interface UserPost {
   id: string;
@@ -43,16 +44,34 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
   onCreatePost
 }) => {
   const { t } = useLanguage();
+  const location = useLocation();
   const [posts, setPosts] = useState<UserPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingPost, setEditingPost] = useState<UserPost | null>(null);
   const [username, setUsername] = useState<string>('user');
   const [openComments, setOpenComments] = useState<Set<string>>(new Set());
+  const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
 
   useEffect(() => {
     loadPosts();
     loadUsername();
   }, [userId]);
+
+  // Handle hash-based highlighting
+  useEffect(() => {
+    const hash = location.hash;
+    if (hash.startsWith('#post-')) {
+      const postId = hash.replace('#post-', '');
+      setHighlightedPostId(postId);
+      
+      // Remove highlight after 3 seconds
+      const timer = setTimeout(() => {
+        setHighlightedPostId(null);
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [location.hash]);
 
   const loadUsername = async () => {
     try {
@@ -207,7 +226,11 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ delay: index * 0.05 }}
-                className="bg-cosmic-800/40 backdrop-blur-xl border border-primary/10 rounded-lg overflow-hidden group"
+                className={`bg-cosmic-800/40 backdrop-blur-xl border rounded-lg overflow-hidden group transition-all duration-500 ${
+                  highlightedPostId === post.id 
+                    ? 'border-orange-500/80 shadow-[0_0_30px_rgba(249,115,22,0.5)] ring-2 ring-orange-500/50' 
+                    : 'border-primary/10'
+                }`}
               >
                 {/* Post Images Carousel */}
                 <div className="relative">

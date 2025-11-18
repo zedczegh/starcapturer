@@ -10,6 +10,7 @@ interface ProfileAvatarProps {
   onRemoveAvatar: () => void;
   uploadingAvatar: boolean;
   avatarUploadProgress?: number;
+  viewMode?: boolean;
 }
 
 const ProfileAvatar = ({ 
@@ -17,7 +18,8 @@ const ProfileAvatar = ({
   onAvatarChange, 
   onRemoveAvatar,
   uploadingAvatar,
-  avatarUploadProgress = 0
+  avatarUploadProgress = 0,
+  viewMode = false
 }: ProfileAvatarProps) => {
   const { t } = useLanguage();
 
@@ -33,33 +35,37 @@ const ProfileAvatar = ({
                 className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-700"
               />
             </div>
-            <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <button 
-                onClick={onRemoveAvatar} 
-                className="text-white p-1 rounded-full hover:text-red-400 transition-colors"
-                type="button"
-                aria-label={t("Remove avatar", "删除头像")}
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
+            {!viewMode && (
+              <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <button 
+                  onClick={onRemoveAvatar} 
+                  className="text-white p-1 rounded-full hover:text-red-400 transition-colors"
+                  type="button"
+                  aria-label={t("Remove avatar", "删除头像")}
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            )}
           </div>
         ) : (
-          <label htmlFor="avatar-upload" className="w-full h-full rounded-full bg-gradient-to-br from-cosmic-700/60 to-cosmic-900/90 flex items-center justify-center shadow-2xl ring-4 ring-cosmic-800/50 cursor-pointer hover:ring-primary/30 transition-all group">
+          <label htmlFor="avatar-upload" className={`w-full h-full rounded-full bg-gradient-to-br from-cosmic-700/60 to-cosmic-900/90 flex items-center justify-center shadow-2xl ring-4 ring-cosmic-800/50 ${!viewMode ? 'cursor-pointer hover:ring-primary/30 transition-all' : ''} group`}>
             <div className="absolute inset-0 flex items-center justify-center">
-              <Camera className="w-12 h-12 text-cosmic-400 group-hover:text-primary transition-colors" />
+              <Camera className={`w-12 h-12 text-cosmic-400 ${!viewMode ? 'group-hover:text-primary transition-colors' : ''}`} />
             </div>
-            <Input
-              id="avatar-upload"
-              type="file"
-              accept="image/*"
-              onChange={onAvatarChange}
-              className="hidden"
-            />
+            {!viewMode && (
+              <Input
+                id="avatar-upload"
+                type="file"
+                accept="image/*"
+                onChange={onAvatarChange}
+                className="hidden"
+              />
+            )}
           </label>
         )}
       </div>
-      {uploadingAvatar && avatarUploadProgress > 0 && (
+      {!viewMode && uploadingAvatar && avatarUploadProgress > 0 && (
         <div className="mt-3 w-full max-w-[200px]">
           <div className="flex items-center justify-between mb-1">
             <p className="text-cosmic-400 text-sm">
