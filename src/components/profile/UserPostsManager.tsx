@@ -60,12 +60,33 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
     checkAdminStatus();
   }, [userId, currentUserId]);
 
-  // Handle hash-based highlighting
+  // Handle hash-based highlighting and auto-scroll
   useEffect(() => {
     const hash = location.hash;
     if (hash.startsWith('#post-')) {
       const postId = hash.replace('#post-', '');
       setHighlightedPostId(postId);
+      
+      // Auto-scroll to the post with multiple attempts
+      const scrollToPost = () => {
+        const postElement = document.getElementById(`post-${postId}`);
+        if (postElement) {
+          postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return true;
+        }
+        return false;
+      };
+
+      // Try immediately
+      if (!scrollToPost()) {
+        // Try again after 100ms (for initial load)
+        setTimeout(() => {
+          if (!scrollToPost()) {
+            // Final attempt after 500ms
+            setTimeout(scrollToPost, 500);
+          }
+        }, 100);
+      }
       
       // Remove highlight after 3 seconds
       const timer = setTimeout(() => {
@@ -74,7 +95,7 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
       
       return () => clearTimeout(timer);
     }
-  }, [location.hash]);
+  }, [location.hash, posts]);
 
   const checkAdminStatus = async () => {
     if (!currentUserId) return;
