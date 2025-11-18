@@ -183,6 +183,7 @@ const ProfileMainNew = ({
                 onRemoveAvatar={onRemoveAvatar}
                 uploadingAvatar={uploadingAvatar}
                 avatarUploadProgress={avatarUploadProgress}
+                viewMode={viewMode}
               />
             </div>
           </div>
