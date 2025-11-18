@@ -49,7 +49,7 @@ const ProfileMainNew = ({
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [tagsExpanded, setTagsExpanded] = useState(false);
+  const [tagsExpanded, setTagsExpanded] = useState(true);
 
   // Animation variants for staggered tag animations
   const containerVariants = {
