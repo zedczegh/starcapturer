@@ -12,9 +12,10 @@ import { AdminBadge } from './AdminBadge';
 import { UserPostsManager } from './UserPostsManager';
 import { InstagramPostUpload } from './InstagramPostUpload';
 import ProfileTag from './ProfileTag';
-import { Settings, Wallet, Camera, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Settings, Wallet, Camera, X, ChevronDown, ChevronUp, Menu, History } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { motion } from 'framer-motion';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
 const ProfileMainNew = ({
   displayUsername,
@@ -67,6 +68,56 @@ const ProfileMainNew = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-cosmic-950 to-slate-900">
+      {/* Hamburger Menu - Top Left - Only show on own profile */}
+      {!viewMode && (
+        <div className="fixed top-4 left-4 z-50">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 rounded-full bg-cosmic-900/80 backdrop-blur-xl border border-primary/20 hover:bg-cosmic-800/80"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="bg-cosmic-900/95 backdrop-blur-xl border-primary/20">
+              <SheetHeader>
+                <SheetTitle className="text-xl bg-gradient-to-r from-white to-primary bg-clip-text text-transparent">
+                  {t('Menu', '菜单')}
+                </SheetTitle>
+              </SheetHeader>
+              <div className="mt-8 space-y-4">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-base"
+                  onClick={() => navigate('/activity-history')}
+                >
+                  <History className="mr-3 h-5 w-5" />
+                  {t('Activity History', '活动历史')}
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-base"
+                  onClick={() => navigate('/profile/settings')}
+                >
+                  <Settings className="mr-3 h-5 w-5" />
+                  {t('Settings', '设置')}
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-base"
+                  onClick={() => navigate('/profile/wallet')}
+                >
+                  <Wallet className="mr-3 h-5 w-5" />
+                  {t('Wallet', '钱包')}
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      )}
+
       {/* Enhanced Cover Photo */}
       <div className="relative h-[250px] sm:h-[300px] md:h-[400px] overflow-hidden group">
         <div className="absolute inset-0 overflow-hidden">
@@ -190,30 +241,6 @@ const ProfileMainNew = ({
         <div className="relative -mt-12 sm:-mt-16 mb-6 sm:mb-8">
           <div className="max-w-4xl mx-auto">
             <Card className="bg-cosmic-900/10 backdrop-blur-xl border border-primary/10 p-6 sm:p-8 relative">
-              {/* Settings & Wallet Icons - Below cover photo - Only show on own profile */}
-              {!viewMode && (
-                <div className="absolute top-4 right-4 flex gap-2 z-20">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => navigate('/profile/settings')}
-                    className="h-9 w-9 rounded-full hover:bg-cosmic-800/50"
-                    title={t('Settings', '设置')}
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => navigate('/profile/wallet')}
-                    className="h-9 w-9 rounded-full hover:bg-cosmic-800/50"
-                    title={t('Wallet', '钱包')}
-                  >
-                    <Wallet className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-
               {/* Username, Motto, and Tags - Centered */}
               <div className="text-center pt-16 sm:pt-20">
                 {/* Username and Badge */}
