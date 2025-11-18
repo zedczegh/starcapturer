@@ -172,18 +172,33 @@ export const InstagramPostUpload: React.FC<InstagramPostUploadProps> = ({
       if (isTiffOrRaw) {
         try {
           toast.info(`Processing ${file.name}...`);
-          const { dataUrl } = await loadImageFromFile(file, { enableDownscale: true, maxResolution: 2048 });
-          urls.push(dataUrl);
+          const { dataUrl, element } = await loadImageFromFile(file, { enableDownscale: false });
           
-          // Convert TIFF/RAW to JPEG for Supabase compatibility
-          const response = await fetch(dataUrl);
-          const blob = await response.blob();
+          // Convert to high-quality JPEG using canvas
+          const canvas = document.createElement('canvas');
+          canvas.width = element.width;
+          canvas.height = element.height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('Failed to get canvas context');
+          
+          ctx.drawImage(element, 0, 0);
+          
+          // Convert to JPEG with 95% quality
+          const jpegBlob = await new Promise<Blob>((resolve, reject) => {
+            canvas.toBlob(
+              (blob) => blob ? resolve(blob) : reject(new Error('Failed to convert to JPEG')),
+              'image/jpeg',
+              0.95
+            );
+          });
+          
           const jpegFile = new File(
-            [blob], 
+            [jpegBlob], 
             file.name.replace(/\.(tiff?|cr2|nef|arw|dng|raw|orf|rw2|pef|raf)$/i, '.jpg'),
             { type: 'image/jpeg' }
           );
           validFiles[validFiles.length - 1] = jpegFile; // Replace with JPEG version
+          urls.push(URL.createObjectURL(jpegFile));
         } catch (error) {
           console.error(`Failed to process ${file.name}:`, error);
           toast.error(`Failed to process ${file.name}`);
