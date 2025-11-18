@@ -34,13 +34,13 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const maxSize = 20 * 1024 * 1024;
+    const maxSize = 300 * 1024 * 1024; // 300MB
     const validFiles: File[] = [];
     const urls: string[] = [];
 
     Array.from(files).forEach(file => {
       if (file.size > maxSize) {
-        toast.error(`File "${file.name}" exceeds 20MB limit`);
+        toast.error(`File "${file.name}" exceeds 300MB limit`);
         return;
       }
       validFiles.push(file);
@@ -218,7 +218,7 @@ export const EditPostDialog: React.FC<EditPostDialogProps> = ({
               type="file"
               id="add-images"
               multiple
-              accept="image/*"
+              accept="image/*,image/tiff,image/tif,image/x-canon-cr2,image/x-nikon-nef,image/x-sony-arw,image/x-adobe-dng,image/x-panasonic-raw,image/x-olympus-orf,image/x-panasonic-rw2,image/x-pentax-pef,image/x-fuji-raf,.tiff,.tif,.cr2,.nef,.arw,.dng,.raw,.orf,.rw2,.pef,.raf"
               onChange={handleFileSelect}
               className="hidden"
             />
