@@ -24,6 +24,7 @@ import Profile from './pages/Profile';
 import UserProfile from './pages/UserProfile';
 import ProfileSettings from './pages/ProfileSettings';
 import WalletSettings from './pages/WalletSettings';
+import ActivityHistory from './pages/ActivityHistory';
 import PreferencesPage from './pages/Preferences';
 import ManageAstroSpots from './pages/ManageAstroSpots';
 import AstroSpotProfile from './pages/AstroSpotProfile';
@@ -139,6 +140,7 @@ function AppContent() {
       <Route path="/user/:userId" element={<UserProfile />} />
       <Route path="/profile/settings" element={<ProfileSettings />} />
       <Route path="/profile/wallet" element={<WalletSettings />} />
+      <Route path="/activity-history" element={<ActivityHistory />} />
       <Route path="/profile/:id" element={<ProfileMini />} />
       <Route path="/settings" element={<PreferencesPage />} />
       <Route path="/manage-astro-spots" element={<ManageAstroSpots />} />
