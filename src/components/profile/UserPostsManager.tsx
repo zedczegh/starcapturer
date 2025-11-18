@@ -51,11 +51,14 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
   const [username, setUsername] = useState<string>('user');
   const [openComments, setOpenComments] = useState<Set<string>>(new Set());
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
+  const [isCurrentUserAdmin, setIsCurrentUserAdmin] = useState(false);
+  const [isPostOwnerAdmin, setIsPostOwnerAdmin] = useState(false);
 
   useEffect(() => {
     loadPosts();
     loadUsername();
-  }, [userId]);
+    checkAdminStatus();
+  }, [userId, currentUserId]);
 
   // Handle hash-based highlighting
   useEffect(() => {
@@ -72,6 +75,44 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
       return () => clearTimeout(timer);
     }
   }, [location.hash]);
+
+  const checkAdminStatus = async () => {
+    if (!currentUserId) return;
+
+    try {
+      // Check if current user is admin
+      const { data: currentUserRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', currentUserId)
+        .eq('role', 'admin')
+        .single();
+      
+      setIsCurrentUserAdmin(!!currentUserRole);
+
+      // Check if post owner (userId) is admin
+      const { data: postOwnerRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .single();
+      
+      setIsPostOwnerAdmin(!!postOwnerRole);
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+    }
+  };
+
+  const canEditDelete = () => {
+    // User can edit/delete if they own the post
+    if (isOwnProfile) return true;
+    
+    // Admin can edit/delete if post owner is not an admin
+    if (isCurrentUserAdmin && !isPostOwnerAdmin) return true;
+    
+    return false;
+  };
 
   const loadUsername = async () => {
     try {
@@ -238,7 +279,7 @@ export const UserPostsManager: React.FC<UserPostsManagerProps> = ({
                     images={getPostImages(post)}
                     alt={post.description || post.file_name}
                   />
-                  {isOwnProfile && (
+                  {canEditDelete() && (
                     <div className="absolute top-2 right-2 flex gap-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                       <Button
                         variant="secondary"
