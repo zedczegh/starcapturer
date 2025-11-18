@@ -68,55 +68,6 @@ const ProfileMainNew = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-cosmic-950 to-slate-900">
-      {/* Hamburger Menu - Top Left - Only show on own profile */}
-      {!viewMode && (
-        <div className="fixed top-4 left-4 z-50">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10 rounded-full bg-cosmic-900/80 backdrop-blur-xl border border-primary/20 hover:bg-cosmic-800/80"
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="bg-cosmic-900/95 backdrop-blur-xl border-primary/20">
-              <SheetHeader>
-                <SheetTitle className="text-xl bg-gradient-to-r from-white to-primary bg-clip-text text-transparent">
-                  {t('Menu', '菜单')}
-                </SheetTitle>
-              </SheetHeader>
-              <div className="mt-8 space-y-4">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start text-base"
-                  onClick={() => navigate('/activity-history')}
-                >
-                  <History className="mr-3 h-5 w-5" />
-                  {t('Activity History', '活动历史')}
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start text-base"
-                  onClick={() => navigate('/profile/settings')}
-                >
-                  <Settings className="mr-3 h-5 w-5" />
-                  {t('Settings', '设置')}
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start text-base"
-                  onClick={() => navigate('/profile/wallet')}
-                >
-                  <Wallet className="mr-3 h-5 w-5" />
-                  {t('Wallet', '钱包')}
-                </Button>
-              </div>
-            </SheetContent>
-          </Sheet>
-        </div>
-      )}
 
       {/* Enhanced Cover Photo */}
       <div className="relative h-[250px] sm:h-[300px] md:h-[400px] overflow-hidden group">
@@ -244,11 +195,61 @@ const ProfileMainNew = ({
               {/* Username, Motto, and Tags - Centered */}
               <div className="text-center pt-16 sm:pt-20">
                 {/* Username and Badge */}
-                <div className="flex items-center justify-center gap-2 mb-2">
+                <div className="flex items-center justify-center gap-2 mb-2 relative">
                   <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-white via-primary to-purple-400 bg-clip-text text-transparent">
                     {displayUsername}
                   </h1>
                   <AdminBadge />
+                  
+                  {/* Hamburger Menu - Top Right of Username - Only show on own profile */}
+                  {!viewMode && (
+                    <div className="absolute -right-2 -top-1">
+                      <Sheet>
+                        <SheetTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-10 w-10 rounded-full bg-cosmic-900/80 backdrop-blur-xl border border-primary/20 hover:bg-cosmic-800/80"
+                          >
+                            <Menu className="h-5 w-5" />
+                          </Button>
+                        </SheetTrigger>
+                        <SheetContent side="left" className="bg-cosmic-900/95 backdrop-blur-xl border-primary/20">
+                          <SheetHeader>
+                            <SheetTitle className="text-xl bg-gradient-to-r from-white to-primary bg-clip-text text-transparent">
+                              {t('Menu', '菜单')}
+                            </SheetTitle>
+                          </SheetHeader>
+                          <div className="mt-8 space-y-4">
+                            <Button
+                              variant="ghost"
+                              className="w-full justify-start text-base"
+                              onClick={() => navigate('/activity-history')}
+                            >
+                              <History className="mr-3 h-5 w-5" />
+                              {t('Activity History', '活动历史')}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              className="w-full justify-start text-base"
+                              onClick={() => navigate('/profile/settings')}
+                            >
+                              <Settings className="mr-3 h-5 w-5" />
+                              {t('Settings', '设置')}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              className="w-full justify-start text-base"
+                              onClick={() => navigate('/profile/wallet')}
+                            >
+                              <Wallet className="mr-3 h-5 w-5" />
+                              {t('Wallet', '钱包')}
+                            </Button>
+                          </div>
+                        </SheetContent>
+                      </Sheet>
+                    </div>
+                  )}
                 </div>
                   
                   {/* Motto */}

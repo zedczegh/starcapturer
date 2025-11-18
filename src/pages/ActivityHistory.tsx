@@ -4,9 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Heart, MessageSquare, Bookmark, MapPin } from 'lucide-react';
+import { Heart, MessageSquare, Bookmark, MapPin, ArrowLeft } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import NavBar from '@/components/NavBar';
@@ -220,6 +221,18 @@ const ActivityHistory = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-cosmic-950 to-slate-900">
       <NavBar />
+      
+      {/* Back Button */}
+      <div className="container mx-auto px-4 pt-4 max-w-4xl">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/profile')}
+          className="mb-2"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          {t('Back to Profile', '返回个人资料')}
+        </Button>
+      </div>
       
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-white via-primary to-purple-400 bg-clip-text text-transparent">
