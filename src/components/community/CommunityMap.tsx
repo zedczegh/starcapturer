@@ -74,12 +74,12 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
           maxZoom={19}
         />
         
-        {/* Light Pollution Overlay Layer - 2024 VIIRS Data */}
+        {/* Light Pollution Overlay Layer - VIIRS 2022 (Latest Available) */}
         <TileLayer
-          url="https://www.lightpollutionmap.info/tiles/VIIRS_2024/{z}/{x}/{y}.png"
+          url="https://tiles.lightpollutionmap.info/VIIRS_2022/{z}/{x}/{y}.png"
           opacity={lightPollutionOpacity}
           maxZoom={19}
-          attribution='Light pollution © <a href="https://www.lightpollutionmap.info">lightpollutionmap.info</a>'
+          attribution='Light pollution data © <a href="https://www.lightpollutionmap.info">lightpollutionmap.info</a> VIIRS 2022'
         />
 
         {/* Dark Sky Heat Map Layer - Only in Combined Mode */}
@@ -142,7 +142,7 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
           <div className="text-xs text-cosmic-400 mt-1 text-center">
             {Math.round(lightPollutionOpacity * 100)}%
           </div>
-          <p className="text-xs text-cosmic-500 mt-2">VIIRS 2024 Satellite Data</p>
+          <p className="text-xs text-cosmic-500 mt-2">VIIRS 2022 Satellite Data</p>
         </div>
       </div>
 
@@ -159,8 +159,8 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
             </div>
           </div>
           <div className="mt-2 pt-2 border-t border-cosmic-700">
-            <p className="text-xs text-cosmic-400">VIIRS 2024 Satellite Data</p>
-            <p className="text-xs text-cosmic-500">Updated annually</p>
+            <p className="text-xs text-cosmic-400">VIIRS 2022 Satellite Data</p>
+            <p className="text-xs text-cosmic-500">NASA/NOAA Partnership</p>
           </div>
         </div>
       </div>
