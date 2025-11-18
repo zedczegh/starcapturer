@@ -67,8 +67,9 @@ const ProfileMainNew = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-cosmic-950 to-slate-900">
-      {/* Enhanced Cover Photo with User's Background and Upload Controls */}
-      <div className="relative h-[200px] sm:h-[250px] md:h-[350px] overflow-hidden group">
+      {/* Enhanced Cover Photo with Curved Bottom Edge */}
+      <div className="relative h-[250px] sm:h-[300px] md:h-[400px] overflow-visible group">
+        <div className="absolute inset-0 overflow-hidden rounded-b-[50%_80px]">
         {backgroundUrl ? (
           <>
             <img 
@@ -165,16 +166,33 @@ const ProfileMainNew = ({
           <div className="absolute top-1/3 right-1/3 w-1 h-1 bg-white rounded-full animate-pulse delay-100"></div>
           <div className="absolute bottom-1/4 left-1/2 w-1 h-1 bg-white rounded-full animate-pulse delay-200"></div>
         </div>
+        </div>
       </div>
 
       <div className="container mx-auto px-3 sm:px-4 md:px-6 max-w-7xl">
-        {/* Enhanced Profile Header Section with Glow */}
-        <div className="relative -mt-20 sm:-mt-24 mb-6 sm:mb-8">
+        {/* Avatar positioned in the curve */}
+        <div className="relative -mt-16 sm:-mt-20 mb-4 flex justify-center">
+          <div className="relative">
+            <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse"></div>
+            <div className="relative">
+              <ProfileAvatar 
+                avatarUrl={avatarUrl}
+                onAvatarChange={onAvatarChange}
+                onRemoveAvatar={onRemoveAvatar}
+                uploadingAvatar={uploadingAvatar}
+                avatarUploadProgress={avatarUploadProgress}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Enhanced Profile Header Section */}
+        <div className="relative mb-6 sm:mb-8">
           <div className="max-w-4xl mx-auto">
             <Card className="bg-cosmic-900/10 backdrop-blur-xl border border-primary/10 p-6 sm:p-8 relative">
-              {/* Settings & Wallet Icons - Top Right Stacked - Only show on own profile */}
+              {/* Settings & Wallet Icons - Below cover photo - Only show on own profile */}
               {!viewMode && (
-                <div className="absolute top-4 right-4 flex flex-col gap-2">
+                <div className="absolute top-4 right-4 flex gap-2">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -196,81 +214,65 @@ const ProfileMainNew = ({
                 </div>
               )}
 
-              {/* Top Left Layout */}
-              <div className="flex items-start gap-6">
-                {/* Avatar with glow */}
-                <div className="relative flex-shrink-0">
-                  <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse"></div>
-                  <div className="relative">
-                    <ProfileAvatar 
-                      avatarUrl={avatarUrl}
-                      onAvatarChange={onAvatarChange}
-                      onRemoveAvatar={onRemoveAvatar}
-                      uploadingAvatar={uploadingAvatar}
-                      avatarUploadProgress={avatarUploadProgress}
-                    />
-                  </div>
+              {/* Username, Motto, and Tags - Centered */}
+              <div className="text-center pt-2">
+                {/* Username and Badge */}
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white via-primary to-purple-400 bg-clip-text text-transparent">
+                    {displayUsername}
+                  </h1>
+                  <AdminBadge />
                 </div>
-                
-                {/* Username, Motto, and Tags */}
-                <div className="flex-1 pt-2">
-                  {/* Username and Badge */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white via-primary to-purple-400 bg-clip-text text-transparent">
-                      {displayUsername}
-                    </h1>
-                    <AdminBadge size="sm" />
-                  </div>
                   
-                  {/* Motto below username */}
-                  <div className="mb-4">
+                  {/* Motto */}
+                  <div className="mb-4 flex justify-center">
                     <ProfileMotto 
                       motto={motto}
                       onSave={onMottoSave}
-                      isOwner={true}
+                      isOwner={!viewMode}
                     />
                   </div>
-
-                  {/* Bio if exists */}
+                  
+                  {/* Bio */}
                   {bio && (
-                    <p className="text-cosmic-300 text-sm leading-relaxed mb-4 max-w-2xl">
+                    <p className="text-cosmic-300 text-sm sm:text-base leading-relaxed mb-4 max-w-2xl mx-auto">
                       {bio}
                     </p>
                   )}
                   
-                  {/* Collapsible Tags Section */}
+                  {/* Tags Section with Collapsible Animation */}
                   {tags && tags.length > 0 && (
-                    <Collapsible 
-                      open={tagsExpanded} 
-                      onOpenChange={setTagsExpanded}
-                      className="mt-2"
-                    >
-                      <CollapsibleTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="flex items-center gap-2 text-cosmic-300 hover:text-white transition-colors p-0 h-auto"
-                        >
-                          <span className="text-sm font-medium">
-                            {t("Interests", "兴趣")} ({tags.length})
-                          </span>
-                          {tagsExpanded ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="mt-3">
+                    <Collapsible open={tagsExpanded} onOpenChange={setTagsExpanded}>
+                      <div className="mb-3 flex justify-center">
+                        <CollapsibleTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-cosmic-400 hover:text-primary transition-colors text-xs"
+                          >
+                            {t("Interests", "兴趣爱好")} ({tags.length})
+                            {tagsExpanded ? (
+                              <ChevronUp className="ml-2 h-3 w-3" />
+                            ) : (
+                              <ChevronDown className="ml-2 h-3 w-3" />
+                            )}
+                          </Button>
+                        </CollapsibleTrigger>
+                      </div>
+                      
+                      <CollapsibleContent>
                         <motion.div 
-                          className="flex flex-wrap gap-2"
+                          className="flex flex-wrap gap-2 justify-center"
                           variants={containerVariants}
                           initial="hidden"
                           animate="visible"
                         >
-                          {tags.map((tag: string) => (
-                            <motion.div key={tag} variants={itemVariants}>
-                              <ProfileTag tag={tag} size="sm" />
+                          {tags.map((tag, index) => (
+                            <motion.div
+                              key={tag}
+                              variants={itemVariants}
+                            >
+                              <ProfileTag tag={tag} />
                             </motion.div>
                           ))}
                         </motion.div>
@@ -278,7 +280,6 @@ const ProfileMainNew = ({
                     </Collapsible>
                   )}
                 </div>
-              </div>
             </Card>
           </div>
         </div>
