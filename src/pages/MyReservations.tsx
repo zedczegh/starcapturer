@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -67,6 +67,24 @@ const MyReservations = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
+
+  // Load user's background image
+  useEffect(() => {
+    const loadBackground = async () => {
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('background_image_url')
+          .eq('id', user.id)
+          .single();
+        if (profile?.background_image_url) {
+          setBackgroundUrl(profile.background_image_url);
+        }
+      }
+    };
+    loadBackground();
+  }, [user]);
 
   const { data: reservations, isLoading } = useQuery({
     queryKey: ['userReservations', user?.id],

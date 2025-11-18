@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -25,6 +25,7 @@ import { CollectedPostsGrid } from "@/components/collections/CollectedPostsGrid"
 import EmptyCollections from "@/components/collections/EmptyCollections";
 import { useCollectionActions } from "@/hooks/collections/useCollectionActions";
 import { useAstroSpotCollectionActions } from "@/hooks/collections/useAstroSpotCollectionActions";
+import { supabase } from "@/integrations/supabase/client";
 
 const Collections = () => {
   const { t } = useLanguage();
@@ -32,6 +33,7 @@ const Collections = () => {
   const navigate = useNavigate();
   const [editMode, setEditMode] = useState(false);
   const [activeTab, setActiveTab] = useState('locations');
+  const [backgroundUrl, setBackgroundUrl] = useState<string | null>(null);
 
   // Location collections
   const {
@@ -94,11 +96,38 @@ const Collections = () => {
   const loading = locationsLoading || spotsLoading || postsLoading;
   const hasError = locationsError || spotsError || postsError;
 
+  // Load user's background image
+  useEffect(() => {
+    const loadBackground = async () => {
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('background_image_url')
+          .eq('id', user.id)
+          .single();
+        if (profile?.background_image_url) {
+          setBackgroundUrl(profile.background_image_url);
+        }
+      }
+    };
+    loadBackground();
+  }, [user]);
+
   if (!authChecked) return <PageLoader />;
 
   if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-cosmic-900">
+  return (
+    <div className="min-h-screen relative">
+      {backgroundUrl && (
+        <div className="fixed inset-0 z-0">
+          <img src={backgroundUrl} alt="Background" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-60% to-slate-900"></div>
+          <div className="absolute inset-0 bg-slate-900/60"></div>
+        </div>
+      )}
+      <div className="relative z-10 min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-cosmic-900"
+           style={{ backgroundColor: backgroundUrl ? 'transparent' : undefined }}
+      >
         <NavBar />
         <div className="container mx-auto px-4 py-8 pt-16 md:pt-20">
           <LocationStatusMessage

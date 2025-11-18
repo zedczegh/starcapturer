@@ -78,34 +78,36 @@ const ProfileMainNew = ({
             />
             {/* Enhanced gradient with more bleed at bottom */}
             <div className="absolute inset-0 bg-gradient-to-t from-cosmic-950 via-cosmic-950/80 via-50% to-transparent"></div>
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-70% to-cosmic-950/90"></div>
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-60% to-cosmic-950"></div>
             
-            {/* Upload Controls - Show on hover */}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center gap-4">
-              <Button
-                onClick={onRemoveBackground}
-                variant="destructive"
-                size="sm"
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
-                type="button"
-              >
-                <X className="w-4 h-4 mr-2" />
-                {t("Remove", "删除")}
-              </Button>
-              <label htmlFor="background-upload-cover" className="opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Upload Controls - Only show on own profile */}
+            {isOwnProfile && !viewMode && (
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center gap-4">
                 <Button
-                  variant="secondary"
+                  onClick={onRemoveBackground}
+                  variant="destructive"
                   size="sm"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity"
                   type="button"
-                  asChild
                 >
-                  <span className="cursor-pointer">
-                    <Camera className="w-4 h-4 mr-2" />
-                    {t("Change", "更改")}
-                  </span>
+                  <X className="w-4 h-4 mr-2" />
+                  {t("Remove", "删除")}
                 </Button>
-              </label>
-            </div>
+                <label htmlFor="background-upload-cover" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    type="button"
+                    asChild
+                  >
+                    <span className="cursor-pointer">
+                      <Camera className="w-4 h-4 mr-2" />
+                      {t("Change", "更改")}
+                    </span>
+                  </Button>
+                </label>
+              </div>
+            )}
           </>
         ) : (
           <>
