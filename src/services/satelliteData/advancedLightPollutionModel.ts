@@ -433,15 +433,29 @@ export function calculateAdvancedLightPollution(
     
     // Decay rate depends on city size (larger cities = slower decay)
     const populationFactor = Math.log10(city.population / 1000000 + 1);
-    const baseDecayRate = 0.04; // Calibrated constant
+    const baseDecayRate = 0.045; // Slightly faster decay for better dark sky accuracy
     const adjustedDecayRate = baseDecayRate / (1 + populationFactor * 0.2);
     
     const decayFactor = Math.exp(-adjustedDecayRate * distanceFromEdge);
-    const minBortle = 3.5; // Rural baseline
+    
+    // CRITICAL FIX: Dynamic minimum based on distance and city size
+    // Far from any city = truly dark sky (Bortle 1-2)
+    // Moderate distance = rural (Bortle 2.5-3.5)
+    let minBortle: number;
+    if (distanceFromEdge > 120) {
+      minBortle = 1.5; // True dark sky at great distance
+    } else if (distanceFromEdge > 80) {
+      minBortle = 2.0; // Excellent dark sky
+    } else if (distanceFromEdge > 50) {
+      minBortle = 2.5; // Typical dark sky
+    } else {
+      minBortle = 3.2; // Rural sky
+    }
+    
     bortle = minBortle + (city.bortleCore - minBortle) * decayFactor;
     
     // Confidence decays with distance
-    confidence = Math.max(0.4, 0.92 * Math.exp(-0.012 * distanceFromEdge));
+    confidence = Math.max(0.3, 0.92 * Math.exp(-0.012 * distanceFromEdge));
   }
   
   // === PHASE 2: ELEVATION CORRECTION ===
