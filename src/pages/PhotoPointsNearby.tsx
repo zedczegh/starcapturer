@@ -215,8 +215,7 @@ const PhotoPointsNearby: React.FC = () => {
             alt="Background" 
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-60% to-cosmic-950"></div>
-          <div className="absolute inset-0 bg-cosmic-950/60"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-cosmic-950 via-cosmic-950/30 via-20% to-transparent"></div>
         </div>
       )}
       
