@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Play, Pause, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Play, Pause, Loader2, Maximize2, X } from 'lucide-react';
 import { OptimizedImage } from '@/components/ui/optimized-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription } from '@/components/ui/dialog';
 
 interface PostImageCarouselProps {
   images: string[];
@@ -13,6 +14,7 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   console.log('PostImageCarousel received images:', images);
@@ -96,8 +98,21 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
     }
   }, [currentIndex, currentIsVideo, images]);
 
-  return (
-    <div className="relative w-full aspect-square bg-cosmic-900">
+  const renderCarousel = (isInDialog = false) => (
+    <div className={`relative w-full ${isInDialog ? 'h-screen' : 'aspect-square'} bg-cosmic-900 group`}>
+      {/* Fullscreen Button - Top Left */}
+      {!isInDialog && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsFullscreen(true)}
+          className="absolute left-2 top-2 bg-black/50 hover:bg-black/70 text-white rounded-full h-10 w-10 backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 z-20"
+          aria-label="View fullscreen"
+        >
+          <Maximize2 className="h-5 w-5" />
+        </Button>
+      )}
+
       {/* Main Image or Video */}
       <AnimatePresence mode="wait">
         <motion.div
@@ -113,7 +128,7 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
               <video
                 ref={videoRef}
                 src={images[currentIndex]}
-                className="w-full h-full object-cover"
+                className={`w-full h-full ${isInDialog ? 'object-contain' : 'object-cover'}`}
                 playsInline
                 loop
                 muted
@@ -182,7 +197,7 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
             <OptimizedImage
               src={images[currentIndex]}
               alt={`${alt} - ${currentIndex + 1}`}
-              className="w-full h-full object-cover"
+              className={`w-full h-full ${isInDialog ? 'object-contain' : 'object-cover'}`}
               loading="lazy"
             />
           )}
@@ -216,19 +231,47 @@ export const PostImageCarousel: React.FC<PostImageCarouselProps> = ({ images, al
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
             {images.map((url, index) => (
               <button
-                key={index}
+                key={url}
                 onClick={() => setCurrentIndex(index)}
                 className={`h-2 rounded-full transition-all ${
-                  index === currentIndex 
-                    ? 'w-8 bg-white' 
-                    : 'w-2 bg-white/50 hover:bg-white/70'
+                  index === currentIndex
+                    ? 'w-8 bg-white'
+                    : 'w-2 bg-white/50 hover:bg-white/75'
                 }`}
-                aria-label={`Go to ${isVideo(url) ? 'video' : 'image'} ${index + 1}`}
+                aria-label={`Go to item ${index + 1}`}
               />
             ))}
           </div>
         </>
       )}
     </div>
+  );
+
+  return (
+    <>
+      {renderCarousel(false)}
+      
+      {/* Fullscreen Dialog */}
+      <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
+        <DialogContent className="max-w-full h-screen w-screen p-0 bg-black border-0">
+          <DialogDescription className="sr-only">
+            Fullscreen image viewer with carousel navigation
+          </DialogDescription>
+          
+          {/* Close Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsFullscreen(false)}
+            className="absolute right-4 top-4 bg-black/50 hover:bg-black/70 text-white rounded-full h-12 w-12 backdrop-blur-sm z-50"
+            aria-label="Close fullscreen"
+          >
+            <X className="h-6 w-6" />
+          </Button>
+          
+          {renderCarousel(true)}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
