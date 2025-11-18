@@ -12,11 +12,12 @@ import { AdminBadge } from './AdminBadge';
 import { UserPostsManager } from './UserPostsManager';
 import { InstagramPostUpload } from './InstagramPostUpload';
 import ProfileTag from './ProfileTag';
-import { Settings, Wallet, Camera, X, ChevronDown, ChevronUp, Menu, History, MessageCircle } from 'lucide-react';
+import { Settings, Wallet, Camera, X, ChevronDown, ChevronUp, Menu, History, MessageCircle, Users, UserPlus } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { motion } from 'framer-motion';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useFollow } from '@/hooks/profile/useFollow';
 
 const ProfileMainNew = ({
   displayUsername,
@@ -48,6 +49,7 @@ const ProfileMainNew = ({
 }: any) => {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { isFollowing, followerCount, followingCount, toggleFollow, loading: followLoading } = useFollow(userId);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [tagsExpanded, setTagsExpanded] = useState(true);
 
@@ -295,6 +297,36 @@ const ProfileMainNew = ({
                       isOwner={!viewMode}
                     />
                   </div>
+                  
+                  {/* Follow Stats and Button */}
+                  <div className="flex items-center justify-center gap-6 mb-4">
+                    <div className="flex items-center gap-1 text-sm">
+                      <Users className="w-4 h-4 text-primary" />
+                      <span className="font-semibold text-white">{followerCount}</span>
+                      <span className="text-cosmic-400">{t("Followers", "关注者")}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-sm">
+                      <UserPlus className="w-4 h-4 text-primary" />
+                      <span className="font-semibold text-white">{followingCount}</span>
+                      <span className="text-cosmic-400">{t("Following", "关注中")}</span>
+                    </div>
+                  </div>
+
+                  {/* Follow Button - only show on other users' profiles */}
+                  {viewMode && (
+                    <div className="mb-4 flex justify-center">
+                      <Button
+                        onClick={toggleFollow}
+                        disabled={followLoading}
+                        variant={isFollowing ? "secondary" : "default"}
+                        size="sm"
+                        className="gap-2 px-6"
+                      >
+                        <UserPlus className="w-4 h-4" />
+                        {isFollowing ? t("Unfollow", "取消关注") : t("Follow", "关注")}
+                      </Button>
+                    </div>
+                  )}
                   
                   {/* Bio */}
                   {bio && (
