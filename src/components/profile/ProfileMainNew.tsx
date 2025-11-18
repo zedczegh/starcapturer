@@ -215,10 +215,10 @@ const ProfileMainNew = ({
               )}
 
               {/* Username, Motto, and Tags - Centered */}
-              <div className="text-center pt-2">
+              <div className="text-center pt-16 sm:pt-20">
                 {/* Username and Badge */}
                 <div className="flex items-center justify-center gap-2 mb-2">
-                  <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-white via-primary to-purple-400 bg-clip-text text-transparent">
+                  <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-white via-primary to-purple-400 bg-clip-text text-transparent">
                     {displayUsername}
                   </h1>
                   <AdminBadge />
