@@ -68,18 +68,37 @@ export function translateType(type: string): string {
 // Profile tags translations
 export function translateProfileTag(tag: string): string {
   const tagMap: Record<string, string> = {
+    // Astronomy tags
     "Professional Astronomer": "专业天文学家",
     "Amateur Astronomer": "业余天文学家",
+    "Star Gazer": "观星者",
     "Astrophotographer": "天体摄影师",
-    "Meteorology Enthusiast": "气象爱好者",
     "Cosmos Lover": "宇宙爱好者",
-    "Traveler": "旅行者",
-    "Dark Sky Volunteer": "暗夜志愿者",
-    "Nebulae Observer": "星云观测员",
-    "Astronomy Student": "天文学学生",
     "Planet Watcher": "行星观察者",
+    "Nebulae Observer": "星云观测者",
     "Telescope Maker": "望远镜制造者",
-    "Star Gazer": "观星者"
+    "Astronomy Student": "天文学学生",
+    "Dark Sky Volunteer": "暗夜志愿者",
+    
+    // Outdoor & Nature tags
+    "Mountaineer": "登山者",
+    "Hiker": "徒步爱好者",
+    "Rock Climber": "攀岩者",
+    "Camper": "露营者",
+    "Nature Photographer": "自然摄影师",
+    "Wildlife Observer": "野生动物观察者",
+    "Trail Runner": "越野跑者",
+    "Backpacker": "背包客",
+    "Adventure Seeker": "冒险探索者",
+    "Outdoor Enthusiast": "户外运动爱好者",
+    "Desert Explorer": "沙漠探险家",
+    "Alpine Climber": "高山攀登者",
+    
+    // Weather & Exploration
+    "Meteorology Enthusiast": "气象爱好者",
+    "Storm Chaser": "追风者",
+    "Aurora Hunter": "极光猎人",
+    "Traveler": "旅行者"
   };
   return tagMap[tag] || tag;
 }
