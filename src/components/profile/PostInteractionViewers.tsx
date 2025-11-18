@@ -136,11 +136,8 @@ export const PostInteractionViewers: React.FC<PostInteractionViewersProps> = ({
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
         ) : (
-          <Tabs defaultValue="all" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="all">
-                All ({interactions?.length || 0})
-              </TabsTrigger>
+        <Tabs defaultValue="like" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="like">
                 <ThumbsUp className="h-4 w-4" />
                 <span className="ml-1">{groupedInteractions.like.length}</span>
@@ -158,10 +155,6 @@ export const PostInteractionViewers: React.FC<PostInteractionViewersProps> = ({
                 <span className="ml-1">{groupedInteractions.collect.length}</span>
               </TabsTrigger>
             </TabsList>
-
-            <TabsContent value="all">
-              {renderUserList(interactions || [])}
-            </TabsContent>
 
             <TabsContent value="like">
               {renderUserList(groupedInteractions.like)}
