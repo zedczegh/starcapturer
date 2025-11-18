@@ -1,10 +1,9 @@
 /**
- * Satellite Data Integration Service
- * Aggregates multiple satellite data sources for maximum accuracy
+ * Enhanced Data Integration Service
+ * Uses population density and geographic analysis for maximum accuracy
  */
 
-export { fetchVIIRSData, fetchWorldAtlasData, skyQualityToBortle } from './viirsService';
-export { fetchGlobalRadianceData } from './globalRadianceService';
+export { getPopulationBasedBortle, getRemoteAreaBortle } from './populationDensityService';
 export { 
   getSatelliteBasedBortleScale, 
   type SatelliteDataResult 
