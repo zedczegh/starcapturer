@@ -1845,14 +1845,14 @@ const StarField3D: React.FC<StarField3DProps> = ({
       
       // Apply hyperspeed twist to background
       if (hyperspeed && blurAmount > 0) {
-        const twistIntensity = blurAmount / 6; // 0 to 1
+        const twistIntensity = blurAmount / 3; // 0 to 2 - doubled intensity
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
         
         ctx.save();
         ctx.translate(centerX, centerY);
-        // Spiral twist effect - rotate based on distance from center
-        const twistAngle = twistIntensity * 0.15; // Max 8.6 degrees
+        // Dramatic spiral twist effect - rotate based on distance from center
+        const twistAngle = twistIntensity * 0.45; // Max ~52 degrees - much more dramatic
         ctx.rotate(twistAngle);
         ctx.translate(-centerX, -centerY);
         ctx.drawImage(backgroundImg, drawX, drawY, scaledWidth, scaledHeight);
