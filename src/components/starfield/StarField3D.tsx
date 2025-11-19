@@ -21,6 +21,7 @@ interface StarField3DProps {
     spin?: number;
     spinDirection?: string;
     fadeOut?: boolean;
+    hyperspeed?: boolean;
   };
   isAnimating: boolean;
   isRecording: boolean;
@@ -73,6 +74,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
   const lastProgressUpdateRef = useRef<number>(0);
   const currentProgressRef = useRef<number>(0); // Track current progress for resume
   const hasRenderedInitialFrame = useRef<boolean>(false); // Track if initial frame was rendered
+  const [blurAmount, setBlurAmount] = useState(0); // Motion blur for hyperspeed effect
   const offsetsRef = useRef({
     layer1: { x: 0, y: 0, scale: 1 },   // Largest/brightest stars (closest)
     layer2: { x: 0, y: 0, scale: 1 },
@@ -825,7 +827,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
     }
     
     const ctx = canvasCtxRef.current;
-    const { motionType = 'zoom_in', speed = 1, duration = 10, spin = 0, spinDirection = 'clockwise', fadeOut = true } = settings;
+    const { motionType = 'zoom_in', speed = 1, duration = 10, spin = 0, spinDirection = 'clockwise', fadeOut = true, hyperspeed = false } = settings;
     
     // Use controlled progress if provided (for video recording), otherwise calculate from time
     let progress: number;
@@ -1999,6 +2001,18 @@ const StarField3D: React.FC<StarField3DProps> = ({
     // Restore rotation transform
     ctx.restore();
     
+    // Update hyperspeed blur effect based on progress
+    if (hyperspeed) {
+      // Create a smooth sine curve: 0 at start/end, peak in middle
+      const normalizedProgress = progress / 100;
+      const blurCurve = Math.sin(normalizedProgress * Math.PI);
+      const maxBlur = 6; // Maximum blur in pixels
+      const currentBlur = blurCurve * maxBlur;
+      setBlurAmount(currentBlur);
+    } else {
+      setBlurAmount(0);
+    }
+    
     // Continue animation loop (unless in video rendering mode where we control it manually)
     if (!videoProgressRef) {
       animationFrameRef.current = requestAnimationFrame(animate);
@@ -2182,7 +2196,11 @@ const StarField3D: React.FC<StarField3DProps> = ({
         width={imageDimensions.width}
         height={imageDimensions.height}
         className="w-full h-full object-contain bg-black"
-        style={{ willChange: isAnimating ? 'contents' : 'auto' }}
+        style={{ 
+          willChange: isAnimating ? 'contents' : 'auto',
+          filter: blurAmount > 0 ? `blur(${blurAmount}px)` : 'none',
+          transition: 'filter 0.05s linear'
+        }}
       />
       
       {/* Recording indicator */}
