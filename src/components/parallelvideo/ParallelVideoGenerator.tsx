@@ -100,7 +100,7 @@ const ParallelVideoGenerator: React.FC = () => {
   const horizontalDisplace = displacementAmount; // Use displacement amount from UI
   const starShiftAmount = 6; // Fixed star shift amount
 
-  // 3D Star Field Motion Settings - complete settings
+  // 3D Star Field Motion Settings - complete settings (matching 3D StarField Generator defaults)
   const [motionSettings, setMotionSettings] = useState<MotionSettings>({
     motionType: 'zoom_in',
     speed: 1.5,
@@ -109,11 +109,12 @@ const ParallelVideoGenerator: React.FC = () => {
     amplification: 150,
     spin: 0,
     spinDirection: 'clockwise',
-    fadeOut: true
+    fadeOut: false, // Changed to false to match 3D StarField Generator
+    hyperspeed: false // New: hyperspeed effect disabled by default
   });
 
   const [depthIntensity, setDepthIntensity] = useState<number>(200);
-  const [preserveStarsIntensity, setPreserveStarsIntensity] = useState<number>(0);
+  const [preserveStarsIntensity, setPreserveStarsIntensity] = useState<number>(50); // Changed to 50 to match 3D StarField Generator
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationProgress, setAnimationProgress] = useState(0);
   const [debugImagesOpen, setDebugImagesOpen] = useState(false);
@@ -1925,10 +1926,11 @@ const ParallelVideoGenerator: React.FC = () => {
                       amplification: 150,
                       spin: 0,
                       spinDirection: 'clockwise',
-                      fadeOut: true
+                      fadeOut: false,
+                      hyperspeed: false
                     });
                     setDepthIntensity(200);
-                    setPreserveStarsIntensity(0);
+                    setPreserveStarsIntensity(50);
                   }}
                   className="h-8 gap-2 text-xs bg-cosmic-800/50 hover:bg-cosmic-700/50 border-cosmic-600"
                 >
@@ -1999,6 +2001,23 @@ const ParallelVideoGenerator: React.FC = () => {
                   <Switch
                     checked={motionSettings.fadeOut}
                     onCheckedChange={(checked) => setMotionSettings(prev => ({ ...prev, fadeOut: checked }))}
+                    className="ml-4"
+                  />
+                </div>
+
+                {/* Hyperspeed toggle */}
+                <div className="flex items-center justify-between p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30 mt-3">
+                  <div className="flex-1">
+                    <Label className="text-cosmic-200 text-sm font-medium">
+                      {t('Hyperspeed Effect', '超光速效果')}
+                    </Label>
+                    <p className="text-xs text-cosmic-400 mt-1">
+                      {t('Add motion blur and whirlpool distortion for Star Wars-like hyperspeed effect', '添加运动模糊和漩涡扭曲以实现星战般的超光速效果')}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={motionSettings.hyperspeed || false}
+                    onCheckedChange={(checked) => setMotionSettings(prev => ({ ...prev, hyperspeed: checked }))}
                     className="ml-4"
                   />
                 </div>
