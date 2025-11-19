@@ -1865,10 +1865,13 @@ const StarField3D: React.FC<StarField3DProps> = ({
         if (tempCtx) {
           tempCtx.drawImage(backgroundImg, drawX, drawY, scaledWidth, scaledHeight);
           
-          // Apply whirlpool distortion by redrawing in a spiral pattern
+          // Apply whirlpool distortion by redrawing in a spiral pattern with smooth interpolation
           ctx.save();
-          const segments = 32; // Number of radial segments
-          const rings = 24; // Number of concentric rings
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          
+          const segments = 64; // Increased from 32 for smoother rendering
+          const rings = 48; // Increased from 24 for smoother rendering
           
           for (let ring = 0; ring < rings; ring++) {
             const radiusRatio = ring / rings;
@@ -1890,9 +1893,12 @@ const StarField3D: React.FC<StarField3DProps> = ({
               const dstX = centerX + Math.cos(dstAngle) * radius;
               const dstY = centerY + Math.sin(dstAngle) * radius;
               
-              // Draw small segment
-              const segmentSize = Math.max(2, maxRadius / rings * 1.5);
+              // Draw overlapping segments for smoother blending
+              const segmentSize = Math.max(3, maxRadius / rings * 2.2); // Larger overlap
+              const segmentAlpha = 0.08; // Lower alpha for smooth blending
+              
               ctx.save();
+              ctx.globalAlpha = segmentAlpha;
               ctx.translate(dstX, dstY);
               ctx.rotate(dstAngle - srcAngle);
               ctx.drawImage(
