@@ -1140,7 +1140,7 @@ const StarFieldGenerator: React.FC = () => {
                       amplification: value[0],
                       speed: (value[0] / 100) * (60 / prev.duration) // Calculate speed based on amplification and duration
                     }))}
-                    min={100}
+                    min={50}
                     max={300}
                     step={10}
                     className="w-full"
