@@ -26,6 +26,7 @@ export interface MotionSettings {
   spin: number;
   spinDirection: 'clockwise' | 'counterclockwise';
   fadeOut?: boolean;
+  hyperspeed?: boolean; // New: hyperspeed motion blur and whirlpool effect
 }
 
 export class VideoGenerationService {
