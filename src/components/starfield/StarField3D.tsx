@@ -1842,7 +1842,24 @@ const StarField3D: React.FC<StarField3DProps> = ({
       
       ctx.globalAlpha = bgAlpha;
       ctx.globalCompositeOperation = 'source-over';
-      ctx.drawImage(backgroundImg, drawX, drawY, scaledWidth, scaledHeight);
+      
+      // Apply hyperspeed twist to background
+      if (hyperspeed && blurAmount > 0) {
+        const twistIntensity = blurAmount / 6; // 0 to 1
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        // Spiral twist effect - rotate based on distance from center
+        const twistAngle = twistIntensity * 0.15; // Max 8.6 degrees
+        ctx.rotate(twistAngle);
+        ctx.translate(-centerX, -centerY);
+        ctx.drawImage(backgroundImg, drawX, drawY, scaledWidth, scaledHeight);
+        ctx.restore();
+      } else {
+        ctx.drawImage(backgroundImg, drawX, drawY, scaledWidth, scaledHeight);
+      }
     }
     
     // Draw twelve star layers with 3D parallax (back to front) and intelligent blending
@@ -1881,9 +1898,28 @@ const StarField3D: React.FC<StarField3DProps> = ({
           const maxDist = Math.sqrt(centerX * centerX + centerY * centerY);
           const normalizedDist = distance / maxDist;
           
+          // Star trailing: draw multiple stretched copies radiating from center
+          const trailIntensity = blurAmount / 6; // 0 to 1
+          const angle = Math.atan2(dy, dx);
+          const trailSteps = 6;
+          const trailLength = trailIntensity * 80 * normalizedDist;
+          
+          for (let i = 0; i < trailSteps; i++) {
+            const t = i / trailSteps;
+            const trailX = drawX - Math.cos(angle) * trailLength * t;
+            const trailY = drawY - Math.sin(angle) * trailLength * t;
+            const trailAlpha = opacity * trailIntensity * 0.4 * (1 - t * 0.8);
+            
+            ctx.save();
+            ctx.globalCompositeOperation = compositeOp;
+            ctx.globalAlpha = trailAlpha;
+            ctx.filter = 'none';
+            ctx.drawImage(layer, trailX, trailY, scaledWidth, scaledHeight);
+            ctx.restore();
+          }
+          
           // Chromatic aberration: shift red and blue channels
           const aberrationAmount = (blurAmount / 6) * 5 * normalizedDist;
-          const angle = Math.atan2(dy, dx);
           
           // Red shift (away from center - Doppler red shift)
           ctx.save();
@@ -1907,7 +1943,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
           
           // Main layer (normal position, brighter)
           ctx.globalCompositeOperation = compositeOp;
-          ctx.globalAlpha = opacity * 0.7;
+          ctx.globalAlpha = opacity * 0.8;
           ctx.filter = 'none';
           ctx.drawImage(layer, drawX, drawY, scaledWidth, scaledHeight);
         } else {
