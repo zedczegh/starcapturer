@@ -1859,10 +1859,10 @@ const StarField3D: React.FC<StarField3DProps> = ({
           fadeFactor = (1.0 - progressRatio) / (1.0 - fadeOutStart);
         }
         
-        // Pulsing intensity - oscillates using sine wave
+        // Pulsing intensity - oscillates using sine wave with dramatic range
         const pulseFrequency = 0.002; // Speed of the pulse
         const pulsePhase = Date.now() * pulseFrequency;
-        const pulseModulation = 0.6 + Math.sin(pulsePhase) * 0.4; // Oscillates between 0.2 and 1.0
+        const pulseModulation = 0.5 + Math.sin(pulsePhase) * 0.5; // Oscillates between 0.0 and 1.0 - more dramatic
         
         const baseTwistIntensity = blurAmount / 3; // 0 to 2
         const twistIntensity = baseTwistIntensity * pulseModulation * fadeFactor;
@@ -1884,8 +1884,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
           ctx.imageSmoothingEnabled = true;
           ctx.imageSmoothingQuality = 'high';
           
-          const segments = 48; // Balanced resolution
-          const rings = 32; // Balanced resolution
+          const segments = 64; // Higher resolution for smoother edges
+          const rings = 48; // Higher resolution for smoother edges
           
           for (let ring = 0; ring < rings; ring++) {
             const radiusRatio = ring / rings;
@@ -1907,9 +1907,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
               const dstX = centerX + Math.cos(dstAngle) * radius;
               const dstY = centerY + Math.sin(dstAngle) * radius;
               
-              // Draw with moderate overlap for smoother blending while preserving brightness
-              const segmentSize = Math.max(3, maxRadius / rings * 1.8);
-              const segmentAlpha = 0.15; // Increased from 0.08 to preserve brightness
+              // Draw with optimal overlap for ultra-smooth blending while preserving brightness
+              const segmentSize = Math.max(3, maxRadius / rings * 2.0);
+              const segmentAlpha = 0.12; // Optimized for smooth blending with higher segment count
               
               ctx.save();
               ctx.globalAlpha = segmentAlpha;
@@ -1970,7 +1970,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
           // Pulsing intensity - oscillates using sine wave (same as whirlpool)
           const pulseFrequency = 0.002;
           const pulsePhase = Date.now() * pulseFrequency;
-          const pulseModulation = 0.6 + Math.sin(pulsePhase) * 0.4; // Oscillates between 0.2 and 1.0
+          const pulseModulation = 0.5 + Math.sin(pulsePhase) * 0.5; // Oscillates between 0.0 and 1.0 - more dramatic
           
           // Calculate fade in/out based on animation progress (same as whirlpool)
           const fadeInEnd = 0.35;
