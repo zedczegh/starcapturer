@@ -183,12 +183,21 @@ const StarFieldGenerator: React.FC = () => {
     const canvasPool = CanvasPool.getInstance();
     
     const { result } = await MemoryManager.monitorOperation(async () => {
-      const canvas = canvasPool.acquire(img.width, img.height);
+      // Limit processing resolution for very large images to improve performance
+      const maxDimension = 3072;
+      const scale =
+        Math.max(img.width, img.height) > maxDimension
+          ? maxDimension / Math.max(img.width, img.height)
+          : 1;
+      const targetWidth = Math.round(img.width * scale);
+      const targetHeight = Math.round(img.height * scale);
+
+      const canvas = canvasPool.acquire(targetWidth, targetHeight);
       const ctx = canvas.getContext('2d')!;
       
       try {
-        // Draw starless image
-        ctx.drawImage(img, 0, 0);
+        // Draw starless image (scaled if necessary)
+        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         
         // Process depth map in chunks for large images
@@ -246,11 +255,21 @@ const StarFieldGenerator: React.FC = () => {
   // Extract star positions with diffraction spike detection (Newtonian cross stars) - optimized
   const extractStarPositions = useCallback((img: HTMLImageElement): StarPosition[] => {
     const canvasPool = CanvasPool.getInstance();
-    const canvas = canvasPool.acquire(img.width, img.height);
+    
+    // Limit star extraction resolution for very large images
+    const maxDimension = 3072;
+    const scale =
+      Math.max(img.width, img.height) > maxDimension
+        ? maxDimension / Math.max(img.width, img.height)
+        : 1;
+    const targetWidth = Math.round(img.width * scale);
+    const targetHeight = Math.round(img.height * scale);
+
+    const canvas = canvasPool.acquire(targetWidth, targetHeight);
     const ctx = canvas.getContext('2d')!;
     
     try {
-      ctx.drawImage(img, 0, 0);
+      ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
     
