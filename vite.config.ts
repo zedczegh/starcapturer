@@ -61,13 +61,8 @@ export default defineConfig(({ mode }) => ({
     assetsDir: 'assets',
     copyPublicDir: true,
     chunkSizeWarningLimit: 1000,
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: mode === 'production',
-        drop_debugger: mode === 'production',
-      },
-    },
+    // Use Vite's default esbuild minifier for better compatibility
+    minify: 'esbuild',
   },
   optimizeDeps: {
     exclude: ['lovable-tagger'],
