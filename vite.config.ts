@@ -22,50 +22,18 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          // Core React and routing
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/react-router')) {
-            return 'react-core';
-          }
-          // UI components library
-          if (id.includes('node_modules/@radix-ui')) {
-            return 'radix-ui';
-          }
-          // Leaflet and mapping
-          if (id.includes('node_modules/leaflet') || id.includes('node_modules/react-leaflet')) {
-            return 'maps';
-          }
-          // Three.js and 3D
-          if (id.includes('node_modules/three') || id.includes('node_modules/@react-three')) {
-            return 'three-js';
-          }
-          // Chart libraries
-          if (id.includes('node_modules/recharts')) {
-            return 'charts';
-          }
-          // Heavy utilities
-          if (id.includes('node_modules/date-fns') || id.includes('node_modules/lodash')) {
-            return 'utils';
-          }
-          // Supabase
-          if (id.includes('node_modules/@supabase')) {
-            return 'supabase';
-          }
-          // Other vendor libraries
-          if (id.includes('node_modules/')) {
-            return 'vendor';
-          }
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          ui: ['@/components/ui'],
+          vendor: ['suncalc'],
         }
       }
     },
     assetsDir: 'assets',
-    copyPublicDir: true,
-    chunkSizeWarningLimit: 1000,
-    // Use Vite's default esbuild minifier for better compatibility
-    minify: 'esbuild',
+    copyPublicDir: true, // Ensures public directory is copied to dist
   },
   optimizeDeps: {
     exclude: ['lovable-tagger'],
-    include: ['suncalc', 'react', 'react-dom', 'react-router-dom'],
+    include: ['suncalc'],
   }
 }));

@@ -109,12 +109,11 @@ const ParallelVideoGenerator: React.FC = () => {
     amplification: 150,
     spin: 0,
     spinDirection: 'clockwise',
-    fadeOut: false,
-    hyperspeed: false
+    fadeOut: true
   });
 
   const [depthIntensity, setDepthIntensity] = useState<number>(200);
-  const [preserveStarsIntensity, setPreserveStarsIntensity] = useState<number>(50);
+  const [preserveStarsIntensity, setPreserveStarsIntensity] = useState<number>(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationProgress, setAnimationProgress] = useState(0);
   const [debugImagesOpen, setDebugImagesOpen] = useState(false);
@@ -1926,11 +1925,10 @@ const ParallelVideoGenerator: React.FC = () => {
                       amplification: 150,
                       spin: 0,
                       spinDirection: 'clockwise',
-                      fadeOut: false,
-                      hyperspeed: false
+                      fadeOut: true
                     });
                     setDepthIntensity(200);
-                    setPreserveStarsIntensity(50);
+                    setPreserveStarsIntensity(0);
                   }}
                   className="h-8 gap-2 text-xs bg-cosmic-800/50 hover:bg-cosmic-700/50 border-cosmic-600"
                 >
@@ -2001,22 +1999,6 @@ const ParallelVideoGenerator: React.FC = () => {
                   <Switch
                     checked={motionSettings.fadeOut}
                     onCheckedChange={(checked) => setMotionSettings(prev => ({ ...prev, fadeOut: checked }))}
-                    className="ml-4"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30 mt-3">
-                  <div className="flex-1">
-                    <Label className="text-cosmic-200 text-sm font-medium">
-                      {t('Hyperspeed Effect', '超光速效果')}
-                    </Label>
-                    <p className="text-xs text-cosmic-400 mt-1">
-                      {t('Enable whirlpool distortion and star trailing effects for dramatic hyperspace journey', '启用漩涡扭曲和星轨效果，营造戏剧性的超空间旅行')}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={motionSettings.hyperspeed || false}
-                    onCheckedChange={(checked) => setMotionSettings(prev => ({ ...prev, hyperspeed: checked }))}
                     className="ml-4"
                   />
                 </div>

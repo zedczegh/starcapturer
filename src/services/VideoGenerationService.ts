@@ -26,7 +26,6 @@ export interface MotionSettings {
   spin: number;
   spinDirection: 'clockwise' | 'counterclockwise';
   fadeOut?: boolean;
-  hyperspeed?: boolean;
 }
 
 export class VideoGenerationService {
