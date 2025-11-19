@@ -1137,11 +1137,11 @@ const StarFieldGenerator: React.FC = () => {
                     value={[animationSettings.amplification]}
                     onValueChange={(value) => setAnimationSettings(prev => ({
                       ...prev, 
-                      amplification: value[0],
-                      speed: (value[0] / 100) * (60 / prev.duration) // Calculate speed based on amplification and duration
-                    }))}
-                    min={50}
-                    max={300}
+                    amplification: value[0],
+                    speed: (value[0] / 100) * (60 / prev.duration) // Calculate speed based on amplification and duration
+                  }))}
+                  min={20}
+                  max={300}
                     step={10}
                     className="w-full"
                   />
