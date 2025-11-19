@@ -1850,69 +1850,53 @@ const StarField3D: React.FC<StarField3DProps> = ({
         const centerY = canvas.height / 2;
         const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY);
         
-        // Draw image to temporary canvas
+        // Draw image to temporary canvas for pixel manipulation
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = canvas.width;
         tempCanvas.height = canvas.height;
         const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
         if (tempCtx) {
           tempCtx.drawImage(backgroundImg, drawX, drawY, scaledWidth, scaledHeight);
-          const imageData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
-          const outputData = ctx.createImageData(canvas.width, canvas.height);
           
-          // Apply smooth whirlpool distortion pixel by pixel
-          for (let y = 0; y < canvas.height; y++) {
-            for (let x = 0; x < canvas.width; x++) {
-              // Calculate distance and angle from center
-              const dx = x - centerX;
-              const dy = y - centerY;
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              const distRatio = Math.min(dist / maxRadius, 1);
+          // Apply whirlpool distortion by redrawing in a spiral pattern
+          ctx.save();
+          const segments = 32; // Number of radial segments
+          const rings = 24; // Number of concentric rings
+          
+          for (let ring = 0; ring < rings; ring++) {
+            const radiusRatio = ring / rings;
+            const radius = radiusRatio * maxRadius;
+            
+            for (let seg = 0; seg < segments; seg++) {
+              const angle = (seg / segments) * Math.PI * 2;
               
-              // Calculate twist amount (more at edges, smooth falloff)
-              const twistAmount = twistIntensity * distRatio * distRatio * 0.6;
+              // Calculate twist amount based on distance from center (more twist toward edges)
+              const distortionAngle = twistIntensity * radiusRatio * radiusRatio * 0.8; // Quadratic falloff
               
-              // Calculate source coordinates by reverse-twisting
-              const angle = Math.atan2(dy, dx);
-              const srcAngle = angle - twistAmount; // Reverse twist to sample from source
+              // Source coordinates (untwisted)
+              const srcAngle = angle;
+              const srcX = centerX + Math.cos(srcAngle) * radius;
+              const srcY = centerY + Math.sin(srcAngle) * radius;
               
-              const srcX = centerX + Math.cos(srcAngle) * dist;
-              const srcY = centerY + Math.sin(srcAngle) * dist;
+              // Destination coordinates (twisted)
+              const dstAngle = angle + distortionAngle;
+              const dstX = centerX + Math.cos(dstAngle) * radius;
+              const dstY = centerY + Math.sin(dstAngle) * radius;
               
-              // Bilinear interpolation for smooth sampling
-              const x0 = Math.floor(srcX);
-              const x1 = Math.ceil(srcX);
-              const y0 = Math.floor(srcY);
-              const y1 = Math.ceil(srcY);
-              
-              const fx = srcX - x0;
-              const fy = srcY - y0;
-              
-              // Sample with bounds checking
-              const sample = (sx: number, sy: number) => {
-                if (sx >= 0 && sx < canvas.width && sy >= 0 && sy < canvas.height) {
-                  const idx = (sy * canvas.width + sx) * 4;
-                  return [imageData.data[idx], imageData.data[idx + 1], imageData.data[idx + 2], imageData.data[idx + 3]];
-                }
-                return [0, 0, 0, 0];
-              };
-              
-              const p00 = sample(x0, y0);
-              const p10 = sample(x1, y0);
-              const p01 = sample(x0, y1);
-              const p11 = sample(x1, y1);
-              
-              // Bilinear interpolation
-              const outIdx = (y * canvas.width + x) * 4;
-              for (let c = 0; c < 4; c++) {
-                const top = p00[c] * (1 - fx) + p10[c] * fx;
-                const bottom = p01[c] * (1 - fx) + p11[c] * fx;
-                outputData.data[outIdx + c] = top * (1 - fy) + bottom * fy;
-              }
+              // Draw small segment
+              const segmentSize = Math.max(2, maxRadius / rings * 1.5);
+              ctx.save();
+              ctx.translate(dstX, dstY);
+              ctx.rotate(dstAngle - srcAngle);
+              ctx.drawImage(
+                tempCanvas,
+                srcX - segmentSize/2, srcY - segmentSize/2, segmentSize, segmentSize,
+                -segmentSize/2, -segmentSize/2, segmentSize, segmentSize
+              );
+              ctx.restore();
             }
           }
-          
-          ctx.putImageData(outputData, 0, 0);
+          ctx.restore();
         }
       } else {
         ctx.drawImage(backgroundImg, drawX, drawY, scaledWidth, scaledHeight);
