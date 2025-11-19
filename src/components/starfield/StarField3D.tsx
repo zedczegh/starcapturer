@@ -1845,20 +1845,17 @@ const StarField3D: React.FC<StarField3DProps> = ({
       
       // Apply hyperspeed whirlpool distortion to background
       if (hyperspeed && blurAmount > 0) {
-        // Calculate fade in/out with smooth cubic easing for gradual morph effect
-        // 20% fade in (gradual break apart), 60% full intensity, 20% fade out
-        const fadeInEnd = 0.20;
-        const fadeOutStart = 0.80;
+        // Calculate fade in/out based on animation progress (15% fade in, 70% full, 15% fade out)
+        const fadeInEnd = 0.15;
+        const fadeOutStart = 0.85;
         let fadeFactor = 1.0;
         
         if (progressRatio < fadeInEnd) {
-          // Cubic ease-in for very gradual start
-          const t = progressRatio / fadeInEnd;
-          fadeFactor = t * t * t;
+          // Fade in during first 15%
+          fadeFactor = progressRatio / fadeInEnd;
         } else if (progressRatio > fadeOutStart) {
-          // Cubic ease-out for smooth ending
-          const t = (1.0 - progressRatio) / (1.0 - fadeOutStart);
-          fadeFactor = t * t * t;
+          // Fade out during last 15%
+          fadeFactor = (1.0 - progressRatio) / (1.0 - fadeOutStart);
         }
         
         // Pulsing intensity - oscillates using sine wave
@@ -1869,11 +1866,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
         const baseTwistIntensity = blurAmount / 3; // 0 to 2
         const twistIntensity = baseTwistIntensity * pulseModulation * fadeFactor;
         
-        // Only apply distortion if twist intensity is significant enough
-        if (twistIntensity > 0.01) {
-          const centerX = canvas.width / 2;
-          const centerY = canvas.height / 2;
-          const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY);
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY);
         
         // Draw image to temporary canvas for pixel manipulation
         const tempCanvas = document.createElement('canvas');
@@ -1929,10 +1924,6 @@ const StarField3D: React.FC<StarField3DProps> = ({
           }
           ctx.restore();
         }
-        } else {
-          // Twist intensity too low, draw normally
-          ctx.drawImage(backgroundImg, drawX, drawY, scaledWidth, scaledHeight);
-        }
       } else {
         ctx.drawImage(backgroundImg, drawX, drawY, scaledWidth, scaledHeight);
       }
@@ -1980,19 +1971,15 @@ const StarField3D: React.FC<StarField3DProps> = ({
           const pulsePhase = Date.now() * pulseFrequency;
           const pulseModulation = 0.6 + Math.sin(pulsePhase) * 0.4; // Oscillates between 0.2 and 1.0
           
-          // Calculate fade in/out with smooth cubic easing (same as whirlpool)
-          const fadeInEnd = 0.20;
-          const fadeOutStart = 0.80;
+          // Calculate fade in/out based on animation progress (same as whirlpool)
+          const fadeInEnd = 0.15;
+          const fadeOutStart = 0.85;
           let fadeFactor = 1.0;
           
           if (progressRatio < fadeInEnd) {
-            // Cubic ease-in for very gradual start
-            const t = progressRatio / fadeInEnd;
-            fadeFactor = t * t * t;
+            fadeFactor = progressRatio / fadeInEnd;
           } else if (progressRatio > fadeOutStart) {
-            // Cubic ease-out for smooth ending
-            const t = (1.0 - progressRatio) / (1.0 - fadeOutStart);
-            fadeFactor = t * t * t;
+            fadeFactor = (1.0 - progressRatio) / (1.0 - fadeOutStart);
           }
           
           const baseTrailIntensity = blurAmount / 6; // 0 to 1
