@@ -1086,7 +1086,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
         offsetsRef.current.layer1.scale = layer1Max - (easedProgress * ampFactor * 1.0 * parallaxMultipliers.layer1);
       } else if (motionType === 'pan_left') {
         // Pan left: Apply constant zoom effect throughout, pan stars left and background right at half speed
-        const panAmount = easedProgress * speed * 250 * ampFactor;
+        const panAmount = easedProgress * speed * 250;
         
         // Constant zoom effect (remains amplified throughout the animation)
         offsetsRef.current.background.scale = 1.0 + ampFactor;
@@ -1119,7 +1119,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
         offsetsRef.current.layer1.x = -panAmount * parallaxMultipliers.layer1;
       } else if (motionType === 'pan_right') {
         // Pan right: Apply constant zoom effect throughout, pan stars right and background left at half speed
-        const panAmount = easedProgress * speed * 250 * ampFactor;
+        const panAmount = easedProgress * speed * 250;
         
         // Constant zoom effect (remains amplified throughout the animation)
         offsetsRef.current.background.scale = 1.0 + ampFactor;
