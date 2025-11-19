@@ -160,9 +160,14 @@ const StarField3D: React.FC<StarField3DProps> = ({
 
     const img = new Image();
     img.onload = () => {
-      // Use provided dimensions or fall back to image dimensions
-      const targetWidth = canvasWidth || img.width;
-      const targetHeight = canvasHeight || img.height;
+      // Use provided dimensions or fall back to image dimensions, with safety cap
+      const maxDimension = 3072;
+      const baseWidth = canvasWidth || img.width;
+      const baseHeight = canvasHeight || img.height;
+      const baseMax = Math.max(baseWidth, baseHeight);
+      const scale = baseMax > maxDimension ? maxDimension / baseMax : 1;
+      const targetWidth = Math.round(baseWidth * scale);
+      const targetHeight = Math.round(baseHeight * scale);
       setImageDimensions({ width: targetWidth, height: targetHeight });
       
       console.log('Detecting complete stars with cores and spikes...');
@@ -759,9 +764,14 @@ const StarField3D: React.FC<StarField3DProps> = ({
     
     const img = new Image();
     img.onload = () => {
-      // Scale background to match target canvas dimensions (same as stars)
-      const targetWidth = canvasWidth || img.width;
-      const targetHeight = canvasHeight || img.height;
+      // Scale background to match target canvas dimensions (same as stars), with safety cap
+      const maxDimension = 3072;
+      const baseWidth = canvasWidth || img.width;
+      const baseHeight = canvasHeight || img.height;
+      const baseMax = Math.max(baseWidth, baseHeight);
+      const scale = baseMax > maxDimension ? maxDimension / baseMax : 1;
+      const targetWidth = Math.round(baseWidth * scale);
+      const targetHeight = Math.round(baseHeight * scale);
       
       // Create a canvas to scale the background
       const tempCanvas = document.createElement('canvas');
