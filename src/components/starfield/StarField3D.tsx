@@ -1085,37 +1085,23 @@ const StarField3D: React.FC<StarField3DProps> = ({
         offsetsRef.current.layer2.scale = layer2Max - (easedProgress * ampFactor * 0.9 * parallaxMultipliers.layer2);
         offsetsRef.current.layer1.scale = layer1Max - (easedProgress * ampFactor * 1.0 * parallaxMultipliers.layer1);
       } else if (motionType === 'pan_left') {
-        // Pan left: Apply zoom out effect first, then pan stars left and background right at half speed
+        // Pan left: Apply constant zoom effect throughout, pan stars left and background right at half speed
         const panAmount = easedProgress * speed * 250 * ampFactor;
         
-        // Zoom out effect like zoom_out animation (start amplified, shrink as animation progresses)
-        const bgMax = 1.0 + ampFactor;
-        const layer12Max = 1.0 + (ampFactor * 0.15 * parallaxMultipliers.layer12);
-        const layer11Max = 1.0 + (ampFactor * 0.2 * parallaxMultipliers.layer11);
-        const layer10Max = 1.0 + (ampFactor * 0.25 * parallaxMultipliers.layer10);
-        const layer9Max = 1.0 + (ampFactor * 0.3 * parallaxMultipliers.layer9);
-        const layer8Max = 1.0 + (ampFactor * 0.35 * parallaxMultipliers.layer8);
-        const layer7Max = 1.0 + (ampFactor * 0.4 * parallaxMultipliers.layer7);
-        const layer6Max = 1.0 + (ampFactor * 0.5 * parallaxMultipliers.layer6);
-        const layer5Max = 1.0 + (ampFactor * 0.6 * parallaxMultipliers.layer5);
-        const layer4Max = 1.0 + (ampFactor * 0.7 * parallaxMultipliers.layer4);
-        const layer3Max = 1.0 + (ampFactor * 0.8 * parallaxMultipliers.layer3);
-        const layer2Max = 1.0 + (ampFactor * 0.9 * parallaxMultipliers.layer2);
-        const layer1Max = 1.0 + (ampFactor * 1.0 * parallaxMultipliers.layer1);
-        
-        offsetsRef.current.background.scale = bgMax - (easedProgress * ampFactor);
-        offsetsRef.current.layer12.scale = layer12Max - (easedProgress * ampFactor * 0.15 * parallaxMultipliers.layer12);
-        offsetsRef.current.layer11.scale = layer11Max - (easedProgress * ampFactor * 0.2 * parallaxMultipliers.layer11);
-        offsetsRef.current.layer10.scale = layer10Max - (easedProgress * ampFactor * 0.25 * parallaxMultipliers.layer10);
-        offsetsRef.current.layer9.scale = layer9Max - (easedProgress * ampFactor * 0.3 * parallaxMultipliers.layer9);
-        offsetsRef.current.layer8.scale = layer8Max - (easedProgress * ampFactor * 0.35 * parallaxMultipliers.layer8);
-        offsetsRef.current.layer7.scale = layer7Max - (easedProgress * ampFactor * 0.4 * parallaxMultipliers.layer7);
-        offsetsRef.current.layer6.scale = layer6Max - (easedProgress * ampFactor * 0.5 * parallaxMultipliers.layer6);
-        offsetsRef.current.layer5.scale = layer5Max - (easedProgress * ampFactor * 0.6 * parallaxMultipliers.layer5);
-        offsetsRef.current.layer4.scale = layer4Max - (easedProgress * ampFactor * 0.7 * parallaxMultipliers.layer4);
-        offsetsRef.current.layer3.scale = layer3Max - (easedProgress * ampFactor * 0.8 * parallaxMultipliers.layer3);
-        offsetsRef.current.layer2.scale = layer2Max - (easedProgress * ampFactor * 0.9 * parallaxMultipliers.layer2);
-        offsetsRef.current.layer1.scale = layer1Max - (easedProgress * ampFactor * 1.0 * parallaxMultipliers.layer1);
+        // Constant zoom effect (remains amplified throughout the animation)
+        offsetsRef.current.background.scale = 1.0 + ampFactor;
+        offsetsRef.current.layer12.scale = 1.0 + (ampFactor * 0.15 * parallaxMultipliers.layer12);
+        offsetsRef.current.layer11.scale = 1.0 + (ampFactor * 0.2 * parallaxMultipliers.layer11);
+        offsetsRef.current.layer10.scale = 1.0 + (ampFactor * 0.25 * parallaxMultipliers.layer10);
+        offsetsRef.current.layer9.scale = 1.0 + (ampFactor * 0.3 * parallaxMultipliers.layer9);
+        offsetsRef.current.layer8.scale = 1.0 + (ampFactor * 0.35 * parallaxMultipliers.layer8);
+        offsetsRef.current.layer7.scale = 1.0 + (ampFactor * 0.4 * parallaxMultipliers.layer7);
+        offsetsRef.current.layer6.scale = 1.0 + (ampFactor * 0.5 * parallaxMultipliers.layer6);
+        offsetsRef.current.layer5.scale = 1.0 + (ampFactor * 0.6 * parallaxMultipliers.layer5);
+        offsetsRef.current.layer4.scale = 1.0 + (ampFactor * 0.7 * parallaxMultipliers.layer4);
+        offsetsRef.current.layer3.scale = 1.0 + (ampFactor * 0.8 * parallaxMultipliers.layer3);
+        offsetsRef.current.layer2.scale = 1.0 + (ampFactor * 0.9 * parallaxMultipliers.layer2);
+        offsetsRef.current.layer1.scale = 1.0 + (ampFactor * 1.0 * parallaxMultipliers.layer1);
         
         // Stars pan left (negative x), background pans right (positive x) at half speed
         offsetsRef.current.background.x = (panAmount * 0.5) * parallaxMultipliers.background;
@@ -1132,37 +1118,23 @@ const StarField3D: React.FC<StarField3DProps> = ({
         offsetsRef.current.layer2.x = -panAmount * parallaxMultipliers.layer2;
         offsetsRef.current.layer1.x = -panAmount * parallaxMultipliers.layer1;
       } else if (motionType === 'pan_right') {
-        // Pan right: Apply zoom out effect first, then pan stars right and background left at half speed
+        // Pan right: Apply constant zoom effect throughout, pan stars right and background left at half speed
         const panAmount = easedProgress * speed * 250 * ampFactor;
         
-        // Zoom out effect like zoom_out animation (start amplified, shrink as animation progresses)
-        const bgMax = 1.0 + ampFactor;
-        const layer12Max = 1.0 + (ampFactor * 0.15 * parallaxMultipliers.layer12);
-        const layer11Max = 1.0 + (ampFactor * 0.2 * parallaxMultipliers.layer11);
-        const layer10Max = 1.0 + (ampFactor * 0.25 * parallaxMultipliers.layer10);
-        const layer9Max = 1.0 + (ampFactor * 0.3 * parallaxMultipliers.layer9);
-        const layer8Max = 1.0 + (ampFactor * 0.35 * parallaxMultipliers.layer8);
-        const layer7Max = 1.0 + (ampFactor * 0.4 * parallaxMultipliers.layer7);
-        const layer6Max = 1.0 + (ampFactor * 0.5 * parallaxMultipliers.layer6);
-        const layer5Max = 1.0 + (ampFactor * 0.6 * parallaxMultipliers.layer5);
-        const layer4Max = 1.0 + (ampFactor * 0.7 * parallaxMultipliers.layer4);
-        const layer3Max = 1.0 + (ampFactor * 0.8 * parallaxMultipliers.layer3);
-        const layer2Max = 1.0 + (ampFactor * 0.9 * parallaxMultipliers.layer2);
-        const layer1Max = 1.0 + (ampFactor * 1.0 * parallaxMultipliers.layer1);
-        
-        offsetsRef.current.background.scale = bgMax - (easedProgress * ampFactor);
-        offsetsRef.current.layer12.scale = layer12Max - (easedProgress * ampFactor * 0.15 * parallaxMultipliers.layer12);
-        offsetsRef.current.layer11.scale = layer11Max - (easedProgress * ampFactor * 0.2 * parallaxMultipliers.layer11);
-        offsetsRef.current.layer10.scale = layer10Max - (easedProgress * ampFactor * 0.25 * parallaxMultipliers.layer10);
-        offsetsRef.current.layer9.scale = layer9Max - (easedProgress * ampFactor * 0.3 * parallaxMultipliers.layer9);
-        offsetsRef.current.layer8.scale = layer8Max - (easedProgress * ampFactor * 0.35 * parallaxMultipliers.layer8);
-        offsetsRef.current.layer7.scale = layer7Max - (easedProgress * ampFactor * 0.4 * parallaxMultipliers.layer7);
-        offsetsRef.current.layer6.scale = layer6Max - (easedProgress * ampFactor * 0.5 * parallaxMultipliers.layer6);
-        offsetsRef.current.layer5.scale = layer5Max - (easedProgress * ampFactor * 0.6 * parallaxMultipliers.layer5);
-        offsetsRef.current.layer4.scale = layer4Max - (easedProgress * ampFactor * 0.7 * parallaxMultipliers.layer4);
-        offsetsRef.current.layer3.scale = layer3Max - (easedProgress * ampFactor * 0.8 * parallaxMultipliers.layer3);
-        offsetsRef.current.layer2.scale = layer2Max - (easedProgress * ampFactor * 0.9 * parallaxMultipliers.layer2);
-        offsetsRef.current.layer1.scale = layer1Max - (easedProgress * ampFactor * 1.0 * parallaxMultipliers.layer1);
+        // Constant zoom effect (remains amplified throughout the animation)
+        offsetsRef.current.background.scale = 1.0 + ampFactor;
+        offsetsRef.current.layer12.scale = 1.0 + (ampFactor * 0.15 * parallaxMultipliers.layer12);
+        offsetsRef.current.layer11.scale = 1.0 + (ampFactor * 0.2 * parallaxMultipliers.layer11);
+        offsetsRef.current.layer10.scale = 1.0 + (ampFactor * 0.25 * parallaxMultipliers.layer10);
+        offsetsRef.current.layer9.scale = 1.0 + (ampFactor * 0.3 * parallaxMultipliers.layer9);
+        offsetsRef.current.layer8.scale = 1.0 + (ampFactor * 0.35 * parallaxMultipliers.layer8);
+        offsetsRef.current.layer7.scale = 1.0 + (ampFactor * 0.4 * parallaxMultipliers.layer7);
+        offsetsRef.current.layer6.scale = 1.0 + (ampFactor * 0.5 * parallaxMultipliers.layer6);
+        offsetsRef.current.layer5.scale = 1.0 + (ampFactor * 0.6 * parallaxMultipliers.layer5);
+        offsetsRef.current.layer4.scale = 1.0 + (ampFactor * 0.7 * parallaxMultipliers.layer4);
+        offsetsRef.current.layer3.scale = 1.0 + (ampFactor * 0.8 * parallaxMultipliers.layer3);
+        offsetsRef.current.layer2.scale = 1.0 + (ampFactor * 0.9 * parallaxMultipliers.layer2);
+        offsetsRef.current.layer1.scale = 1.0 + (ampFactor * 1.0 * parallaxMultipliers.layer1);
         
         // Stars pan right (positive x), background pans left (negative x) at half speed
         offsetsRef.current.background.x = -(panAmount * 0.5) * parallaxMultipliers.background;
