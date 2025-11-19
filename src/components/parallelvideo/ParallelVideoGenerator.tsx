@@ -441,6 +441,18 @@ const ParallelVideoGenerator: React.FC = () => {
       // Calculate intensity multiplier
       const intensityMultiplier = 0.2 + (depthIntensity / 100) * 1.8;
       
+      // Store raw stars with properties for astrophysical sorting
+      interface RawStar {
+        x: number;
+        y: number;
+        brightness: number;
+        size: number;
+        color: { r: number; g: number; b: number };
+        maxLuminance: number;
+        avgBrightness: number;
+      }
+      const rawStars: RawStar[] = [];
+      
       // Scan for bright regions
       for (let y = 1; y < canvas.height - 1; y++) {
         for (let x = 1; x < canvas.width - 1; x++) {
@@ -452,13 +464,14 @@ const ParallelVideoGenerator: React.FC = () => {
           
           if (luminance > threshold) {
             // Found a bright pixel - grow the star region
-            const starPixels: {x: number, y: number, lum: number}[] = [];
+            const starPixels: {x: number, y: number, lum: number, r: number, g: number, b: number}[] = [];
             const queue: {x: number, y: number}[] = [{x, y}];
             visited[idx] = 1;
             
             let minX = x, maxX = x, minY = y, maxY = y;
             let totalLum = 0, maxLum = 0;
             let totalX = 0, totalY = 0;
+            let totalR = 0, totalG = 0, totalB = 0;
             
             while (queue.length > 0 && starPixels.length < maxStarSize) {
               const curr = queue.shift()!;
@@ -466,9 +479,17 @@ const ParallelVideoGenerator: React.FC = () => {
               const currPixelIdx = currIdx * 4;
               const currLum = 0.299 * data[currPixelIdx] + 0.587 * data[currPixelIdx + 1] + 0.114 * data[currPixelIdx + 2];
               
-              starPixels.push({x: curr.x, y: curr.y, lum: currLum});
+              const r = data[currPixelIdx];
+              const g = data[currPixelIdx + 1];
+              const b = data[currPixelIdx + 2];
+              
+              starPixels.push({x: curr.x, y: curr.y, lum: currLum, r, g, b});
               totalLum += currLum;
               if (currLum > maxLum) maxLum = currLum;
+              
+              totalR += r;
+              totalG += g;
+              totalB += b;
               
               // Weighted centroid calculation
               const weight = currLum * currLum;
@@ -511,34 +532,31 @@ const ParallelVideoGenerator: React.FC = () => {
               const centroidY = Math.round(totalY / totalWeight);
               
               // Check minimum distance from existing stars
-              const tooClose = stars.some(s => {
-                const dx = (s.x / 0.08 + canvas.width / 2) - centroidX;
-                const dy = -(s.y / 0.08 - canvas.height / 2) - centroidY;
+              const tooClose = rawStars.some(s => {
+                const dx = s.x - centroidX;
+                const dy = s.y - centroidY;
                 return Math.sqrt(dx * dx + dy * dy) < minDistance;
               });
               
               if (!tooClose) {
-                const centerIdx = (centroidY * canvas.width + centroidX) * 4;
                 const starWidth = maxX - minX + 1;
                 const starHeight = maxY - minY + 1;
                 const actualSize = Math.max(starWidth, starHeight);
                 
-                // Get depth from depth map at star position
-                const depthIdx = (Math.floor(centroidY) * depthMap.width + Math.floor(centroidX)) * 4;
-                const depth = depthData.data[depthIdx] / 255;
+                // Calculate average color
+                const avgR = totalR / starPixels.length;
+                const avgG = totalG / starPixels.length;
+                const avgB = totalB / starPixels.length;
+                const avgBrightness = totalLum / starPixels.length;
                 
-                // Convert to 3D coordinates - matching StarFieldGenerator
-                const centerX = canvas.width / 2;
-                const centerY = canvas.height / 2;
-                const scale = 0.08;
-                
-                stars.push({
-                  x: (centroidX - centerX) * scale,
-                  y: -(centroidY - centerY) * scale, // Invert Y for correct orientation
-                  z: (depth - 0.5) * 200 * intensityMultiplier,
+                rawStars.push({
+                  x: centroidX,
+                  y: centroidY,
                   brightness: maxLum / 255,
                   size: actualSize,
-                  color3d: `rgb(${data[centerIdx]}, ${data[centerIdx + 1]}, ${data[centerIdx + 2]})`
+                  color: { r: avgR, g: avgG, b: avgB },
+                  maxLuminance: maxLum / 255,
+                  avgBrightness: avgBrightness / 255
                 });
               }
             }
@@ -546,7 +564,81 @@ const ParallelVideoGenerator: React.FC = () => {
         }
       }
       
-      console.log(`Detected ${stars.length} stars with diffraction spikes`);
+      // ============= ASTROPHYSICAL DEPTH CALCULATION =============
+      // Calculate depth scores based on astrophysical principles
+      const starsWithDepth = rawStars.map(star => {
+        // 1. Calculate color temperature (blue stars are hotter)
+        const colorMax = Math.max(star.color.r, star.color.g, star.color.b, 1);
+        const normalizedR = star.color.r / colorMax;
+        const normalizedG = star.color.g / colorMax;
+        const normalizedB = star.color.b / colorMax;
+        
+        // Temperature indicator: blue-red difference
+        const colorTemp = (normalizedB - normalizedR + 1) / 2; // 0 to 1, higher = bluer/hotter
+        
+        // 2. Estimate intrinsic luminosity based on color (H-R diagram concept)
+        // Hotter (bluer) stars are generally more luminous
+        const intrinsicLuminosity = Math.pow(0.5 + colorTemp * 0.5, 3.5);
+        
+        // 3. Calculate apparent magnitude
+        // Combine pixel brightness with normalized size and luminance
+        const normalizedSize = Math.min(star.size / 50, 1);
+        const normalizedLuminance = star.maxLuminance;
+        const normalizedBrightness = star.avgBrightness;
+        
+        const apparentMagnitude = (
+          normalizedBrightness * 0.5 +
+          normalizedSize * 0.3 +
+          normalizedLuminance * 0.2
+        );
+        
+        // 4. Estimate distance using inverse square law
+        // Distance ~ sqrt(intrinsicLuminosity / apparentMagnitude)
+        const estimatedDistance = Math.sqrt(intrinsicLuminosity / (apparentMagnitude + 0.01));
+        
+        // 5. Calculate depth score (closer stars = higher score)
+        const baseDepthScore = 1 / (estimatedDistance + 0.1);
+        
+        // Add small random variation for natural distribution
+        const randomVariation = 0.95 + Math.random() * 0.1;
+        const depthScore = baseDepthScore * randomVariation;
+        
+        return { ...star, depthScore, estimatedDistance };
+      });
+      
+      // Sort by depth score to assign layers
+      starsWithDepth.sort((a, b) => b.depthScore - a.depthScore);
+      
+      // Find min/max depth scores for normalization
+      const minDepth = Math.min(...starsWithDepth.map(s => s.depthScore));
+      const maxDepth = Math.max(...starsWithDepth.map(s => s.depthScore));
+      const depthRange = maxDepth - minDepth || 1;
+      
+      console.log(`Astrophysical depth range: ${minDepth.toFixed(3)} to ${maxDepth.toFixed(3)}`);
+      
+      // Convert to 3D coordinates with astrophysical depth
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const scale = 0.08;
+      
+      starsWithDepth.forEach(star => {
+        // Normalize depth score to 0-1 range
+        const normalizedDepth = (star.depthScore - minDepth) / depthRange;
+        
+        // Map to z-coordinate: closer stars (high depth score) = positive z
+        const zPosition = (normalizedDepth - 0.5) * 200 * intensityMultiplier;
+        
+        stars.push({
+          x: (star.x - centerX) * scale,
+          y: -(star.y - centerY) * scale, // Invert Y for correct orientation
+          z: zPosition,
+          brightness: star.brightness,
+          size: star.size,
+          color3d: `rgb(${Math.round(star.color.r)}, ${Math.round(star.color.g)}, ${Math.round(star.color.b)})`
+        });
+      });
+      
+      console.log(`Detected ${stars.length} stars with astrophysical depth layering`);
       return stars;
     } finally {
       canvasPool.release(canvas);
