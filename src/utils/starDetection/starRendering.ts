@@ -9,6 +9,10 @@ import type { DetectedStar } from './types';
 export function renderStarWithPSF(ctx: CanvasRenderingContext2D, star: DetectedStar): void {
   const { x, y, size, color, brightness, type } = star;
   
+  // Get canvas bounds for clipping
+  const canvasWidth = ctx.canvas.width;
+  const canvasHeight = ctx.canvas.height;
+  
   let coreSize = size;
   let midHaloSize = size * 2;
   let outerHaloSize = size * 4;
@@ -37,7 +41,7 @@ export function renderStarWithPSF(ctx: CanvasRenderingContext2D, star: DetectedS
   
   const { r, g, b } = color;
   
-  // Layer 4: Far outer halo
+  // Layer 4: Far outer halo with bounds checking
   const farOuterGradient = ctx.createRadialGradient(x, y, outerHaloSize, x, y, farOuterHaloSize);
   farOuterGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness * 0.08})`);
   farOuterGradient.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, ${brightness * 0.05})`);
@@ -46,9 +50,13 @@ export function renderStarWithPSF(ctx: CanvasRenderingContext2D, star: DetectedS
   farOuterGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
   
   ctx.fillStyle = farOuterGradient;
-  ctx.fillRect(x - farOuterHaloSize, y - farOuterHaloSize, farOuterHaloSize * 2, farOuterHaloSize * 2);
+  const farRectX = Math.max(0, x - farOuterHaloSize);
+  const farRectY = Math.max(0, y - farOuterHaloSize);
+  const farRectW = Math.min(canvasWidth - farRectX, (x + farOuterHaloSize) - farRectX);
+  const farRectH = Math.min(canvasHeight - farRectY, (y + farOuterHaloSize) - farRectY);
+  ctx.fillRect(farRectX, farRectY, farRectW, farRectH);
   
-  // Layer 3: Outer halo
+  // Layer 3: Outer halo with bounds checking
   const outerGradient = ctx.createRadialGradient(x, y, midHaloSize, x, y, outerHaloSize);
   outerGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness * 0.15})`);
   outerGradient.addColorStop(0.3, `rgba(${r}, ${g}, ${b}, ${brightness * 0.1})`);
@@ -57,9 +65,13 @@ export function renderStarWithPSF(ctx: CanvasRenderingContext2D, star: DetectedS
   outerGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
   
   ctx.fillStyle = outerGradient;
-  ctx.fillRect(x - outerHaloSize, y - outerHaloSize, outerHaloSize * 2, outerHaloSize * 2);
+  const outerRectX = Math.max(0, x - outerHaloSize);
+  const outerRectY = Math.max(0, y - outerHaloSize);
+  const outerRectW = Math.min(canvasWidth - outerRectX, (x + outerHaloSize) - outerRectX);
+  const outerRectH = Math.min(canvasHeight - outerRectY, (y + outerHaloSize) - outerRectY);
+  ctx.fillRect(outerRectX, outerRectY, outerRectW, outerRectH);
   
-  // Layer 2: Mid halo
+  // Layer 2: Mid halo with bounds checking
   const midGradient = ctx.createRadialGradient(x, y, coreSize, x, y, midHaloSize);
   midGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness * 0.4})`);
   midGradient.addColorStop(0.2, `rgba(${r}, ${g}, ${b}, ${brightness * 0.3})`);
@@ -68,9 +80,13 @@ export function renderStarWithPSF(ctx: CanvasRenderingContext2D, star: DetectedS
   midGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
   
   ctx.fillStyle = midGradient;
-  ctx.fillRect(x - midHaloSize, y - midHaloSize, midHaloSize * 2, midHaloSize * 2);
+  const midRectX = Math.max(0, x - midHaloSize);
+  const midRectY = Math.max(0, y - midHaloSize);
+  const midRectW = Math.min(canvasWidth - midRectX, (x + midHaloSize) - midRectX);
+  const midRectH = Math.min(canvasHeight - midRectY, (y + midHaloSize) - midRectY);
+  ctx.fillRect(midRectX, midRectY, midRectW, midRectH);
   
-  // Layer 1: Core brightness
+  // Layer 1: Core brightness with bounds checking
   const coreGradient = ctx.createRadialGradient(x, y, 0, x, y, coreSize);
   coreGradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${brightness})`);
   coreGradient.addColorStop(0.2, `rgba(${r}, ${g}, ${b}, ${brightness * 0.95})`);
@@ -80,7 +96,11 @@ export function renderStarWithPSF(ctx: CanvasRenderingContext2D, star: DetectedS
   coreGradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${brightness * 0.3})`);
   
   ctx.fillStyle = coreGradient;
-  ctx.fillRect(x - coreSize, y - coreSize, coreSize * 2, coreSize * 2);
+  const coreRectX = Math.max(0, x - coreSize);
+  const coreRectY = Math.max(0, y - coreSize);
+  const coreRectW = Math.min(canvasWidth - coreRectX, (x + coreSize) - coreRectX);
+  const coreRectH = Math.min(canvasHeight - coreRectY, (y + coreSize) - coreRectY);
+  ctx.fillRect(coreRectX, coreRectY, coreRectW, coreRectH);
   
   if (brightness > 0.7 && type !== 'point') {
     renderDiffractionSpikes(ctx, star);

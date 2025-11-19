@@ -708,9 +708,25 @@ const StarField3D: React.FC<StarField3DProps> = ({
         resizeQuality: 'high'
       };
       
-      Promise.all(
-        canvases.map(canvas => createImageBitmap(canvas, bitmapOptions))
-      ).then((bitmaps) => {
+      // Process bitmaps with better memory management
+      const createBitmapsSequentially = async () => {
+        const bitmaps: ImageBitmap[] = [];
+        for (let i = 0; i < canvases.length; i++) {
+          try {
+            const bitmap = await createImageBitmap(canvases[i], bitmapOptions);
+            bitmaps.push(bitmap);
+            // Clear canvas reference after bitmap creation to free memory
+            canvases[i].width = 1;
+            canvases[i].height = 1;
+          } catch (error) {
+            console.error(`Failed to create bitmap for layer ${i + 1}:`, error);
+            throw error;
+          }
+        }
+        return bitmaps;
+      };
+      
+      createBitmapsSequentially().then((bitmaps) => {
         console.log('🌟 [StarField3D] Setting star layers state with bitmaps');
         setStarLayers({
           layer1: bitmaps[0],
@@ -761,7 +777,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
       tempCtx.imageSmoothingQuality = 'high';
       tempCtx.drawImage(img, 0, 0, targetWidth, targetHeight);
       
-      // Convert scaled canvas to ImageBitmap for GPU-accelerated rendering
+      // Convert scaled canvas to ImageBitmap for GPU-accelerated rendering with memory management
       const bitmapOptions: ImageBitmapOptions = {
         premultiplyAlpha: 'premultiply',
         colorSpaceConversion: 'none',
@@ -775,9 +791,15 @@ const StarField3D: React.FC<StarField3DProps> = ({
         if (imageDimensions.width === 1920 && imageDimensions.height === 1080) {
           setImageDimensions({ width: targetWidth, height: targetHeight });
         }
+        // Clear temp canvas to free memory
+        tempCanvas.width = 1;
+        tempCanvas.height = 1;
         console.log('✅ [StarField3D] Background image loaded and scaled for rendering');
       }).catch(error => {
         console.error('❌ [StarField3D] Failed to create background bitmap:', error);
+        // Still try to free memory on error
+        tempCanvas.width = 1;
+        tempCanvas.height = 1;
       });
     };
     img.src = backgroundImage;
