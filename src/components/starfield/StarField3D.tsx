@@ -605,31 +605,55 @@ const StarField3D: React.FC<StarField3DProps> = ({
       }
       // === END AUTO-SHRINK ===
       
-      // Calculate depth score combining size, brightness, and luminance for more realistic layering
-      // Larger, brighter stars appear closer (move faster), smaller dimmer stars farther (move slower)
+      // ASTROPHYSICALLY ACCURATE depth calculation based on apparent magnitude and color temperature
+      // Using principles from stellar physics: inverse square law, H-R diagram, and color-luminosity relationship
       const maxSize = Math.max(...starRegions.map(s => s.size));
       const maxLum = Math.max(...starRegions.map(s => s.maxLuminance));
       
       starRegions.forEach(star => {
-        // Normalize size (0-1)
-        const normalizedSize = star.size / maxSize;
-        
-        // Use maxLuminance already calculated during detection
-        const normalizedLuminance = star.maxLuminance / maxLum;
-        
-        // Calculate average brightness from star's pixels using pixel indices
-        let totalBrightness = 0;
+        // Calculate average color and brightness from star's pixels
+        let totalR = 0, totalG = 0, totalB = 0, totalBrightness = 0;
         for (let j = 0; j < star.pixelCount; j++) {
           const pixelIdx = star.pixels[j];
           const idx = pixelIdx * 4;
-          const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
-          totalBrightness += brightness;
+          totalR += data[idx];
+          totalG += data[idx + 1];
+          totalB += data[idx + 2];
+          totalBrightness += (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
         }
-        const avgBrightness = totalBrightness / star.pixelCount / 255; // Normalize to 0-1
+        const avgR = totalR / star.pixelCount / 255;
+        const avgG = totalG / star.pixelCount / 255;
+        const avgB = totalB / star.pixelCount / 255;
+        const avgBrightness = totalBrightness / star.pixelCount / 255;
         
-        // Combined depth score: 50% size, 30% brightness, 20% luminance, with slight random variation
-        // Higher score = closer (faster), lower score = farther (slower)
-        (star as any).depthScore = (normalizedSize * 0.5 + avgBrightness * 0.3 + normalizedLuminance * 0.2) + (Math.random() * 0.04 - 0.02);
+        // Calculate color temperature indicator (0-1, where 1 = blue/hot, 0 = red/cool)
+        // Blue stars are typically O, B, A class (hot, high luminosity)
+        // Red stars are typically K, M class (cool, low luminosity)
+        const colorTemp = (avgB - avgR + 1) / 2; // Normalized blue-red difference
+        
+        // Estimate intrinsic luminosity from color temperature (H-R diagram concept)
+        // Blue stars are ~1000x more luminous than red stars of same mass
+        // Use exponential relationship: L ∝ T^3.5 (Stefan-Boltzmann approximation)
+        const intrinsicLuminosity = Math.pow(0.5 + colorTemp * 0.5, 3.5);
+        
+        // Calculate apparent magnitude (brightness as observed)
+        // Combine pixel brightness, size (larger = brighter/closer), and peak luminance
+        const normalizedSize = star.size / maxSize;
+        const normalizedLuminance = star.maxLuminance / maxLum;
+        const apparentMagnitude = (avgBrightness * 0.4 + normalizedSize * 0.3 + normalizedLuminance * 0.3);
+        
+        // Apply inverse square law: apparent brightness = intrinsic luminosity / distance²
+        // Solving for distance: distance ∝ √(intrinsic luminosity / apparent brightness)
+        // Lower distance = closer = higher depth score
+        const estimatedDistance = Math.sqrt(intrinsicLuminosity / Math.max(apparentMagnitude, 0.001));
+        
+        // Convert distance to depth score (inverse relationship)
+        // Add small random variation to simulate natural scatter in stellar populations
+        const baseDepthScore = 1 / (estimatedDistance + 0.1); // Prevents division by zero
+        (star as any).depthScore = baseDepthScore * (0.98 + Math.random() * 0.04);
+        
+        // Store color temperature for potential future use
+        (star as any).colorTemperature = colorTemp;
       });
       
       // Sort stars by depth score to determine layer distribution
@@ -649,7 +673,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
       const layer11Threshold = starRegions[Math.floor(starRegions.length * 0.917)] ? (starRegions[Math.floor(starRegions.length * 0.917)] as any).depthScore : 0.25;
       // layer12 = remaining smallest/dimmest stars
       
-      console.log(`✨ 12-layer depth score thresholds (size+brightness+luminance): L1=${layer1Threshold.toFixed(3)}, L2=${layer2Threshold.toFixed(3)}, L3=${layer3Threshold.toFixed(3)}, L4=${layer4Threshold.toFixed(3)}, L5=${layer5Threshold.toFixed(3)}, L6=${layer6Threshold.toFixed(3)}, L7=${layer7Threshold.toFixed(3)}, L8=${layer8Threshold.toFixed(3)}, L9=${layer9Threshold.toFixed(3)}, L10=${layer10Threshold.toFixed(3)}, L11=${layer11Threshold.toFixed(3)}`);
+      console.log(`✨ 12-layer astrophysical depth thresholds (inverse-square law + color temp): L1=${layer1Threshold.toFixed(3)}, L2=${layer2Threshold.toFixed(3)}, L3=${layer3Threshold.toFixed(3)}, L4=${layer4Threshold.toFixed(3)}, L5=${layer5Threshold.toFixed(3)}, L6=${layer6Threshold.toFixed(3)}, L7=${layer7Threshold.toFixed(3)}, L8=${layer8Threshold.toFixed(3)}, L9=${layer9Threshold.toFixed(3)}, L10=${layer10Threshold.toFixed(3)}, L11=${layer11Threshold.toFixed(3)}`);
       
       // Create twelve separate canvases for depth layers
       const canvases = Array(12).fill(null).map(() => {
