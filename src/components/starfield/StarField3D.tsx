@@ -1853,6 +1853,70 @@ const StarField3D: React.FC<StarField3DProps> = ({
                         starLayers.layer10 || starLayers.layer11 || starLayers.layer12;
     
     if (hasAnyLayers) {
+      // Apply hyperspeed star streaking effect
+      if (hyperspeed && blurAmount > 0) {
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const streakIntensity = blurAmount / 6; // 0 to 1 based on blur curve
+        
+        // Draw radial streaks for each layer
+        const drawStreaks = (layer: ImageBitmap | null, offset: {x: number, y: number, scale: number}, opacity: number) => {
+          if (!layer) return;
+          
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.globalAlpha = opacity * streakIntensity * 0.3;
+          
+          const scale = offset.scale;
+          const scaledWidth = layer.width * scale;
+          const scaledHeight = layer.height * scale;
+          const drawX = (canvas.width - scaledWidth) * 0.5 + offset.x;
+          const drawY = (canvas.height - scaledHeight) * 0.5 + offset.y;
+          
+          // Calculate streak direction from center
+          const layerCenterX = drawX + scaledWidth / 2;
+          const layerCenterY = drawY + scaledHeight / 2;
+          const dx = layerCenterX - centerX;
+          const dy = layerCenterY - centerY;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          if (distance > 1) {
+            const angle = Math.atan2(dy, dx);
+            const streakLength = streakIntensity * 150 * (distance / Math.max(canvas.width, canvas.height));
+            
+            // Draw multiple stretched copies for motion blur effect
+            const streakSteps = 5;
+            for (let i = 0; i < streakSteps; i++) {
+              const t = i / streakSteps;
+              const stretchX = drawX + Math.cos(angle) * streakLength * t;
+              const stretchY = drawY + Math.sin(angle) * streakLength * t;
+              const stretchScale = scale * (1 + streakIntensity * 0.2 * t);
+              const stretchWidth = layer.width * stretchScale;
+              const stretchHeight = layer.height * stretchScale;
+              
+              ctx.globalAlpha = opacity * streakIntensity * 0.3 * (1 - t * 0.7);
+              ctx.drawImage(layer, stretchX, stretchY, stretchWidth, stretchHeight);
+            }
+          }
+          
+          ctx.restore();
+        };
+        
+        // Apply streaks to all star layers (not background)
+        drawStreaks(starLayers.layer12, offsetsRef.current.layer12, 0.85);
+        drawStreaks(starLayers.layer11, offsetsRef.current.layer11, 0.87);
+        drawStreaks(starLayers.layer10, offsetsRef.current.layer10, 0.89);
+        drawStreaks(starLayers.layer9, offsetsRef.current.layer9, 0.91);
+        drawStreaks(starLayers.layer8, offsetsRef.current.layer8, 0.93);
+        drawStreaks(starLayers.layer7, offsetsRef.current.layer7, 0.95);
+        drawStreaks(starLayers.layer6, offsetsRef.current.layer6, 0.97);
+        drawStreaks(starLayers.layer5, offsetsRef.current.layer5, 0.99);
+        drawStreaks(starLayers.layer4, offsetsRef.current.layer4, 1.0);
+        drawStreaks(starLayers.layer3, offsetsRef.current.layer3, 1.0);
+        drawStreaks(starLayers.layer2, offsetsRef.current.layer2, 1.0);
+        drawStreaks(starLayers.layer1, offsetsRef.current.layer1, 1.0);
+      }
+      
       // Layer 12: Smallest/dimmest stars (farthest, slowest movement)
       if (starLayers.layer12) {
         ctx.globalCompositeOperation = 'screen';
@@ -2197,9 +2261,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
         height={imageDimensions.height}
         className="w-full h-full object-contain bg-black"
         style={{ 
-          willChange: isAnimating ? 'contents' : 'auto',
-          filter: blurAmount > 0 ? `blur(${blurAmount}px)` : 'none',
-          transition: 'filter 0.05s linear'
+          willChange: isAnimating ? 'contents' : 'auto'
         }}
       />
       
