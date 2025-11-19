@@ -2248,9 +2248,7 @@ const StarField3D: React.FC<StarField3DProps> = ({
         height={imageDimensions.height}
         className="w-full h-full object-contain bg-black"
         style={{ 
-          willChange: isAnimating ? 'contents' : 'auto',
-          filter: blurAmount > 0 ? `blur(${blurAmount * 0.5}px)` : 'none',
-          transition: 'filter 0.05s linear'
+          willChange: isAnimating ? 'contents' : 'auto'
         }}
       />
       
