@@ -81,7 +81,7 @@ const StarFieldGenerator: React.FC = () => {
 
   // Animation settings with motion controls
   const [animationSettings, setAnimationSettings] = useState({
-    motionType: 'zoom_in' as 'zoom_in' | 'zoom_out' | 'pan_left' | 'pan_right',
+    motionType: 'zoom_in' as 'zoom_in' | 'zoom_out' | 'pan_left' | 'pan_right' | 'zoom_in_pan_left' | 'zoom_in_pan_right',
     speed: 1.5,
     duration: 10,
     fieldOfView: 75,
@@ -89,7 +89,7 @@ const StarFieldGenerator: React.FC = () => {
     amplification: 150, // 100-300%
     spin: 0, // 0-90 degrees
     spinDirection: 'clockwise' as 'clockwise' | 'counterclockwise',
-    fadeOut: true // Enable nebula fade-out effect by default
+    fadeOut: false // Nebula fade-out effect disabled by default
   });
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
@@ -1089,7 +1089,7 @@ const StarFieldGenerator: React.FC = () => {
                           amplification: 150,
                           spin: 0,
                           spinDirection: 'clockwise',
-                          fadeOut: true
+                          fadeOut: false
                         });
                         setDepthIntensity(200);
                         setPreserveStarsIntensity(50);
@@ -1123,6 +1123,12 @@ const StarFieldGenerator: React.FC = () => {
                       </SelectItem>
                       <SelectItem value="pan_right" className="text-white hover:bg-cosmic-700">
                         {t('Pan Right', '向右平移')}
+                      </SelectItem>
+                      <SelectItem value="zoom_in_pan_left" className="text-white hover:bg-cosmic-700">
+                        {t('Zoom + Pan Left', '放大 + 左移')}
+                      </SelectItem>
+                      <SelectItem value="zoom_in_pan_right" className="text-white hover:bg-cosmic-700">
+                        {t('Zoom + Pan Right', '放大 + 右移')}
                       </SelectItem>
                     </SelectContent>
                   </Select>
