@@ -1,7 +1,7 @@
 // Service Worker for caching and performance optimization
-const CACHE_NAME = 'astrosiqs-v1';
-const STATIC_CACHE = 'astrosiqs-static-v1';
-const DYNAMIC_CACHE = 'astrosiqs-dynamic-v1';
+const CACHE_NAME = 'astrosiqs-v2';
+const STATIC_CACHE = 'astrosiqs-static-v2';
+const DYNAMIC_CACHE = 'astrosiqs-dynamic-v2';
 
 // Assets to cache immediately
 const STATIC_ASSETS = [
@@ -48,6 +48,27 @@ self.addEventListener('fetch', (event) => {
 
   // Skip caching for API calls to Supabase
   if (url.hostname.includes('supabase.co')) {
+    return;
+  }
+
+  // Handle navigation requests (HTML pages) - always return index.html for SPA routing
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          // Cache successful navigation responses
+          const responseClone = response.clone();
+          caches.open(STATIC_CACHE)
+            .then((cache) => {
+              cache.put(request, responseClone);
+            });
+          return response;
+        })
+        .catch(() => {
+          // Fallback to cached index.html for SPA routing
+          return caches.match('/') || caches.match('/index.html');
+        })
+    );
     return;
   }
 
