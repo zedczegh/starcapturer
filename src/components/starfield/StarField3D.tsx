@@ -1845,7 +1845,14 @@ const StarField3D: React.FC<StarField3DProps> = ({
       
       // Apply hyperspeed whirlpool distortion to background
       if (hyperspeed && blurAmount > 0) {
-        const twistIntensity = blurAmount / 3; // 0 to 2
+        // Pulsing intensity - oscillates using sine wave
+        const pulseFrequency = 0.002; // Speed of the pulse
+        const pulsePhase = Date.now() * pulseFrequency;
+        const pulseModulation = 0.6 + Math.sin(pulsePhase) * 0.4; // Oscillates between 0.2 and 1.0
+        
+        const baseTwistIntensity = blurAmount / 3; // 0 to 2
+        const twistIntensity = baseTwistIntensity * pulseModulation;
+        
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
         const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY);
@@ -1940,7 +1947,14 @@ const StarField3D: React.FC<StarField3DProps> = ({
           const normalizedDist = distance / maxDist;
           
           // Star trailing: draw multiple stretched copies radiating from center
-          const trailIntensity = blurAmount / 6; // 0 to 1
+          // Pulsing intensity - oscillates using sine wave (same as whirlpool)
+          const pulseFrequency = 0.002;
+          const pulsePhase = Date.now() * pulseFrequency;
+          const pulseModulation = 0.6 + Math.sin(pulsePhase) * 0.4; // Oscillates between 0.2 and 1.0
+          
+          const baseTrailIntensity = blurAmount / 6; // 0 to 1
+          const trailIntensity = baseTrailIntensity * pulseModulation;
+          
           const angle = Math.atan2(dy, dx);
           const trailSteps = 6;
           const trailLength = trailIntensity * 80 * normalizedDist;
