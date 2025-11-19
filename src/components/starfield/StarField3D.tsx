@@ -1843,20 +1843,61 @@ const StarField3D: React.FC<StarField3DProps> = ({
       ctx.globalAlpha = bgAlpha;
       ctx.globalCompositeOperation = 'source-over';
       
-      // Apply hyperspeed twist to background
+      // Apply hyperspeed whirlpool distortion to background
       if (hyperspeed && blurAmount > 0) {
-        const twistIntensity = blurAmount / 3; // 0 to 2 - doubled intensity
+        const twistIntensity = blurAmount / 3; // 0 to 2
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
+        const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY);
         
-        ctx.save();
-        ctx.translate(centerX, centerY);
-        // Dramatic spiral twist effect - rotate based on distance from center
-        const twistAngle = twistIntensity * 0.45; // Max ~52 degrees - much more dramatic
-        ctx.rotate(twistAngle);
-        ctx.translate(-centerX, -centerY);
-        ctx.drawImage(backgroundImg, drawX, drawY, scaledWidth, scaledHeight);
-        ctx.restore();
+        // Draw image to temporary canvas for pixel manipulation
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+        if (tempCtx) {
+          tempCtx.drawImage(backgroundImg, drawX, drawY, scaledWidth, scaledHeight);
+          
+          // Apply whirlpool distortion by redrawing in a spiral pattern
+          ctx.save();
+          const segments = 32; // Number of radial segments
+          const rings = 24; // Number of concentric rings
+          
+          for (let ring = 0; ring < rings; ring++) {
+            const radiusRatio = ring / rings;
+            const radius = radiusRatio * maxRadius;
+            
+            for (let seg = 0; seg < segments; seg++) {
+              const angle = (seg / segments) * Math.PI * 2;
+              
+              // Calculate twist amount based on distance from center (more twist toward edges)
+              const distortionAngle = twistIntensity * radiusRatio * radiusRatio * 0.8; // Quadratic falloff
+              
+              // Source coordinates (untwisted)
+              const srcAngle = angle;
+              const srcX = centerX + Math.cos(srcAngle) * radius;
+              const srcY = centerY + Math.sin(srcAngle) * radius;
+              
+              // Destination coordinates (twisted)
+              const dstAngle = angle + distortionAngle;
+              const dstX = centerX + Math.cos(dstAngle) * radius;
+              const dstY = centerY + Math.sin(dstAngle) * radius;
+              
+              // Draw small segment
+              const segmentSize = Math.max(2, maxRadius / rings * 1.5);
+              ctx.save();
+              ctx.translate(dstX, dstY);
+              ctx.rotate(dstAngle - srcAngle);
+              ctx.drawImage(
+                tempCanvas,
+                srcX - segmentSize/2, srcY - segmentSize/2, segmentSize, segmentSize,
+                -segmentSize/2, -segmentSize/2, segmentSize, segmentSize
+              );
+              ctx.restore();
+            }
+          }
+          ctx.restore();
+        }
       } else {
         ctx.drawImage(backgroundImg, drawX, drawY, scaledWidth, scaledHeight);
       }
