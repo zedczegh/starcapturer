@@ -856,6 +856,10 @@ const StarField3D: React.FC<StarField3DProps> = ({
         console.error('❌ [StarField3D] Failed to get 2D context in animate()');
         return;
       }
+      
+      // Enable high-quality image smoothing for star textures to prevent pixelation
+      canvasCtxRef.current.imageSmoothingEnabled = true;
+      canvasCtxRef.current.imageSmoothingQuality = 'high';
     }
     
     const ctx = canvasCtxRef.current;
@@ -1987,6 +1991,10 @@ const StarField3D: React.FC<StarField3DProps> = ({
         compositeOp: GlobalCompositeOperation
       ) => {
         if (!layer) return;
+        
+        // Ensure smooth scaling for star textures to prevent blocky appearance
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
         
         const scale = offset.scale;
         const scaledWidth = cachedScaledWidth * scale;
