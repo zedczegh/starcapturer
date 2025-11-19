@@ -1859,71 +1859,78 @@ const StarField3D: React.FC<StarField3DProps> = ({
           fadeFactor = (1.0 - progressRatio) / (1.0 - fadeOutStart);
         }
         
-        // Pulsing intensity - oscillates using sine wave with dramatic range
-        const pulseFrequency = 0.002; // Speed of the pulse
-        const pulsePhase = Date.now() * pulseFrequency;
-        const pulseModulation = 0.5 + Math.sin(pulsePhase) * 0.5; // Oscillates between 0.0 and 1.0 - more dramatic
-        
-        const baseTwistIntensity = blurAmount / 3; // 0 to 2
-        const twistIntensity = baseTwistIntensity * pulseModulation * fadeFactor;
-        
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-        const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY);
-        
-        // Draw image to temporary canvas for pixel manipulation
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
-        const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
-        if (tempCtx) {
-          tempCtx.drawImage(backgroundImg, drawX, drawY, scaledWidth, scaledHeight);
+        // Only apply whirlpool effect if fadeFactor is significant
+        // This ensures nebula remains perfectly original at start and end
+        if (fadeFactor > 0.01) {
+          // Pulsing intensity - oscillates using sine wave with dramatic range
+          const pulseFrequency = 0.002; // Speed of the pulse
+          const pulsePhase = Date.now() * pulseFrequency;
+          const pulseModulation = 0.5 + Math.sin(pulsePhase) * 0.5; // Oscillates between 0.0 and 1.0 - more dramatic
           
-          // Apply whirlpool distortion by redrawing in a spiral pattern with smooth interpolation
-          ctx.save();
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = 'high';
+          const baseTwistIntensity = blurAmount / 3; // 0 to 2
+          const twistIntensity = baseTwistIntensity * pulseModulation * fadeFactor;
           
-          const segments = 64; // Higher resolution for smoother edges
-          const rings = 48; // Higher resolution for smoother edges
+          const centerX = canvas.width / 2;
+          const centerY = canvas.height / 2;
+          const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY);
           
-          for (let ring = 0; ring < rings; ring++) {
-            const radiusRatio = ring / rings;
-            const radius = radiusRatio * maxRadius;
+          // Draw image to temporary canvas for pixel manipulation
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = canvas.width;
+          tempCanvas.height = canvas.height;
+          const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+          if (tempCtx) {
+            tempCtx.drawImage(backgroundImg, drawX, drawY, scaledWidth, scaledHeight);
             
-            for (let seg = 0; seg < segments; seg++) {
-              const angle = (seg / segments) * Math.PI * 2;
+            // Apply whirlpool distortion by redrawing in a spiral pattern with smooth interpolation
+            ctx.save();
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            
+            const segments = 64; // Higher resolution for smoother edges
+            const rings = 48; // Higher resolution for smoother edges
+            
+            for (let ring = 0; ring < rings; ring++) {
+              const radiusRatio = ring / rings;
+              const radius = radiusRatio * maxRadius;
               
-              // Calculate twist amount based on distance from center (more twist toward edges)
-              const distortionAngle = twistIntensity * radiusRatio * radiusRatio * 0.8; // Quadratic falloff
-              
-              // Source coordinates (untwisted)
-              const srcAngle = angle;
-              const srcX = centerX + Math.cos(srcAngle) * radius;
-              const srcY = centerY + Math.sin(srcAngle) * radius;
-              
-              // Destination coordinates (twisted)
-              const dstAngle = angle + distortionAngle;
-              const dstX = centerX + Math.cos(dstAngle) * radius;
-              const dstY = centerY + Math.sin(dstAngle) * radius;
-              
-              // Draw with optimal overlap for ultra-smooth blending while preserving brightness
-              const segmentSize = Math.max(3, maxRadius / rings * 2.0);
-              const segmentAlpha = 0.12; // Optimized for smooth blending with higher segment count
-              
-              ctx.save();
-              ctx.globalAlpha = segmentAlpha;
-              ctx.translate(dstX, dstY);
-              ctx.rotate(dstAngle - srcAngle);
-              ctx.drawImage(
-                tempCanvas,
-                srcX - segmentSize/2, srcY - segmentSize/2, segmentSize, segmentSize,
-                -segmentSize/2, -segmentSize/2, segmentSize, segmentSize
-              );
-              ctx.restore();
+              for (let seg = 0; seg < segments; seg++) {
+                const angle = (seg / segments) * Math.PI * 2;
+                
+                // Calculate twist amount based on distance from center (more twist toward edges)
+                const distortionAngle = twistIntensity * radiusRatio * radiusRatio * 0.8; // Quadratic falloff
+                
+                // Source coordinates (untwisted)
+                const srcAngle = angle;
+                const srcX = centerX + Math.cos(srcAngle) * radius;
+                const srcY = centerY + Math.sin(srcAngle) * radius;
+                
+                // Destination coordinates (twisted)
+                const dstAngle = angle + distortionAngle;
+                const dstX = centerX + Math.cos(dstAngle) * radius;
+                const dstY = centerY + Math.sin(dstAngle) * radius;
+                
+                // Draw with optimal overlap for ultra-smooth blending while preserving brightness
+                const segmentSize = Math.max(3, maxRadius / rings * 2.0);
+                const segmentAlpha = 0.12; // Optimized for smooth blending with higher segment count
+                
+                ctx.save();
+                ctx.globalAlpha = segmentAlpha;
+                ctx.translate(dstX, dstY);
+                ctx.rotate(dstAngle - srcAngle);
+                ctx.drawImage(
+                  tempCanvas,
+                  srcX - segmentSize/2, srcY - segmentSize/2, segmentSize, segmentSize,
+                  -segmentSize/2, -segmentSize/2, segmentSize, segmentSize
+                );
+                ctx.restore();
+              }
             }
+            ctx.restore();
           }
-          ctx.restore();
+        } else {
+          // At start/end of animation, draw nebula completely original
+          ctx.drawImage(backgroundImg, drawX, drawY, scaledWidth, scaledHeight);
         }
       } else {
         ctx.drawImage(backgroundImg, drawX, drawY, scaledWidth, scaledHeight);
@@ -1984,55 +1991,65 @@ const StarField3D: React.FC<StarField3DProps> = ({
             fadeFactor = (1.0 - progressRatio) / (1.0 - fadeOutStart);
           }
           
-          const baseTrailIntensity = blurAmount / 6; // 0 to 1
-          const trailIntensity = baseTrailIntensity * pulseModulation * fadeFactor;
-          
-          const angle = Math.atan2(dy, dx);
-          const trailSteps = 6;
-          const trailLength = trailIntensity * 80 * normalizedDist;
-          
-          for (let i = 0; i < trailSteps; i++) {
-            const t = i / trailSteps;
-            const trailX = drawX - Math.cos(angle) * trailLength * t;
-            const trailY = drawY - Math.sin(angle) * trailLength * t;
-            const trailAlpha = opacity * trailIntensity * 0.4 * (1 - t * 0.8);
+          // Only apply star trailing effects if fadeFactor is significant
+          // This ensures stars remain perfectly original at start and end
+          if (fadeFactor > 0.01) {
+            const baseTrailIntensity = blurAmount / 6; // 0 to 1
+            const trailIntensity = baseTrailIntensity * pulseModulation * fadeFactor;
             
+            const angle = Math.atan2(dy, dx);
+            const trailSteps = 6;
+            const trailLength = trailIntensity * 80 * normalizedDist;
+            
+            for (let i = 0; i < trailSteps; i++) {
+              const t = i / trailSteps;
+              const trailX = drawX - Math.cos(angle) * trailLength * t;
+              const trailY = drawY - Math.sin(angle) * trailLength * t;
+              const trailAlpha = opacity * trailIntensity * 0.4 * (1 - t * 0.8);
+              
+              ctx.save();
+              ctx.globalCompositeOperation = compositeOp;
+              ctx.globalAlpha = trailAlpha;
+              ctx.filter = 'none';
+              ctx.drawImage(layer, trailX, trailY, scaledWidth, scaledHeight);
+              ctx.restore();
+            }
+            
+            // Chromatic aberration: shift red and blue channels
+            const aberrationAmount = (blurAmount / 6) * 5 * normalizedDist;
+            
+            // Red shift (away from center - Doppler red shift)
             ctx.save();
             ctx.globalCompositeOperation = compositeOp;
-            ctx.globalAlpha = trailAlpha;
-            ctx.filter = 'none';
-            ctx.drawImage(layer, trailX, trailY, scaledWidth, scaledHeight);
+            ctx.globalAlpha = opacity * 0.35;
+            ctx.filter = 'sepia(100%) saturate(300%) hue-rotate(-10deg)';
+            const redX = drawX + Math.cos(angle) * aberrationAmount;
+            const redY = drawY + Math.sin(angle) * aberrationAmount;
+            ctx.drawImage(layer, redX, redY, scaledWidth, scaledHeight);
             ctx.restore();
+            
+            // Blue shift (toward center - Doppler blue shift)
+            ctx.save();
+            ctx.globalCompositeOperation = compositeOp;
+            ctx.globalAlpha = opacity * 0.35;
+            ctx.filter = 'sepia(100%) saturate(300%) hue-rotate(180deg)';
+            const blueX = drawX - Math.cos(angle) * aberrationAmount;
+            const blueY = drawY - Math.sin(angle) * aberrationAmount;
+            ctx.drawImage(layer, blueX, blueY, scaledWidth, scaledHeight);
+            ctx.restore();
+            
+            // Main layer (normal position, brighter)
+            ctx.globalCompositeOperation = compositeOp;
+            ctx.globalAlpha = opacity * 0.8;
+            ctx.filter = 'none';
+            ctx.drawImage(layer, drawX, drawY, scaledWidth, scaledHeight);
+          } else {
+            // At start/end of animation, draw stars completely original
+            ctx.globalCompositeOperation = compositeOp;
+            ctx.globalAlpha = opacity;
+            ctx.filter = 'none';
+            ctx.drawImage(layer, drawX, drawY, scaledWidth, scaledHeight);
           }
-          
-          // Chromatic aberration: shift red and blue channels
-          const aberrationAmount = (blurAmount / 6) * 5 * normalizedDist;
-          
-          // Red shift (away from center - Doppler red shift)
-          ctx.save();
-          ctx.globalCompositeOperation = compositeOp;
-          ctx.globalAlpha = opacity * 0.35;
-          ctx.filter = 'sepia(100%) saturate(300%) hue-rotate(-10deg)';
-          const redX = drawX + Math.cos(angle) * aberrationAmount;
-          const redY = drawY + Math.sin(angle) * aberrationAmount;
-          ctx.drawImage(layer, redX, redY, scaledWidth, scaledHeight);
-          ctx.restore();
-          
-          // Blue shift (toward center - Doppler blue shift)
-          ctx.save();
-          ctx.globalCompositeOperation = compositeOp;
-          ctx.globalAlpha = opacity * 0.35;
-          ctx.filter = 'sepia(100%) saturate(300%) hue-rotate(180deg)';
-          const blueX = drawX - Math.cos(angle) * aberrationAmount;
-          const blueY = drawY - Math.sin(angle) * aberrationAmount;
-          ctx.drawImage(layer, blueX, blueY, scaledWidth, scaledHeight);
-          ctx.restore();
-          
-          // Main layer (normal position, brighter)
-          ctx.globalCompositeOperation = compositeOp;
-          ctx.globalAlpha = opacity * 0.8;
-          ctx.filter = 'none';
-          ctx.drawImage(layer, drawX, drawY, scaledWidth, scaledHeight);
         } else {
           // Normal rendering without effects
           ctx.globalCompositeOperation = compositeOp;
