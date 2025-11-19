@@ -2003,17 +2003,15 @@ const StarField3D: React.FC<StarField3DProps> = ({
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
     
-    // Update hyperspeed blur effect based on progress
+    // Update hyperspeed blur effect during animation
     if (hyperspeed) {
-      // Create a smooth sine curve: 0 at start/end, peak in middle
       const normalizedProgress = progress / 100;
       const blurCurve = Math.sin(normalizedProgress * Math.PI);
-      const maxBlur = 6; // Maximum blur in pixels
+      const maxBlur = 6;
       const currentBlur = blurCurve * maxBlur;
       setBlurAmount(currentBlur);
-    } else {
-      setBlurAmount(0);
     }
+    
     
     // Continue animation loop (unless in video rendering mode where we control it manually)
     if (!videoProgressRef) {
@@ -2116,6 +2114,21 @@ const StarField3D: React.FC<StarField3DProps> = ({
       }
     };
   }, [isAnimating, animate, onProgressUpdate, videoProgressRef]);
+  
+  // Update blur amount when hyperspeed setting changes
+  useEffect(() => {
+    if (settings.hyperspeed) {
+      // Calculate blur based on current progress
+      const progress = currentProgressRef.current;
+      const normalizedProgress = progress / 100;
+      const blurCurve = Math.sin(normalizedProgress * Math.PI);
+      const maxBlur = 6;
+      const currentBlur = blurCurve * maxBlur;
+      setBlurAmount(currentBlur);
+    } else {
+      setBlurAmount(0);
+    }
+  }, [settings.hyperspeed]);
   
   // Cleanup ImageBitmaps when new layers are created or on unmount
   useEffect(() => {
