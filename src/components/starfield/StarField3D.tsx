@@ -1845,14 +1845,15 @@ const StarField3D: React.FC<StarField3DProps> = ({
       
       // Apply hyperspeed whirlpool distortion to background
       if (hyperspeed && blurAmount > 0) {
-        // Calculate fade in/out based on animation progress (15% fade in, 70% full, 15% fade out)
-        const fadeInEnd = 0.15;
+        // Calculate fade in/out based on animation progress (35% fade in, 50% full, 15% fade out)
+        const fadeInEnd = 0.35;
         const fadeOutStart = 0.85;
         let fadeFactor = 1.0;
         
         if (progressRatio < fadeInEnd) {
-          // Fade in during first 15%
-          fadeFactor = progressRatio / fadeInEnd;
+          // Gradual fade in during first 35% with ease-in curve for smooth nebula breakup
+          const linearFade = progressRatio / fadeInEnd;
+          fadeFactor = Math.pow(linearFade, 1.5); // Ease-in curve for smoother start
         } else if (progressRatio > fadeOutStart) {
           // Fade out during last 15%
           fadeFactor = (1.0 - progressRatio) / (1.0 - fadeOutStart);
@@ -1972,12 +1973,13 @@ const StarField3D: React.FC<StarField3DProps> = ({
           const pulseModulation = 0.6 + Math.sin(pulsePhase) * 0.4; // Oscillates between 0.2 and 1.0
           
           // Calculate fade in/out based on animation progress (same as whirlpool)
-          const fadeInEnd = 0.15;
+          const fadeInEnd = 0.35;
           const fadeOutStart = 0.85;
           let fadeFactor = 1.0;
           
           if (progressRatio < fadeInEnd) {
-            fadeFactor = progressRatio / fadeInEnd;
+            const linearFade = progressRatio / fadeInEnd;
+            fadeFactor = Math.pow(linearFade, 1.5); // Ease-in curve for smoother start
           } else if (progressRatio > fadeOutStart) {
             fadeFactor = (1.0 - progressRatio) / (1.0 - fadeOutStart);
           }
