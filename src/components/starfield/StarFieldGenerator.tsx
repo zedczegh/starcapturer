@@ -81,7 +81,13 @@ const StarFieldGenerator: React.FC = () => {
 
   // Animation settings with motion controls
   const [animationSettings, setAnimationSettings] = useState({
-    motionType: 'zoom_in' as 'zoom_in' | 'zoom_out' | 'pan_left' | 'pan_right' | 'zoom_in_pan_left' | 'zoom_in_pan_right' | 'zoom_out_pan_left' | 'zoom_out_pan_right',
+    motionType: 'zoom_in' as 'zoom_in' | 'zoom_out' | 
+                'pan_left' | 'pan_right' | 'pan_up' | 'pan_down' | 
+                'zoom_in_pan_left' | 'zoom_in_pan_right' | 'zoom_in_pan_up' | 'zoom_in_pan_down' |
+                'zoom_out_pan_left' | 'zoom_out_pan_right' | 'zoom_out_pan_up' | 'zoom_out_pan_down' |
+                'pan_diagonal_up_left' | 'pan_diagonal_up_right' | 'pan_diagonal_down_left' | 'pan_diagonal_down_right' |
+                'zoom_in_pan_diagonal_up_left' | 'zoom_in_pan_diagonal_up_right' | 'zoom_in_pan_diagonal_down_left' | 'zoom_in_pan_diagonal_down_right' |
+                'zoom_out_pan_diagonal_up_left' | 'zoom_out_pan_diagonal_up_right' | 'zoom_out_pan_diagonal_down_left' | 'zoom_out_pan_diagonal_down_right',
     speed: 1.5,
     duration: 10,
     fieldOfView: 75,
@@ -1135,6 +1141,60 @@ const StarFieldGenerator: React.FC = () => {
                       </SelectItem>
                       <SelectItem value="zoom_out_pan_right" className="text-white hover:bg-cosmic-700">
                         {t('Zoom Out + Pan Right', '缩小 + 右移')}
+                      </SelectItem>
+                      <SelectItem value="pan_up" className="text-white hover:bg-cosmic-700">
+                        {t('Pan Up', '向上平移')}
+                      </SelectItem>
+                      <SelectItem value="pan_down" className="text-white hover:bg-cosmic-700">
+                        {t('Pan Down', '向下平移')}
+                      </SelectItem>
+                      <SelectItem value="zoom_in_pan_up" className="text-white hover:bg-cosmic-700">
+                        {t('Zoom In + Pan Up', '放大 + 上移')}
+                      </SelectItem>
+                      <SelectItem value="zoom_in_pan_down" className="text-white hover:bg-cosmic-700">
+                        {t('Zoom In + Pan Down', '放大 + 下移')}
+                      </SelectItem>
+                      <SelectItem value="zoom_out_pan_up" className="text-white hover:bg-cosmic-700">
+                        {t('Zoom Out + Pan Up', '缩小 + 上移')}
+                      </SelectItem>
+                      <SelectItem value="zoom_out_pan_down" className="text-white hover:bg-cosmic-700">
+                        {t('Zoom Out + Pan Down', '缩小 + 下移')}
+                      </SelectItem>
+                      <SelectItem value="pan_diagonal_up_left" className="text-white hover:bg-cosmic-700">
+                        {t('Pan Diagonal Up-Left', '对角线左上')}
+                      </SelectItem>
+                      <SelectItem value="pan_diagonal_up_right" className="text-white hover:bg-cosmic-700">
+                        {t('Pan Diagonal Up-Right', '对角线右上')}
+                      </SelectItem>
+                      <SelectItem value="pan_diagonal_down_left" className="text-white hover:bg-cosmic-700">
+                        {t('Pan Diagonal Down-Left', '对角线左下')}
+                      </SelectItem>
+                      <SelectItem value="pan_diagonal_down_right" className="text-white hover:bg-cosmic-700">
+                        {t('Pan Diagonal Down-Right', '对角线右下')}
+                      </SelectItem>
+                      <SelectItem value="zoom_in_pan_diagonal_up_left" className="text-white hover:bg-cosmic-700">
+                        {t('Zoom In + Diagonal Up-Left', '放大 + 对角线左上')}
+                      </SelectItem>
+                      <SelectItem value="zoom_in_pan_diagonal_up_right" className="text-white hover:bg-cosmic-700">
+                        {t('Zoom In + Diagonal Up-Right', '放大 + 对角线右上')}
+                      </SelectItem>
+                      <SelectItem value="zoom_in_pan_diagonal_down_left" className="text-white hover:bg-cosmic-700">
+                        {t('Zoom In + Diagonal Down-Left', '放大 + 对角线左下')}
+                      </SelectItem>
+                      <SelectItem value="zoom_in_pan_diagonal_down_right" className="text-white hover:bg-cosmic-700">
+                        {t('Zoom In + Diagonal Down-Right', '放大 + 对角线右下')}
+                      </SelectItem>
+                      <SelectItem value="zoom_out_pan_diagonal_up_left" className="text-white hover:bg-cosmic-700">
+                        {t('Zoom Out + Diagonal Up-Left', '缩小 + 对角线左上')}
+                      </SelectItem>
+                      <SelectItem value="zoom_out_pan_diagonal_up_right" className="text-white hover:bg-cosmic-700">
+                        {t('Zoom Out + Diagonal Up-Right', '缩小 + 对角线右上')}
+                      </SelectItem>
+                      <SelectItem value="zoom_out_pan_diagonal_down_left" className="text-white hover:bg-cosmic-700">
+                        {t('Zoom Out + Diagonal Down-Left', '缩小 + 对角线左下')}
+                      </SelectItem>
+                      <SelectItem value="zoom_out_pan_diagonal_down_right" className="text-white hover:bg-cosmic-700">
+                        {t('Zoom Out + Diagonal Down-Right', '缩小 + 对角线右下')}
                       </SelectItem>
                     </SelectContent>
                   </Select>
