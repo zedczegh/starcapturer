@@ -6,14 +6,21 @@ import { preloadCertifiedLocations } from "./certifiedLocationsService";
  * This should be called early in the application lifecycle
  */
 export function initializePreloadServices() {
-  // Start preloading certified locations immediately
-  // This will make them available globally as soon as possible
-  console.log("Starting preload of certified locations");
-  preloadCertifiedLocations()
-    .then(locations => {
-      console.log(`Successfully preloaded ${locations.length} certified locations`);
-    })
-    .catch(error => {
-      console.error("Error preloading certified locations:", error);
-    });
+  // Use requestIdleCallback for non-blocking preload
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(() => {
+      preloadCertifiedLocations()
+        .then(locations => {
+          console.log(`Preloaded ${locations.length} certified locations`);
+        })
+        .catch(error => {
+          console.error("Error preloading certified locations:", error);
+        });
+    }, { timeout: 2000 });
+  } else {
+    // Fallback for browsers without requestIdleCallback
+    setTimeout(() => {
+      preloadCertifiedLocations().catch(console.error);
+    }, 100);
+  }
 }
