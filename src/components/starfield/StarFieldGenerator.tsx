@@ -95,7 +95,8 @@ const StarFieldGenerator: React.FC = () => {
     amplification: 150, // 100-300%
     spin: 0, // 0-90 degrees
     spinDirection: 'clockwise' as 'clockwise' | 'counterclockwise',
-    fadeOut: false // Nebula fade-out effect disabled by default
+    fadeOut: false, // Nebula fade-out effect disabled by default
+    hyperspeed: false // Hyperspeed motion blur effect disabled by default
   });
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
@@ -1095,7 +1096,8 @@ const StarFieldGenerator: React.FC = () => {
                           amplification: 150,
                           spin: 0,
                           spinDirection: 'clockwise',
-                          fadeOut: false
+                          fadeOut: false,
+                          hyperspeed: false
                         });
                         setDepthIntensity(200);
                         setPreserveStarsIntensity(50);
@@ -1234,6 +1236,23 @@ const StarFieldGenerator: React.FC = () => {
                     <Switch
                       checked={animationSettings.fadeOut}
                       onCheckedChange={(checked) => setAnimationSettings(prev => ({ ...prev, fadeOut: checked }))}
+                      className="ml-4"
+                    />
+                  </div>
+
+                  {/* Hyperspeed toggle */}
+                  <div className="flex items-center justify-between p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30 mt-3">
+                    <div className="flex-1">
+                      <Label className="text-cosmic-200 text-sm font-medium">
+                        {t('Hyperspeed Effect', '超光速效果')}
+                      </Label>
+                      <p className="text-xs text-cosmic-400 mt-1">
+                        {t('Add motion blur during animation for Star Wars-like hyperspeed effect', '在动画过程中添加运动模糊以实现星战般的超光速效果')}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={animationSettings.hyperspeed}
+                      onCheckedChange={(checked) => setAnimationSettings(prev => ({ ...prev, hyperspeed: checked }))}
                       className="ml-4"
                     />
                   </div>
