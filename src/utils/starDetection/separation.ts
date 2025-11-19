@@ -73,26 +73,45 @@ export async function separateStarsAndNebula(
         return;
       }
 
-      canvas.width = imageElement.naturalWidth;
-      canvas.height = imageElement.naturalHeight;
-
-      const starMask = createPreciseStarMask(canvas.width, canvas.height, detectedStars);
+      const originalWidth = imageElement.naturalWidth;
+      const originalHeight = imageElement.naturalHeight;
       
-      // Generate star-only image
+      // Add padding to prevent edge star clipping (largest possible star halo)
+      const maxStarSize = Math.max(...detectedStars.map(s => s.size), 10);
+      const padding = Math.ceil(maxStarSize * 12); // farOuterHaloSize from renderStarWithPSF
+      
+      canvas.width = originalWidth + padding * 2;
+      canvas.height = originalHeight + padding * 2;
+
+      const starMask = createPreciseStarMask(originalWidth, originalHeight, detectedStars);
+      
+      // Generate star-only image with padding
       ctx.fillStyle = 'black';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
+      // Render stars with offset for padding
       for (const star of detectedStars) {
-        renderStarWithPSF(ctx, star);
+        const offsetStar = {
+          ...star,
+          x: star.x + padding,
+          y: star.y + padding
+        };
+        renderStarWithPSF(ctx, offsetStar);
       }
+      
+      // Crop back to original dimensions
+      const paddedImageData = ctx.getImageData(padding, padding, originalWidth, originalHeight);
+      canvas.width = originalWidth;
+      canvas.height = originalHeight;
+      ctx.putImageData(paddedImageData, 0, 0);
       
       const starImage = canvas.toDataURL('image/png');
 
-      // Create nebula image
+      // Create nebula image (use original dimensions)
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(imageElement, 0, 0);
+      ctx.drawImage(imageElement, 0, 0, originalWidth, originalHeight);
       
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const imageData = ctx.getImageData(0, 0, originalWidth, originalHeight);
       const nebulaData = removeStarsFromImage(imageData, detectedStars, starMask);
       
       ctx.putImageData(nebulaData, 0, 0);
