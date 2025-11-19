@@ -1853,217 +1853,155 @@ const StarField3D: React.FC<StarField3DProps> = ({
                         starLayers.layer10 || starLayers.layer11 || starLayers.layer12;
     
     if (hasAnyLayers) {
-      // Apply hyperspeed star streaking effect
-      if (hyperspeed && blurAmount > 0) {
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-        const streakIntensity = blurAmount / 6; // 0 to 1 based on blur curve
+      // Helper function to draw star layers with chromatic aberration for hyperspeed
+      const drawLayerWithEffects = (
+        layer: ImageBitmap | null, 
+        offset: {x: number, y: number, scale: number},
+        cachedScaledWidth: number,
+        cachedScaledHeight: number,
+        opacity: number,
+        compositeOp: GlobalCompositeOperation
+      ) => {
+        if (!layer) return;
         
-        // Draw radial streaks for each layer
-        const drawStreaks = (layer: ImageBitmap | null, offset: {x: number, y: number, scale: number}, opacity: number) => {
-          if (!layer) return;
-          
-          ctx.save();
-          ctx.globalCompositeOperation = 'lighter';
-          ctx.globalAlpha = opacity * streakIntensity * 0.3;
-          
-          const scale = offset.scale;
-          const scaledWidth = layer.width * scale;
-          const scaledHeight = layer.height * scale;
-          const drawX = (canvas.width - scaledWidth) * 0.5 + offset.x;
-          const drawY = (canvas.height - scaledHeight) * 0.5 + offset.y;
-          
-          // Calculate streak direction from center
+        const scale = offset.scale;
+        const scaledWidth = cachedScaledWidth * scale;
+        const scaledHeight = cachedScaledHeight * scale;
+        const drawX = (canvas.width - scaledWidth) * 0.5 + offset.x;
+        const drawY = (canvas.height - scaledHeight) * 0.5 + offset.y;
+        
+        if (hyperspeed && blurAmount > 0) {
+          const centerX = canvas.width / 2;
+          const centerY = canvas.height / 2;
           const layerCenterX = drawX + scaledWidth / 2;
           const layerCenterY = drawY + scaledHeight / 2;
           const dx = layerCenterX - centerX;
           const dy = layerCenterY - centerY;
           const distance = Math.sqrt(dx * dx + dy * dy);
+          const maxDist = Math.sqrt(centerX * centerX + centerY * centerY);
+          const normalizedDist = distance / maxDist;
           
-          if (distance > 1) {
-            const angle = Math.atan2(dy, dx);
-            const streakLength = streakIntensity * 150 * (distance / Math.max(canvas.width, canvas.height));
-            
-            // Draw multiple stretched copies for motion blur effect
-            const streakSteps = 5;
-            for (let i = 0; i < streakSteps; i++) {
-              const t = i / streakSteps;
-              const stretchX = drawX + Math.cos(angle) * streakLength * t;
-              const stretchY = drawY + Math.sin(angle) * streakLength * t;
-              const stretchScale = scale * (1 + streakIntensity * 0.2 * t);
-              const stretchWidth = layer.width * stretchScale;
-              const stretchHeight = layer.height * stretchScale;
-              
-              ctx.globalAlpha = opacity * streakIntensity * 0.3 * (1 - t * 0.7);
-              ctx.drawImage(layer, stretchX, stretchY, stretchWidth, stretchHeight);
-            }
-          }
+          // Chromatic aberration: shift red and blue channels
+          const aberrationAmount = (blurAmount / 6) * 5 * normalizedDist;
+          const angle = Math.atan2(dy, dx);
           
+          // Red shift (away from center - Doppler red shift)
+          ctx.save();
+          ctx.globalCompositeOperation = compositeOp;
+          ctx.globalAlpha = opacity * 0.35;
+          ctx.filter = 'sepia(100%) saturate(300%) hue-rotate(-10deg)';
+          const redX = drawX + Math.cos(angle) * aberrationAmount;
+          const redY = drawY + Math.sin(angle) * aberrationAmount;
+          ctx.drawImage(layer, redX, redY, scaledWidth, scaledHeight);
           ctx.restore();
-        };
-        
-        // Apply streaks to all star layers (not background)
-        drawStreaks(starLayers.layer12, offsetsRef.current.layer12, 0.85);
-        drawStreaks(starLayers.layer11, offsetsRef.current.layer11, 0.87);
-        drawStreaks(starLayers.layer10, offsetsRef.current.layer10, 0.89);
-        drawStreaks(starLayers.layer9, offsetsRef.current.layer9, 0.91);
-        drawStreaks(starLayers.layer8, offsetsRef.current.layer8, 0.93);
-        drawStreaks(starLayers.layer7, offsetsRef.current.layer7, 0.95);
-        drawStreaks(starLayers.layer6, offsetsRef.current.layer6, 0.97);
-        drawStreaks(starLayers.layer5, offsetsRef.current.layer5, 0.99);
-        drawStreaks(starLayers.layer4, offsetsRef.current.layer4, 1.0);
-        drawStreaks(starLayers.layer3, offsetsRef.current.layer3, 1.0);
-        drawStreaks(starLayers.layer2, offsetsRef.current.layer2, 1.0);
-        drawStreaks(starLayers.layer1, offsetsRef.current.layer1, 1.0);
-      }
+          
+          // Blue shift (toward center - Doppler blue shift)
+          ctx.save();
+          ctx.globalCompositeOperation = compositeOp;
+          ctx.globalAlpha = opacity * 0.35;
+          ctx.filter = 'sepia(100%) saturate(300%) hue-rotate(180deg)';
+          const blueX = drawX - Math.cos(angle) * aberrationAmount;
+          const blueY = drawY - Math.sin(angle) * aberrationAmount;
+          ctx.drawImage(layer, blueX, blueY, scaledWidth, scaledHeight);
+          ctx.restore();
+          
+          // Main layer (normal position, brighter)
+          ctx.globalCompositeOperation = compositeOp;
+          ctx.globalAlpha = opacity * 0.7;
+          ctx.filter = 'none';
+          ctx.drawImage(layer, drawX, drawY, scaledWidth, scaledHeight);
+        } else {
+          // Normal rendering without effects
+          ctx.globalCompositeOperation = compositeOp;
+          ctx.globalAlpha = opacity;
+          ctx.filter = 'none';
+          ctx.drawImage(layer, drawX, drawY, scaledWidth, scaledHeight);
+        }
+      };
       
       // Layer 12: Smallest/dimmest stars (farthest, slowest movement)
-      if (starLayers.layer12) {
-        ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.85;
-        const scale = offsetsRef.current.layer12.scale;
-        const scaledWidth = cachedDimensions.current.layer12ScaledWidth * scale;
-        const scaledHeight = cachedDimensions.current.layer12ScaledHeight * scale;
-        const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer12.x;
-        const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer12.y;
-        ctx.drawImage(starLayers.layer12, drawX, drawY, scaledWidth, scaledHeight);
-      }
+      drawLayerWithEffects(starLayers.layer12, offsetsRef.current.layer12, 
+        cachedDimensions.current.layer12ScaledWidth, cachedDimensions.current.layer12ScaledHeight, 
+        0.85, 'screen');
       
       // Layer 11
-      if (starLayers.layer11) {
-        ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.87;
-        const scale = offsetsRef.current.layer11.scale;
-        const scaledWidth = cachedDimensions.current.layer11ScaledWidth * scale;
-        const scaledHeight = cachedDimensions.current.layer11ScaledHeight * scale;
-        const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer11.x;
-        const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer11.y;
-        ctx.drawImage(starLayers.layer11, drawX, drawY, scaledWidth, scaledHeight);
-      }
+      drawLayerWithEffects(starLayers.layer11, offsetsRef.current.layer11,
+        cachedDimensions.current.layer11ScaledWidth, cachedDimensions.current.layer11ScaledHeight,
+        0.87, 'screen');
       
       // Layer 10
-      if (starLayers.layer10) {
-        ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.89;
-        const scale = offsetsRef.current.layer10.scale;
-        const scaledWidth = cachedDimensions.current.layer10ScaledWidth * scale;
-        const scaledHeight = cachedDimensions.current.layer10ScaledHeight * scale;
-        const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer10.x;
-        const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer10.y;
-        ctx.drawImage(starLayers.layer10, drawX, drawY, scaledWidth, scaledHeight);
-      }
+      drawLayerWithEffects(starLayers.layer10, offsetsRef.current.layer10,
+        cachedDimensions.current.layer10ScaledWidth, cachedDimensions.current.layer10ScaledHeight,
+        0.89, 'screen');
       
       // Layer 9
-      if (starLayers.layer9) {
-        ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.91;
-        const scale = offsetsRef.current.layer9.scale;
-        const scaledWidth = cachedDimensions.current.layer9ScaledWidth * scale;
-        const scaledHeight = cachedDimensions.current.layer9ScaledHeight * scale;
-        const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer9.x;
-        const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer9.y;
-        ctx.drawImage(starLayers.layer9, drawX, drawY, scaledWidth, scaledHeight);
-      }
+      drawLayerWithEffects(starLayers.layer9, offsetsRef.current.layer9,
+        cachedDimensions.current.layer9ScaledWidth, cachedDimensions.current.layer9ScaledHeight,
+        0.91, 'screen');
       
       // Layer 8
-      if (starLayers.layer8) {
-        ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.93;
-        const scale = offsetsRef.current.layer8.scale;
-        const scaledWidth = cachedDimensions.current.layer8ScaledWidth * scale;
-        const scaledHeight = cachedDimensions.current.layer8ScaledHeight * scale;
-        const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer8.x;
-        const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer8.y;
-        ctx.drawImage(starLayers.layer8, drawX, drawY, scaledWidth, scaledHeight);
-      }
+      drawLayerWithEffects(starLayers.layer8, offsetsRef.current.layer8,
+        cachedDimensions.current.layer8ScaledWidth, cachedDimensions.current.layer8ScaledHeight,
+        0.93, 'screen');
       
       // Layer 7
-      if (starLayers.layer7) {
-        ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.95;
-        const scale = offsetsRef.current.layer7.scale;
-        const scaledWidth = cachedDimensions.current.layer7ScaledWidth * scale;
-        const scaledHeight = cachedDimensions.current.layer7ScaledHeight * scale;
-        const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer7.x;
-        const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer7.y;
-        ctx.drawImage(starLayers.layer7, drawX, drawY, scaledWidth, scaledHeight);
-      }
+      drawLayerWithEffects(starLayers.layer7, offsetsRef.current.layer7,
+        cachedDimensions.current.layer7ScaledWidth, cachedDimensions.current.layer7ScaledHeight,
+        0.95, 'screen');
       
       // Layer 6
-      if (starLayers.layer6) {
-        ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.97;
-        const scale = offsetsRef.current.layer6.scale;
-        const scaledWidth = cachedDimensions.current.layer6ScaledWidth * scale;
-        const scaledHeight = cachedDimensions.current.layer6ScaledHeight * scale;
-        const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer6.x;
-        const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer6.y;
-        ctx.drawImage(starLayers.layer6, drawX, drawY, scaledWidth, scaledHeight);
-      }
+      drawLayerWithEffects(starLayers.layer6, offsetsRef.current.layer6,
+        cachedDimensions.current.layer6ScaledWidth, cachedDimensions.current.layer6ScaledHeight,
+        0.97, 'screen');
       
       // Layer 5
-      if (starLayers.layer5) {
-        ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.95;
-        const scale = offsetsRef.current.layer5.scale;
-        const scaledWidth = cachedDimensions.current.layer5ScaledWidth * scale;
-        const scaledHeight = cachedDimensions.current.layer5ScaledHeight * scale;
-        const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer5.x;
-        const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer5.y;
-        ctx.drawImage(starLayers.layer5, drawX, drawY, scaledWidth, scaledHeight);
-      }
+      drawLayerWithEffects(starLayers.layer5, offsetsRef.current.layer5,
+        cachedDimensions.current.layer5ScaledWidth, cachedDimensions.current.layer5ScaledHeight,
+        0.95, 'screen');
       
       // Layer 4
-      if (starLayers.layer4) {
-        ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 1.0;
-        const scale = offsetsRef.current.layer4.scale;
-        const scaledWidth = cachedDimensions.current.layer4ScaledWidth * scale;
-        const scaledHeight = cachedDimensions.current.layer4ScaledHeight * scale;
-        const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer4.x;
-        const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer4.y;
-        ctx.drawImage(starLayers.layer4, drawX, drawY, scaledWidth, scaledHeight);
-      }
+      drawLayerWithEffects(starLayers.layer4, offsetsRef.current.layer4,
+        cachedDimensions.current.layer4ScaledWidth, cachedDimensions.current.layer4ScaledHeight,
+        1.0, 'screen');
       
-      // Layer 3: Start using lighter blend for brighter stars to create glow with background
-      if (starLayers.layer3) {
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.globalAlpha = 1.0;
-        const scale = offsetsRef.current.layer3.scale;
-        const scaledWidth = cachedDimensions.current.layer3ScaledWidth * scale;
-        const scaledHeight = cachedDimensions.current.layer3ScaledHeight * scale;
-        const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer3.x;
-        const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer3.y;
-        ctx.drawImage(starLayers.layer3, drawX, drawY, scaledWidth, scaledHeight);
-      }
+      // Layer 3: Start using lighter blend for brighter stars
+      drawLayerWithEffects(starLayers.layer3, offsetsRef.current.layer3,
+        cachedDimensions.current.layer3ScaledWidth, cachedDimensions.current.layer3ScaledHeight,
+        1.0, 'lighter');
       
       // Layer 2: Brighter stars with enhanced glow
-      if (starLayers.layer2) {
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.globalAlpha = 1.0;
-        const scale = offsetsRef.current.layer2.scale;
-        const scaledWidth = cachedDimensions.current.layer2ScaledWidth * scale;
-        const scaledHeight = cachedDimensions.current.layer2ScaledHeight * scale;
-        const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer2.x;
-        const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer2.y;
-        ctx.drawImage(starLayers.layer2, drawX, drawY, scaledWidth, scaledHeight);
-      }
+      drawLayerWithEffects(starLayers.layer2, offsetsRef.current.layer2,
+        cachedDimensions.current.layer2ScaledWidth, cachedDimensions.current.layer2ScaledHeight,
+        1.0, 'lighter');
       
-      // Layer 1: Largest/brightest stars (closest, fastest movement) with maximum glow
-      if (starLayers.layer1) {
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.globalAlpha = 1.0;
-        const scale = offsetsRef.current.layer1.scale;
-        const scaledWidth = cachedDimensions.current.layer1ScaledWidth * scale;
-        const scaledHeight = cachedDimensions.current.layer1ScaledHeight * scale;
-        const drawX = (canvas.width - scaledWidth) * 0.5 + offsetsRef.current.layer1.x;
-        const drawY = (canvas.height - scaledHeight) * 0.5 + offsetsRef.current.layer1.y;
-        ctx.drawImage(starLayers.layer1, drawX, drawY, scaledWidth, scaledHeight);
-      }
+      // Layer 1: Largest/brightest stars (closest, fastest movement)
+      drawLayerWithEffects(starLayers.layer1, offsetsRef.current.layer1,
+        cachedDimensions.current.layer1ScaledWidth, cachedDimensions.current.layer1ScaledHeight,
+        1.0, 'lighter');
     }
     
     // Restore rotation transform
     ctx.restore();
+    
+    // Apply hyperspeed vignette effect
+    if (hyperspeed && blurAmount > 0) {
+      const vignetteIntensity = blurAmount / 6; // 0 to 1 based on blur curve
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const maxRadius = Math.sqrt(centerX * centerX + centerY * centerY);
+      
+      // Create radial gradient for vignette
+      const gradient = ctx.createRadialGradient(
+        centerX, centerY, maxRadius * 0.3,
+        centerX, centerY, maxRadius
+      );
+      gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      gradient.addColorStop(0.7, `rgba(0, 0, 0, ${vignetteIntensity * 0.3})`);
+      gradient.addColorStop(1, `rgba(0, 0, 0, ${vignetteIntensity * 0.7})`);
+      
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
     
     // Update hyperspeed blur effect based on progress
     if (hyperspeed) {
@@ -2261,7 +2199,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
         height={imageDimensions.height}
         className="w-full h-full object-contain bg-black"
         style={{ 
-          willChange: isAnimating ? 'contents' : 'auto'
+          willChange: isAnimating ? 'contents' : 'auto',
+          filter: blurAmount > 0 ? `blur(${blurAmount * 0.5}px)` : 'none',
+          transition: 'filter 0.05s linear'
         }}
       />
       
