@@ -81,7 +81,7 @@ const StarFieldGenerator: React.FC = () => {
 
   // Animation settings with motion controls
   const [animationSettings, setAnimationSettings] = useState({
-    motionType: 'zoom_in' as 'zoom_in' | 'zoom_out' | 'pan_left' | 'pan_right' | 'zoom_in_pan_left' | 'zoom_in_pan_right',
+    motionType: 'zoom_in' as 'zoom_in' | 'zoom_out' | 'pan_left' | 'pan_right' | 'zoom_in_pan_left' | 'zoom_in_pan_right' | 'zoom_out_pan_left' | 'zoom_out_pan_right',
     speed: 1.5,
     duration: 10,
     fieldOfView: 75,
@@ -1125,10 +1125,16 @@ const StarFieldGenerator: React.FC = () => {
                         {t('Pan Right', '向右平移')}
                       </SelectItem>
                       <SelectItem value="zoom_in_pan_left" className="text-white hover:bg-cosmic-700">
-                        {t('Zoom + Pan Left', '放大 + 左移')}
+                        {t('Zoom In + Pan Left', '放大 + 左移')}
                       </SelectItem>
                       <SelectItem value="zoom_in_pan_right" className="text-white hover:bg-cosmic-700">
-                        {t('Zoom + Pan Right', '放大 + 右移')}
+                        {t('Zoom In + Pan Right', '放大 + 右移')}
+                      </SelectItem>
+                      <SelectItem value="zoom_out_pan_left" className="text-white hover:bg-cosmic-700">
+                        {t('Zoom Out + Pan Left', '缩小 + 左移')}
+                      </SelectItem>
+                      <SelectItem value="zoom_out_pan_right" className="text-white hover:bg-cosmic-700">
+                        {t('Zoom Out + Pan Right', '缩小 + 右移')}
                       </SelectItem>
                     </SelectContent>
                   </Select>

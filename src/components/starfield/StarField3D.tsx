@@ -1218,6 +1218,72 @@ const StarField3D: React.FC<StarField3DProps> = ({
         offsetsRef.current.layer3.x = panAmount * parallaxMultipliers.layer3;
         offsetsRef.current.layer2.x = panAmount * parallaxMultipliers.layer2;
         offsetsRef.current.layer1.x = panAmount * parallaxMultipliers.layer1;
+      } else if (motionType === 'zoom_out_pan_left') {
+        // Combined zoom out + pan left: Zoom decreases from max to 1.0 while panning left
+        const panAmount = easedProgress * speed * 250;
+        
+        // Progressive zoom out from max to 1.0 with eased progression
+        offsetsRef.current.background.scale = (1.0 + ampFactor) - (easedProgress * ampFactor);
+        offsetsRef.current.layer12.scale = (1.0 + ampFactor * 0.15 * parallaxMultipliers.layer12) - (easedProgress * ampFactor * 0.15 * parallaxMultipliers.layer12);
+        offsetsRef.current.layer11.scale = (1.0 + ampFactor * 0.2 * parallaxMultipliers.layer11) - (easedProgress * ampFactor * 0.2 * parallaxMultipliers.layer11);
+        offsetsRef.current.layer10.scale = (1.0 + ampFactor * 0.25 * parallaxMultipliers.layer10) - (easedProgress * ampFactor * 0.25 * parallaxMultipliers.layer10);
+        offsetsRef.current.layer9.scale = (1.0 + ampFactor * 0.3 * parallaxMultipliers.layer9) - (easedProgress * ampFactor * 0.3 * parallaxMultipliers.layer9);
+        offsetsRef.current.layer8.scale = (1.0 + ampFactor * 0.35 * parallaxMultipliers.layer8) - (easedProgress * ampFactor * 0.35 * parallaxMultipliers.layer8);
+        offsetsRef.current.layer7.scale = (1.0 + ampFactor * 0.4 * parallaxMultipliers.layer7) - (easedProgress * ampFactor * 0.4 * parallaxMultipliers.layer7);
+        offsetsRef.current.layer6.scale = (1.0 + ampFactor * 0.5 * parallaxMultipliers.layer6) - (easedProgress * ampFactor * 0.5 * parallaxMultipliers.layer6);
+        offsetsRef.current.layer5.scale = (1.0 + ampFactor * 0.6 * parallaxMultipliers.layer5) - (easedProgress * ampFactor * 0.6 * parallaxMultipliers.layer5);
+        offsetsRef.current.layer4.scale = (1.0 + ampFactor * 0.7 * parallaxMultipliers.layer4) - (easedProgress * ampFactor * 0.7 * parallaxMultipliers.layer4);
+        offsetsRef.current.layer3.scale = (1.0 + ampFactor * 0.8 * parallaxMultipliers.layer3) - (easedProgress * ampFactor * 0.8 * parallaxMultipliers.layer3);
+        offsetsRef.current.layer2.scale = (1.0 + ampFactor * 0.9 * parallaxMultipliers.layer2) - (easedProgress * ampFactor * 0.9 * parallaxMultipliers.layer2);
+        offsetsRef.current.layer1.scale = (1.0 + ampFactor * 1.0 * parallaxMultipliers.layer1) - (easedProgress * ampFactor * 1.0 * parallaxMultipliers.layer1);
+        
+        // Pan left with parallax
+        offsetsRef.current.background.x = -panAmount * 1.5;
+        offsetsRef.current.layer12.x = -panAmount * parallaxMultipliers.layer12;
+        offsetsRef.current.layer11.x = -panAmount * parallaxMultipliers.layer11;
+        offsetsRef.current.layer10.x = -panAmount * parallaxMultipliers.layer10;
+        offsetsRef.current.layer9.x = -panAmount * parallaxMultipliers.layer9;
+        offsetsRef.current.layer8.x = -panAmount * parallaxMultipliers.layer8;
+        offsetsRef.current.layer7.x = -panAmount * parallaxMultipliers.layer7;
+        offsetsRef.current.layer6.x = -panAmount * parallaxMultipliers.layer6;
+        offsetsRef.current.layer5.x = -panAmount * parallaxMultipliers.layer5;
+        offsetsRef.current.layer4.x = -panAmount * parallaxMultipliers.layer4;
+        offsetsRef.current.layer3.x = -panAmount * parallaxMultipliers.layer3;
+        offsetsRef.current.layer2.x = -panAmount * parallaxMultipliers.layer2;
+        offsetsRef.current.layer1.x = -panAmount * parallaxMultipliers.layer1;
+      } else if (motionType === 'zoom_out_pan_right') {
+        // Combined zoom out + pan right: Zoom decreases from max to 1.0 while panning right
+        const panAmount = easedProgress * speed * 250;
+        
+        // Progressive zoom out from max to 1.0 with eased progression
+        offsetsRef.current.background.scale = (1.0 + ampFactor) - (easedProgress * ampFactor);
+        offsetsRef.current.layer12.scale = (1.0 + ampFactor * 0.15 * parallaxMultipliers.layer12) - (easedProgress * ampFactor * 0.15 * parallaxMultipliers.layer12);
+        offsetsRef.current.layer11.scale = (1.0 + ampFactor * 0.2 * parallaxMultipliers.layer11) - (easedProgress * ampFactor * 0.2 * parallaxMultipliers.layer11);
+        offsetsRef.current.layer10.scale = (1.0 + ampFactor * 0.25 * parallaxMultipliers.layer10) - (easedProgress * ampFactor * 0.25 * parallaxMultipliers.layer10);
+        offsetsRef.current.layer9.scale = (1.0 + ampFactor * 0.3 * parallaxMultipliers.layer9) - (easedProgress * ampFactor * 0.3 * parallaxMultipliers.layer9);
+        offsetsRef.current.layer8.scale = (1.0 + ampFactor * 0.35 * parallaxMultipliers.layer8) - (easedProgress * ampFactor * 0.35 * parallaxMultipliers.layer8);
+        offsetsRef.current.layer7.scale = (1.0 + ampFactor * 0.4 * parallaxMultipliers.layer7) - (easedProgress * ampFactor * 0.4 * parallaxMultipliers.layer7);
+        offsetsRef.current.layer6.scale = (1.0 + ampFactor * 0.5 * parallaxMultipliers.layer6) - (easedProgress * ampFactor * 0.5 * parallaxMultipliers.layer6);
+        offsetsRef.current.layer5.scale = (1.0 + ampFactor * 0.6 * parallaxMultipliers.layer5) - (easedProgress * ampFactor * 0.6 * parallaxMultipliers.layer5);
+        offsetsRef.current.layer4.scale = (1.0 + ampFactor * 0.7 * parallaxMultipliers.layer4) - (easedProgress * ampFactor * 0.7 * parallaxMultipliers.layer4);
+        offsetsRef.current.layer3.scale = (1.0 + ampFactor * 0.8 * parallaxMultipliers.layer3) - (easedProgress * ampFactor * 0.8 * parallaxMultipliers.layer3);
+        offsetsRef.current.layer2.scale = (1.0 + ampFactor * 0.9 * parallaxMultipliers.layer2) - (easedProgress * ampFactor * 0.9 * parallaxMultipliers.layer2);
+        offsetsRef.current.layer1.scale = (1.0 + ampFactor * 1.0 * parallaxMultipliers.layer1) - (easedProgress * ampFactor * 1.0 * parallaxMultipliers.layer1);
+        
+        // Pan right with parallax
+        offsetsRef.current.background.x = panAmount * 1.5;
+        offsetsRef.current.layer12.x = panAmount * parallaxMultipliers.layer12;
+        offsetsRef.current.layer11.x = panAmount * parallaxMultipliers.layer11;
+        offsetsRef.current.layer10.x = panAmount * parallaxMultipliers.layer10;
+        offsetsRef.current.layer9.x = panAmount * parallaxMultipliers.layer9;
+        offsetsRef.current.layer8.x = panAmount * parallaxMultipliers.layer8;
+        offsetsRef.current.layer7.x = panAmount * parallaxMultipliers.layer7;
+        offsetsRef.current.layer6.x = panAmount * parallaxMultipliers.layer6;
+        offsetsRef.current.layer5.x = panAmount * parallaxMultipliers.layer5;
+        offsetsRef.current.layer4.x = panAmount * parallaxMultipliers.layer4;
+        offsetsRef.current.layer3.x = panAmount * parallaxMultipliers.layer3;
+        offsetsRef.current.layer2.x = panAmount * parallaxMultipliers.layer2;
+        offsetsRef.current.layer1.x = panAmount * parallaxMultipliers.layer1;
       }
       
       // Cache the state
