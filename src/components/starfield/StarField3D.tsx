@@ -1845,13 +1845,26 @@ const StarField3D: React.FC<StarField3DProps> = ({
       
       // Apply hyperspeed whirlpool distortion to background
       if (hyperspeed && blurAmount > 0) {
+        // Calculate fade in/out based on animation progress (15% fade in, 70% full, 15% fade out)
+        const fadeInEnd = 0.15;
+        const fadeOutStart = 0.85;
+        let fadeFactor = 1.0;
+        
+        if (progressRatio < fadeInEnd) {
+          // Fade in during first 15%
+          fadeFactor = progressRatio / fadeInEnd;
+        } else if (progressRatio > fadeOutStart) {
+          // Fade out during last 15%
+          fadeFactor = (1.0 - progressRatio) / (1.0 - fadeOutStart);
+        }
+        
         // Pulsing intensity - oscillates using sine wave
         const pulseFrequency = 0.002; // Speed of the pulse
         const pulsePhase = Date.now() * pulseFrequency;
         const pulseModulation = 0.6 + Math.sin(pulsePhase) * 0.4; // Oscillates between 0.2 and 1.0
         
         const baseTwistIntensity = blurAmount / 3; // 0 to 2
-        const twistIntensity = baseTwistIntensity * pulseModulation;
+        const twistIntensity = baseTwistIntensity * pulseModulation * fadeFactor;
         
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
@@ -1870,8 +1883,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
           ctx.imageSmoothingEnabled = true;
           ctx.imageSmoothingQuality = 'high';
           
-          const segments = 64; // Increased from 32 for smoother rendering
-          const rings = 48; // Increased from 24 for smoother rendering
+          const segments = 48; // Balanced resolution
+          const rings = 32; // Balanced resolution
           
           for (let ring = 0; ring < rings; ring++) {
             const radiusRatio = ring / rings;
@@ -1893,9 +1906,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
               const dstX = centerX + Math.cos(dstAngle) * radius;
               const dstY = centerY + Math.sin(dstAngle) * radius;
               
-              // Draw overlapping segments for smoother blending
-              const segmentSize = Math.max(3, maxRadius / rings * 2.2); // Larger overlap
-              const segmentAlpha = 0.08; // Lower alpha for smooth blending
+              // Draw with moderate overlap for smoother blending while preserving brightness
+              const segmentSize = Math.max(3, maxRadius / rings * 1.8);
+              const segmentAlpha = 0.15; // Increased from 0.08 to preserve brightness
               
               ctx.save();
               ctx.globalAlpha = segmentAlpha;
@@ -1958,8 +1971,19 @@ const StarField3D: React.FC<StarField3DProps> = ({
           const pulsePhase = Date.now() * pulseFrequency;
           const pulseModulation = 0.6 + Math.sin(pulsePhase) * 0.4; // Oscillates between 0.2 and 1.0
           
+          // Calculate fade in/out based on animation progress (same as whirlpool)
+          const fadeInEnd = 0.15;
+          const fadeOutStart = 0.85;
+          let fadeFactor = 1.0;
+          
+          if (progressRatio < fadeInEnd) {
+            fadeFactor = progressRatio / fadeInEnd;
+          } else if (progressRatio > fadeOutStart) {
+            fadeFactor = (1.0 - progressRatio) / (1.0 - fadeOutStart);
+          }
+          
           const baseTrailIntensity = blurAmount / 6; // 0 to 1
-          const trailIntensity = baseTrailIntensity * pulseModulation;
+          const trailIntensity = baseTrailIntensity * pulseModulation * fadeFactor;
           
           const angle = Math.atan2(dy, dx);
           const trailSteps = 6;
