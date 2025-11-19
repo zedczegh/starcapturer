@@ -109,12 +109,12 @@ const ParallelVideoGenerator: React.FC = () => {
     amplification: 150,
     spin: 0,
     spinDirection: 'clockwise',
-    fadeOut: true,
+    fadeOut: false,
     hyperspeed: false
   });
 
   const [depthIntensity, setDepthIntensity] = useState<number>(200);
-  const [preserveStarsIntensity, setPreserveStarsIntensity] = useState<number>(0);
+  const [preserveStarsIntensity, setPreserveStarsIntensity] = useState<number>(50);
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationProgress, setAnimationProgress] = useState(0);
   const [debugImagesOpen, setDebugImagesOpen] = useState(false);
@@ -1926,11 +1926,11 @@ const ParallelVideoGenerator: React.FC = () => {
                       amplification: 150,
                       spin: 0,
                       spinDirection: 'clockwise',
-                      fadeOut: true,
+                      fadeOut: false,
                       hyperspeed: false
                     });
                     setDepthIntensity(200);
-                    setPreserveStarsIntensity(0);
+                    setPreserveStarsIntensity(50);
                   }}
                   className="h-8 gap-2 text-xs bg-cosmic-800/50 hover:bg-cosmic-700/50 border-cosmic-600"
                 >
