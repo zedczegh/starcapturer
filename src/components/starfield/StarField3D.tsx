@@ -1103,8 +1103,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
         offsetsRef.current.layer2.scale = 1.0 + (ampFactor * 0.9 * parallaxMultipliers.layer2);
         offsetsRef.current.layer1.scale = 1.0 + (ampFactor * 1.0 * parallaxMultipliers.layer1);
         
-        // Stars pan left (negative x), background pans right (positive x) at higher speed for visible counter-motion
-        offsetsRef.current.background.x = panAmount * 1.5;
+        // Stars and background both pan left (negative x), background moves faster
+        offsetsRef.current.background.x = -panAmount * 1.5;
         offsetsRef.current.layer12.x = -panAmount * parallaxMultipliers.layer12;
         offsetsRef.current.layer11.x = -panAmount * parallaxMultipliers.layer11;
         offsetsRef.current.layer10.x = -panAmount * parallaxMultipliers.layer10;
@@ -1136,8 +1136,8 @@ const StarField3D: React.FC<StarField3DProps> = ({
         offsetsRef.current.layer2.scale = 1.0 + (ampFactor * 0.9 * parallaxMultipliers.layer2);
         offsetsRef.current.layer1.scale = 1.0 + (ampFactor * 1.0 * parallaxMultipliers.layer1);
         
-        // Stars pan right (positive x), background pans left (negative x) at higher speed for visible counter-motion
-        offsetsRef.current.background.x = -panAmount * 1.5;
+        // Stars and background both pan right (positive x), background moves faster
+        offsetsRef.current.background.x = panAmount * 1.5;
         offsetsRef.current.layer12.x = panAmount * parallaxMultipliers.layer12;
         offsetsRef.current.layer11.x = panAmount * parallaxMultipliers.layer11;
         offsetsRef.current.layer10.x = panAmount * parallaxMultipliers.layer10;
