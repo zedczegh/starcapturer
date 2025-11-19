@@ -605,24 +605,51 @@ const StarField3D: React.FC<StarField3DProps> = ({
       }
       // === END AUTO-SHRINK ===
       
-      // Sort stars by size to determine layer distribution across 12 layers
-      starRegions.sort((a, b) => b.size - a.size);
+      // Calculate depth score combining size, brightness, and luminance for more realistic layering
+      // Larger, brighter stars appear closer (move faster), smaller dimmer stars farther (move slower)
+      const maxSize = Math.max(...starRegions.map(s => s.size));
+      const maxLum = Math.max(...starRegions.map(s => s.maxLuminance));
       
-      // Distribute stars into 12 layers for enhanced parallax depth
-      const layer1Threshold = starRegions[Math.floor(starRegions.length * 0.083)]?.size || 30;  // Top 8.3%
-      const layer2Threshold = starRegions[Math.floor(starRegions.length * 0.167)]?.size || 25;
-      const layer3Threshold = starRegions[Math.floor(starRegions.length * 0.250)]?.size || 20;
-      const layer4Threshold = starRegions[Math.floor(starRegions.length * 0.333)]?.size || 16;
-      const layer5Threshold = starRegions[Math.floor(starRegions.length * 0.417)]?.size || 13;
-      const layer6Threshold = starRegions[Math.floor(starRegions.length * 0.500)]?.size || 11;
-      const layer7Threshold = starRegions[Math.floor(starRegions.length * 0.583)]?.size || 9;
-      const layer8Threshold = starRegions[Math.floor(starRegions.length * 0.667)]?.size || 7;
-      const layer9Threshold = starRegions[Math.floor(starRegions.length * 0.750)]?.size || 6;
-      const layer10Threshold = starRegions[Math.floor(starRegions.length * 0.833)]?.size || 5;
-      const layer11Threshold = starRegions[Math.floor(starRegions.length * 0.917)]?.size || 4;
-      // layer12 = remaining smallest stars
+      starRegions.forEach(star => {
+        // Normalize size (0-1)
+        const normalizedSize = star.size / maxSize;
+        
+        // Use maxLuminance already calculated during detection
+        const normalizedLuminance = star.maxLuminance / maxLum;
+        
+        // Calculate average brightness from star's pixels using pixel indices
+        let totalBrightness = 0;
+        for (let j = 0; j < star.pixelCount; j++) {
+          const pixelIdx = star.pixels[j];
+          const idx = pixelIdx * 4;
+          const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+          totalBrightness += brightness;
+        }
+        const avgBrightness = totalBrightness / star.pixelCount / 255; // Normalize to 0-1
+        
+        // Combined depth score: 50% size, 30% brightness, 20% luminance, with slight random variation
+        // Higher score = closer (faster), lower score = farther (slower)
+        (star as any).depthScore = (normalizedSize * 0.5 + avgBrightness * 0.3 + normalizedLuminance * 0.2) + (Math.random() * 0.04 - 0.02);
+      });
       
-      console.log(`12-layer size thresholds: L1=${layer1Threshold}, L2=${layer2Threshold}, L3=${layer3Threshold}, L4=${layer4Threshold}, L5=${layer5Threshold}, L6=${layer6Threshold}, L7=${layer7Threshold}, L8=${layer8Threshold}, L9=${layer9Threshold}, L10=${layer10Threshold}, L11=${layer11Threshold}`);
+      // Sort stars by depth score to determine layer distribution
+      starRegions.sort((a, b) => (b as any).depthScore - (a as any).depthScore);
+      
+      // Calculate thresholds based on depth score for smoother distribution
+      const layer1Threshold = starRegions[Math.floor(starRegions.length * 0.083)] ? (starRegions[Math.floor(starRegions.length * 0.083)] as any).depthScore : 0.9;
+      const layer2Threshold = starRegions[Math.floor(starRegions.length * 0.167)] ? (starRegions[Math.floor(starRegions.length * 0.167)] as any).depthScore : 0.8;
+      const layer3Threshold = starRegions[Math.floor(starRegions.length * 0.250)] ? (starRegions[Math.floor(starRegions.length * 0.250)] as any).depthScore : 0.7;
+      const layer4Threshold = starRegions[Math.floor(starRegions.length * 0.333)] ? (starRegions[Math.floor(starRegions.length * 0.333)] as any).depthScore : 0.6;
+      const layer5Threshold = starRegions[Math.floor(starRegions.length * 0.417)] ? (starRegions[Math.floor(starRegions.length * 0.417)] as any).depthScore : 0.55;
+      const layer6Threshold = starRegions[Math.floor(starRegions.length * 0.500)] ? (starRegions[Math.floor(starRegions.length * 0.500)] as any).depthScore : 0.5;
+      const layer7Threshold = starRegions[Math.floor(starRegions.length * 0.583)] ? (starRegions[Math.floor(starRegions.length * 0.583)] as any).depthScore : 0.45;
+      const layer8Threshold = starRegions[Math.floor(starRegions.length * 0.667)] ? (starRegions[Math.floor(starRegions.length * 0.667)] as any).depthScore : 0.4;
+      const layer9Threshold = starRegions[Math.floor(starRegions.length * 0.750)] ? (starRegions[Math.floor(starRegions.length * 0.750)] as any).depthScore : 0.35;
+      const layer10Threshold = starRegions[Math.floor(starRegions.length * 0.833)] ? (starRegions[Math.floor(starRegions.length * 0.833)] as any).depthScore : 0.3;
+      const layer11Threshold = starRegions[Math.floor(starRegions.length * 0.917)] ? (starRegions[Math.floor(starRegions.length * 0.917)] as any).depthScore : 0.25;
+      // layer12 = remaining smallest/dimmest stars
+      
+      console.log(`✨ 12-layer depth score thresholds (size+brightness+luminance): L1=${layer1Threshold.toFixed(3)}, L2=${layer2Threshold.toFixed(3)}, L3=${layer3Threshold.toFixed(3)}, L4=${layer4Threshold.toFixed(3)}, L5=${layer5Threshold.toFixed(3)}, L6=${layer6Threshold.toFixed(3)}, L7=${layer7Threshold.toFixed(3)}, L8=${layer8Threshold.toFixed(3)}, L9=${layer9Threshold.toFixed(3)}, L10=${layer10Threshold.toFixed(3)}, L11=${layer11Threshold.toFixed(3)}`);
       
       // Create twelve separate canvases for depth layers
       const canvases = Array(12).fill(null).map(() => {
@@ -655,28 +682,29 @@ const StarField3D: React.FC<StarField3DProps> = ({
           const star = starRegions[starIdx];
           let layerIndex: number;
           
-          // Distribute stars into 12 layers based on size
-          if (star.size >= layer1Threshold) {
+          // Distribute stars into 12 layers based on depth score (size + brightness + luminance)
+          const depthScore = (star as any).depthScore;
+          if (depthScore >= layer1Threshold) {
             layerIndex = 0;
-          } else if (star.size >= layer2Threshold) {
+          } else if (depthScore >= layer2Threshold) {
             layerIndex = 1;
-          } else if (star.size >= layer3Threshold) {
+          } else if (depthScore >= layer3Threshold) {
             layerIndex = 2;
-          } else if (star.size >= layer4Threshold) {
+          } else if (depthScore >= layer4Threshold) {
             layerIndex = 3;
-          } else if (star.size >= layer5Threshold) {
+          } else if (depthScore >= layer5Threshold) {
             layerIndex = 4;
-          } else if (star.size >= layer6Threshold) {
+          } else if (depthScore >= layer6Threshold) {
             layerIndex = 5;
-          } else if (star.size >= layer7Threshold) {
+          } else if (depthScore >= layer7Threshold) {
             layerIndex = 6;
-          } else if (star.size >= layer8Threshold) {
+          } else if (depthScore >= layer8Threshold) {
             layerIndex = 7;
-          } else if (star.size >= layer9Threshold) {
+          } else if (depthScore >= layer9Threshold) {
             layerIndex = 8;
-          } else if (star.size >= layer10Threshold) {
+          } else if (depthScore >= layer10Threshold) {
             layerIndex = 9;
-          } else if (star.size >= layer11Threshold) {
+          } else if (depthScore >= layer11Threshold) {
             layerIndex = 10;
           } else {
             layerIndex = 11; // Layer 12 - smallest/dimmest
