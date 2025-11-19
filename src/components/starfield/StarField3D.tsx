@@ -2041,11 +2041,11 @@ const StarField3D: React.FC<StarField3DProps> = ({
     
     // Update hyperspeed blur effect during animation
     if (hyperspeed) {
-      // Keep effects constant at max intensity when hyperspeed is enabled
+      const normalizedProgress = progress / 100;
+      const blurCurve = Math.sin(normalizedProgress * Math.PI);
       const maxBlur = 6;
-      setBlurAmount(maxBlur);
-    } else {
-      setBlurAmount(0);
+      const currentBlur = blurCurve * maxBlur;
+      setBlurAmount(currentBlur);
     }
     
     
@@ -2154,9 +2154,13 @@ const StarField3D: React.FC<StarField3DProps> = ({
   // Update blur amount when hyperspeed setting changes
   useEffect(() => {
     if (settings.hyperspeed) {
-      // Set to max intensity immediately when hyperspeed is enabled
+      // Calculate blur based on current progress
+      const progress = currentProgressRef.current;
+      const normalizedProgress = progress / 100;
+      const blurCurve = Math.sin(normalizedProgress * Math.PI);
       const maxBlur = 6;
-      setBlurAmount(maxBlur);
+      const currentBlur = blurCurve * maxBlur;
+      setBlurAmount(currentBlur);
     } else {
       setBlurAmount(0);
     }
@@ -2244,7 +2248,9 @@ const StarField3D: React.FC<StarField3DProps> = ({
         height={imageDimensions.height}
         className="w-full h-full object-contain bg-black"
         style={{ 
-          willChange: isAnimating ? 'contents' : 'auto'
+          willChange: isAnimating ? 'contents' : 'auto',
+          filter: blurAmount > 0 ? `blur(${blurAmount * 0.5}px)` : 'none',
+          transition: 'filter 0.05s linear'
         }}
       />
       
