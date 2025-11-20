@@ -472,36 +472,62 @@ const StereoscopeProcessor: React.FC = () => {
         const centerY = star.y;
         const maxRadius = Math.max(star.size, 3);
         
-        // For spike stars, extend depth along spike directions first
+        // For spike stars, trace and preserve the full spike structure
         if (star.hasSpikePattern) {
-          const spikeLength = Math.ceil(star.size * 1.5);
+          // Trace spikes in 4 cardinal directions
           const directions = [
             [1, 0], [-1, 0],  // Horizontal spikes
             [0, 1], [0, -1]   // Vertical spikes
           ];
           
           for (const [dx, dy] of directions) {
-            for (let dist = 1; dist <= spikeLength; dist++) {
+            let lastValidLum = 255;
+            let consecutiveMisses = 0;
+            const maxMisses = 3; // Allow small gaps in spike
+            
+            // Trace up to 5x the star size to capture full spike length
+            const maxTraceLength = Math.ceil(star.size * 5);
+            
+            for (let dist = 1; dist <= maxTraceLength; dist++) {
               const sx = Math.round(centerX + dx * dist);
               const sy = Math.round(centerY + dy * dist);
               
-              if (sx >= 0 && sx < width && sy >= 0 && sy < height) {
-                const sidx = (sy * width + sx) * 4;
-                const sLum = 0.299 * data[sidx] + 
-                            0.587 * data[sidx + 1] + 
-                            0.114 * data[sidx + 2];
+              if (sx < 0 || sx >= width || sy < 0 || sy >= height) break;
+              
+              const sidx = (sy * width + sx) * 4;
+              const sLum = 0.299 * data[sidx] + 0.587 * data[sidx + 1] + 0.114 * data[sidx + 2];
+              
+              // Continue tracing if we find bright pixels or haven't exceeded max misses
+              if (sLum > threshold * 0.2) {
+                // Found spike pixel - apply depth with very gentle taper
+                // Use quadratic falloff for smoother transition: keep at least 70% depth at tips
+                const distRatio = dist / maxTraceLength;
+                const gentleTaper = 1.0 - (distRatio * distRatio * 0.3); // Max 30% reduction
+                const taperedDepth = Math.round(depthValue * gentleTaper);
                 
-                // Only paint spike if pixel is bright enough
-                if (sLum > threshold * 0.2) {
-                  const falloff = 1 - (dist / spikeLength) * 0.2; // Gentle falloff
-                  const spikeDepth = Math.round(depthValue * falloff);
-                  const didx = (sy * width + sx) * 4;
+                depthMap.data[sidx] = Math.max(depthMap.data[sidx], taperedDepth);
+                depthMap.data[sidx + 1] = Math.max(depthMap.data[sidx + 1], taperedDepth);
+                depthMap.data[sidx + 2] = Math.max(depthMap.data[sidx + 2], taperedDepth);
+                depthMap.data[sidx + 3] = 255;
+                
+                lastValidLum = sLum;
+                consecutiveMisses = 0;
+              } else {
+                consecutiveMisses++;
+                
+                // If we're in a small gap, interpolate depth
+                if (consecutiveMisses <= maxMisses && lastValidLum > threshold * 0.5) {
+                  const distRatio = dist / maxTraceLength;
+                  const gentleTaper = 1.0 - (distRatio * distRatio * 0.3);
+                  const taperedDepth = Math.round(depthValue * gentleTaper * 0.8); // Slightly reduced for gap
                   
-                  // Use max to preserve existing higher depths
-                  depthMap.data[didx] = Math.max(depthMap.data[didx], spikeDepth);
-                  depthMap.data[didx + 1] = Math.max(depthMap.data[didx + 1], spikeDepth);
-                  depthMap.data[didx + 2] = Math.max(depthMap.data[didx + 2], spikeDepth);
-                  depthMap.data[didx + 3] = 255;
+                  depthMap.data[sidx] = Math.max(depthMap.data[sidx], taperedDepth);
+                  depthMap.data[sidx + 1] = Math.max(depthMap.data[sidx + 1], taperedDepth);
+                  depthMap.data[sidx + 2] = Math.max(depthMap.data[sidx + 2], taperedDepth);
+                  depthMap.data[sidx + 3] = 255;
+                } else if (consecutiveMisses > maxMisses) {
+                  // End of spike
+                  break;
                 }
               }
             }
