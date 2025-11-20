@@ -639,8 +639,47 @@ const StereoscopeProcessor: React.FC = () => {
     const maxShift = customDisplacement !== undefined ? customDisplacement : params.maxShift;
     const directionMultiplier = invertDirection ? -1 : 1;
 
-    // SIMPLE INVERSE MAPPING - Pull pixels from source (prevents gaps and black lines)
-    // For each destination pixel, look back to the source and copy the pixel
+    // Bilinear interpolation helper for smooth star sampling
+    const sampleBilinear = (data: Uint8ClampedArray, x: number, y: number, width: number, height: number): [number, number, number, number] => {
+      // Clamp to image bounds
+      x = Math.max(0, Math.min(width - 1.001, x));
+      y = Math.max(0, Math.min(height - 1.001, y));
+      
+      const x0 = Math.floor(x);
+      const y0 = Math.floor(y);
+      const x1 = Math.min(x0 + 1, width - 1);
+      const y1 = Math.min(y0 + 1, height - 1);
+      
+      const fx = x - x0;
+      const fy = y - y0;
+      
+      const idx00 = (y0 * width + x0) * 4;
+      const idx10 = (y0 * width + x1) * 4;
+      const idx01 = (y1 * width + x0) * 4;
+      const idx11 = (y1 * width + x1) * 4;
+      
+      const r = Math.round(
+        (data[idx00] * (1 - fx) + data[idx10] * fx) * (1 - fy) +
+        (data[idx01] * (1 - fx) + data[idx11] * fx) * fy
+      );
+      const g = Math.round(
+        (data[idx00 + 1] * (1 - fx) + data[idx10 + 1] * fx) * (1 - fy) +
+        (data[idx01 + 1] * (1 - fx) + data[idx11 + 1] * fx) * fy
+      );
+      const b = Math.round(
+        (data[idx00 + 2] * (1 - fx) + data[idx10 + 2] * fx) * (1 - fy) +
+        (data[idx01 + 2] * (1 - fx) + data[idx11 + 2] * fx) * fy
+      );
+      const a = Math.round(
+        (data[idx00 + 3] * (1 - fx) + data[idx10 + 3] * fx) * (1 - fy) +
+        (data[idx01 + 3] * (1 - fx) + data[idx11 + 3] * fx) * fy
+      );
+      
+      return [r, g, b, a];
+    };
+    
+    // SMOOTH INVERSE MAPPING with bilinear interpolation
+    // Pull pixels from source with sub-pixel accuracy to maintain star shapes
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const destIdx = (y * width + x) * 4;
@@ -648,48 +687,24 @@ const StereoscopeProcessor: React.FC = () => {
         // Get depth value at current position
         const depthValue = depthMap.data[destIdx] / 255.0;
         
-        // Check if this is a star
-        const isStar = params.preserveStarShapes && starMask[y * width + x] === 255;
-        
         // Calculate shift amount based on depth
-        // Simple approach: deeper objects shift less, closer objects shift more
         const shift = depthValue * maxShift * directionMultiplier;
         
-        // LEFT VIEW: Pull from right (shift source to left)
-        // When looking at left eye, objects shift left based on depth
-        const leftSourceX = Math.round(x + shift);
+        // LEFT VIEW: Pull from right with bilinear interpolation
+        const leftSourceX = x + shift;
+        const [lr, lg, lb, la] = sampleBilinear(originalData.data, leftSourceX, y, width, height);
+        leftData.data[destIdx] = lr;
+        leftData.data[destIdx + 1] = lg;
+        leftData.data[destIdx + 2] = lb;
+        leftData.data[destIdx + 3] = 255;
         
-        if (leftSourceX >= 0 && leftSourceX < width) {
-          const leftSrcIdx = (y * width + leftSourceX) * 4;
-          leftData.data[destIdx] = originalData.data[leftSrcIdx];
-          leftData.data[destIdx + 1] = originalData.data[leftSrcIdx + 1];
-          leftData.data[destIdx + 2] = originalData.data[leftSrcIdx + 2];
-          leftData.data[destIdx + 3] = 255;
-        } else {
-          // Fill with black if out of bounds
-          leftData.data[destIdx] = 0;
-          leftData.data[destIdx + 1] = 0;
-          leftData.data[destIdx + 2] = 0;
-          leftData.data[destIdx + 3] = 255;
-        }
-        
-        // RIGHT VIEW: Pull from left (shift source to right)
-        // When looking at right eye, objects shift right based on depth
-        const rightSourceX = Math.round(x - shift);
-        
-        if (rightSourceX >= 0 && rightSourceX < width) {
-          const rightSrcIdx = (y * width + rightSourceX) * 4;
-          rightData.data[destIdx] = originalData.data[rightSrcIdx];
-          rightData.data[destIdx + 1] = originalData.data[rightSrcIdx + 1];
-          rightData.data[destIdx + 2] = originalData.data[rightSrcIdx + 2];
-          rightData.data[destIdx + 3] = 255;
-        } else {
-          // Fill with black if out of bounds
-          rightData.data[destIdx] = 0;
-          rightData.data[destIdx + 1] = 0;
-          rightData.data[destIdx + 2] = 0;
-          rightData.data[destIdx + 3] = 255;
-        }
+        // RIGHT VIEW: Pull from left with bilinear interpolation
+        const rightSourceX = x - shift;
+        const [rr, rg, rb, ra] = sampleBilinear(originalData.data, rightSourceX, y, width, height);
+        rightData.data[destIdx] = rr;
+        rightData.data[destIdx + 1] = rg;
+        rightData.data[destIdx + 2] = rb;
+        rightData.data[destIdx + 3] = 255;
       }
     }
 
