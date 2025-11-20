@@ -496,7 +496,9 @@ const StereoscopeProcessor: React.FC = () => {
           width, 
           height, 
           params, 
-          new Uint8ClampedArray(width * height) // No star masking for stars layer
+          new Uint8ClampedArray(width * height), // No star masking for stars layer
+          params.starParallaxPx, // Use star parallax displacement
+          invertDisplacement // Apply same direction as starless layer
         );
 
         // STEP 5: Composite starless + stars for each eye
