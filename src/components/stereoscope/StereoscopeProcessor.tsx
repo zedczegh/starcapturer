@@ -316,6 +316,7 @@ const StereoscopeProcessor: React.FC = () => {
       maxLuminance: number;
       avgBrightness: number;
       depthScore: number;
+      hasSpikePattern: boolean;
       pixels: { x: number; y: number }[];
     }
     
@@ -404,6 +405,10 @@ const StereoscopeProcessor: React.FC = () => {
             const avgB = totalB / starPixels.length;
             const avgBrightness = totalLum / starPixels.length;
             
+            // Detect diffraction spike pattern (elongated + bright)
+            const aspectRatio = Math.max(starWidth, starHeight) / Math.min(starWidth, starHeight);
+            const hasSpikePattern = maxLum > 200 && (starPixels.length > 100 || aspectRatio > 2.5);
+            
             // Calculate astrophysical depth score
             const colorMax = Math.max(avgR, avgG, avgB, 1);
             const normalizedR = avgR / colorMax;
@@ -426,7 +431,10 @@ const StereoscopeProcessor: React.FC = () => {
             const estimatedDistance = Math.sqrt(intrinsicLuminosity / (apparentMagnitude + 0.01));
             const baseDepthScore = 1 / (estimatedDistance + 0.1);
             const randomVariation = 0.95 + Math.random() * 0.1;
-            const depthScore = baseDepthScore * randomVariation;
+            
+            // Boost depth score significantly for stars with diffraction spikes
+            const spikeBoost = hasSpikePattern ? 1.5 : 1.0;
+            const depthScore = baseDepthScore * randomVariation * spikeBoost;
             
             detectedStars.push({
               x: Math.round(totalX / starPixels.reduce((sum, p) => sum + p.lum * p.lum, 0)),
@@ -437,6 +445,7 @@ const StereoscopeProcessor: React.FC = () => {
               maxLuminance: maxLum / 255,
               avgBrightness: avgBrightness / 255,
               depthScore,
+              hasSpikePattern,
               pixels: starPixels.map(p => ({ x: p.x, y: p.y }))
             });
           }
@@ -463,6 +472,42 @@ const StereoscopeProcessor: React.FC = () => {
         const centerY = star.y;
         const maxRadius = Math.max(star.size, 3);
         
+        // For spike stars, extend depth along spike directions first
+        if (star.hasSpikePattern) {
+          const spikeLength = Math.ceil(star.size * 1.5);
+          const directions = [
+            [1, 0], [-1, 0],  // Horizontal spikes
+            [0, 1], [0, -1]   // Vertical spikes
+          ];
+          
+          for (const [dx, dy] of directions) {
+            for (let dist = 1; dist <= spikeLength; dist++) {
+              const sx = Math.round(centerX + dx * dist);
+              const sy = Math.round(centerY + dy * dist);
+              
+              if (sx >= 0 && sx < width && sy >= 0 && sy < height) {
+                const sidx = (sy * width + sx) * 4;
+                const sLum = 0.299 * data[sidx] + 
+                            0.587 * data[sidx + 1] + 
+                            0.114 * data[sidx + 2];
+                
+                // Only paint spike if pixel is bright enough
+                if (sLum > threshold * 0.2) {
+                  const falloff = 1 - (dist / spikeLength) * 0.2; // Gentle falloff
+                  const spikeDepth = Math.round(depthValue * falloff);
+                  const didx = (sy * width + sx) * 4;
+                  
+                  // Use max to preserve existing higher depths
+                  depthMap.data[didx] = Math.max(depthMap.data[didx], spikeDepth);
+                  depthMap.data[didx + 1] = Math.max(depthMap.data[didx + 1], spikeDepth);
+                  depthMap.data[didx + 2] = Math.max(depthMap.data[didx + 2], spikeDepth);
+                  depthMap.data[didx + 3] = 255;
+                }
+              }
+            }
+          }
+        }
+        
         // Paint all pixels with distance-based feathering
         star.pixels.forEach(p => {
           const idx = (p.y * width + p.x) * 4;
@@ -473,85 +518,72 @@ const StereoscopeProcessor: React.FC = () => {
           const distance = Math.sqrt(dx * dx + dy * dy);
           const normalizedDistance = Math.min(distance / maxRadius, 1);
           
-          // Apply feathering: full depth at center, blend to background at edges
-          const featherFactor = 1 - (normalizedDistance * 0.3); // Keep 70% minimum
+          // Less feathering for spike stars to maintain structure
+          const featherStrength = star.hasSpikePattern ? 0.1 : 0.3;
+          const featherFactor = 1 - (normalizedDistance * featherStrength);
           const featheredDepth = Math.round(depthValue * featherFactor);
           
-          depthMap.data[idx] = featheredDepth;
-          depthMap.data[idx + 1] = featheredDepth;
-          depthMap.data[idx + 2] = featheredDepth;
+          // Use max to preserve spike depths
+          depthMap.data[idx] = Math.max(depthMap.data[idx], featheredDepth);
+          depthMap.data[idx + 1] = Math.max(depthMap.data[idx + 1], featheredDepth);
+          depthMap.data[idx + 2] = Math.max(depthMap.data[idx + 2], featheredDepth);
           depthMap.data[idx + 3] = 255;
         });
       });
       
-      // Apply Gaussian smoothing to eliminate blocky artifacts
+      // Apply adaptive Gaussian smoothing - less blur for bright foreground stars
       const smoothedDepth = new ImageData(width, height);
-      const radius = 2;
+      const baseRadius = 2;
       const sigma = 1.5;
-      const kernelSize = radius * 2 + 1;
-      const kernel: number[] = [];
-      let kernelSum = 0;
       
-      // Generate Gaussian kernel
-      for (let i = 0; i < kernelSize; i++) {
-        const x = i - radius;
-        const value = Math.exp(-(x * x) / (2 * sigma * sigma));
-        kernel.push(value);
-        kernelSum += value;
-      }
-      
-      // Normalize kernel
-      for (let i = 0; i < kernelSize; i++) {
-        kernel[i] /= kernelSum;
-      }
-      
-      // Apply horizontal blur
-      const tempData = new Uint8ClampedArray(width * height * 4);
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
-          let sum = 0;
-          let weightSum = 0;
+          const idx = (y * width + x) * 4;
+          const centerDepth = depthMap.data[idx];
           
+          // High depth values (bright foreground stars) get minimal blur
+          const isHighDepth = centerDepth > 200;
+          const adaptiveRadius = isHighDepth ? 1 : baseRadius;
+          const kernelSize = adaptiveRadius * 2 + 1;
+          
+          let sumH = 0, weightSumH = 0;
+          
+          // Horizontal pass with adaptive kernel
           for (let i = 0; i < kernelSize; i++) {
-            const sampleX = x + i - radius;
+            const sampleX = x + i - adaptiveRadius;
             if (sampleX >= 0 && sampleX < width) {
-              const idx = (y * width + sampleX) * 4;
-              if (depthMap.data[idx + 3] > 0) { // Only blur where we have data
-                sum += depthMap.data[idx] * kernel[i];
-                weightSum += kernel[i];
+              const sidx = (y * width + sampleX) * 4;
+              if (depthMap.data[sidx + 3] > 0) {
+                const offset = i - adaptiveRadius;
+                const weight = Math.exp(-(offset * offset) / (2 * sigma * sigma));
+                sumH += depthMap.data[sidx] * weight;
+                weightSumH += weight;
               }
             }
           }
           
-          const idx = (y * width + x) * 4;
-          tempData[idx] = weightSum > 0 ? sum / weightSum : depthMap.data[idx];
-          tempData[idx + 1] = tempData[idx];
-          tempData[idx + 2] = tempData[idx];
-          tempData[idx + 3] = 255;
-        }
-      }
-      
-      // Apply vertical blur
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          let sum = 0;
-          let weightSum = 0;
+          const hBlurred = weightSumH > 0 ? sumH / weightSumH : centerDepth;
           
+          let sumV = 0, weightSumV = 0;
+          
+          // Vertical pass
           for (let i = 0; i < kernelSize; i++) {
-            const sampleY = y + i - radius;
+            const sampleY = y + i - adaptiveRadius;
             if (sampleY >= 0 && sampleY < height) {
-              const idx = (sampleY * width + x) * 4;
-              if (tempData[idx + 3] > 0) {
-                sum += tempData[idx] * kernel[i];
-                weightSum += kernel[i];
+              const sidx = (sampleY * width + x) * 4;
+              if (depthMap.data[sidx + 3] > 0) {
+                const offset = i - adaptiveRadius;
+                const weight = Math.exp(-(offset * offset) / (2 * sigma * sigma));
+                sumV += hBlurred * weight;
+                weightSumV += weight;
               }
             }
           }
           
-          const idx = (y * width + x) * 4;
-          smoothedDepth.data[idx] = weightSum > 0 ? sum / weightSum : tempData[idx];
-          smoothedDepth.data[idx + 1] = smoothedDepth.data[idx];
-          smoothedDepth.data[idx + 2] = smoothedDepth.data[idx];
+          const finalValue = weightSumV > 0 ? sumV / weightSumV : hBlurred;
+          smoothedDepth.data[idx] = finalValue;
+          smoothedDepth.data[idx + 1] = finalValue;
+          smoothedDepth.data[idx + 2] = finalValue;
           smoothedDepth.data[idx + 3] = 255;
         }
       }
