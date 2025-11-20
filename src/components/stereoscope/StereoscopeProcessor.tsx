@@ -639,9 +639,8 @@ const StereoscopeProcessor: React.FC = () => {
     const maxShift = customDisplacement !== undefined ? customDisplacement : params.maxShift;
     const directionMultiplier = invertDirection ? -1 : 1;
 
-    // Bilinear interpolation helper for smooth star sampling
+    // Bilinear interpolation helper for smooth sampling
     const sampleBilinear = (data: Uint8ClampedArray, x: number, y: number, width: number, height: number): [number, number, number, number] => {
-      // Clamp to image bounds
       x = Math.max(0, Math.min(width - 1.001, x));
       y = Math.max(0, Math.min(height - 1.001, y));
       
@@ -677,36 +676,150 @@ const StereoscopeProcessor: React.FC = () => {
       
       return [r, g, b, a];
     };
+
+    // Create star region map - identify contiguous star regions with consistent depth
+    const starRegionMap = new Int32Array(width * height).fill(-1);
+    const starRegions: Array<{
+      id: number;
+      pixels: Array<{x: number, y: number}>;
+      avgDepth: number;
+      centerX: number;
+      centerY: number;
+      isBrightStar: boolean;
+    }> = [];
     
-    // SMOOTH INVERSE MAPPING with bilinear interpolation
-    // Pull pixels from source with sub-pixel accuracy to maintain star shapes
+    let regionId = 0;
+    const visited = new Uint8Array(width * height);
+    
+    // Flood fill to identify star regions
+    const floodFill = (startX: number, startY: number, depth: number, isBright: boolean) => {
+      const queue: Array<{x: number, y: number}> = [{x: startX, y: startY}];
+      const pixels: Array<{x: number, y: number}> = [];
+      let sumX = 0, sumY = 0, sumDepth = 0;
+      
+      while (queue.length > 0) {
+        const {x, y} = queue.shift()!;
+        const idx = y * width + x;
+        
+        if (x < 0 || x >= width || y < 0 || y >= height) continue;
+        if (visited[idx]) continue;
+        
+        const pixelDepth = depthMap.data[idx * 4];
+        const depthDiff = Math.abs(pixelDepth - depth);
+        
+        // Group pixels with similar depth (high depth = stars)
+        if (pixelDepth > 180 && depthDiff < 40) {
+          visited[idx] = 1;
+          starRegionMap[idx] = regionId;
+          pixels.push({x, y});
+          sumX += x;
+          sumY += y;
+          sumDepth += pixelDepth;
+          
+          // Check 8-connected neighbors for star coherence
+          queue.push({x: x+1, y});
+          queue.push({x: x-1, y});
+          queue.push({x, y: y+1});
+          queue.push({x, y: y-1});
+          queue.push({x: x+1, y: y+1});
+          queue.push({x: x+1, y: y-1});
+          queue.push({x: x-1, y: y+1});
+          queue.push({x: x-1, y: y-1});
+        }
+      }
+      
+      if (pixels.length > 5) { // Minimum size threshold
+        starRegions.push({
+          id: regionId,
+          pixels,
+          avgDepth: sumDepth / pixels.length,
+          centerX: sumX / pixels.length,
+          centerY: sumY / pixels.length,
+          isBrightStar: isBright
+        });
+        regionId++;
+      }
+    };
+    
+    // Identify bright star regions (depth > 220)
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = y * width + x;
+        if (!visited[idx] && depthMap.data[idx * 4] > 220) {
+          floodFill(x, y, depthMap.data[idx * 4], true);
+        }
+      }
+    }
+    
+    console.log(`Detected ${starRegions.length} coherent star regions`);
+    
+    // LAYER 1: Displace background/nebula with normal per-pixel displacement
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const destIdx = (y * width + x) * 4;
+        const regionIdx = y * width + x;
         
-        // Get depth value at current position
+        // Skip star regions - they'll be composited separately
+        if (starRegionMap[regionIdx] >= 0) {
+          leftData.data[destIdx + 3] = 0; // Transparent
+          rightData.data[destIdx + 3] = 0;
+          continue;
+        }
+        
         const depthValue = depthMap.data[destIdx] / 255.0;
-        
-        // Calculate shift amount based on depth
         const shift = depthValue * maxShift * directionMultiplier;
         
-        // LEFT VIEW: Pull from right with bilinear interpolation
         const leftSourceX = x + shift;
-        const [lr, lg, lb, la] = sampleBilinear(originalData.data, leftSourceX, y, width, height);
+        const [lr, lg, lb] = sampleBilinear(originalData.data, leftSourceX, y, width, height);
         leftData.data[destIdx] = lr;
         leftData.data[destIdx + 1] = lg;
         leftData.data[destIdx + 2] = lb;
         leftData.data[destIdx + 3] = 255;
         
-        // RIGHT VIEW: Pull from left with bilinear interpolation
         const rightSourceX = x - shift;
-        const [rr, rg, rb, ra] = sampleBilinear(originalData.data, rightSourceX, y, width, height);
+        const [rr, rg, rb] = sampleBilinear(originalData.data, rightSourceX, y, width, height);
         rightData.data[destIdx] = rr;
         rightData.data[destIdx + 1] = rg;
         rightData.data[destIdx + 2] = rb;
         rightData.data[destIdx + 3] = 255;
       }
     }
+    
+    // LAYER 2: Composite star regions as unified objects
+    starRegions.forEach(region => {
+      const regionShift = (region.avgDepth / 255.0) * maxShift * directionMultiplier;
+      
+      region.pixels.forEach(({x, y}) => {
+        const sourceIdx = (y * width + x) * 4;
+        
+        // Get original pixel color
+        const r = originalData.data[sourceIdx];
+        const g = originalData.data[sourceIdx + 1];
+        const b = originalData.data[sourceIdx + 2];
+        
+        // Calculate displaced positions for this entire star region
+        const leftX = Math.round(x - regionShift);
+        const rightX = Math.round(x + regionShift);
+        
+        // Place in left view
+        if (leftX >= 0 && leftX < width && y >= 0 && y < height) {
+          const leftIdx = (y * width + leftX) * 4;
+          leftData.data[leftIdx] = r;
+          leftData.data[leftIdx + 1] = g;
+          leftData.data[leftIdx + 2] = b;
+          leftData.data[leftIdx + 3] = 255;
+        }
+        
+        // Place in right view
+        if (rightX >= 0 && rightX < width && y >= 0 && y < height) {
+          const rightIdx = (y * width + rightX) * 4;
+          rightData.data[rightIdx] = r;
+          rightData.data[rightIdx + 1] = g;
+          rightData.data[rightIdx + 2] = b;
+          rightData.data[rightIdx + 3] = 255;
+        }
+      });
+    });
 
     return { left: leftData, right: rightData };
   }, []);
