@@ -303,9 +303,9 @@ const StereoscopeProcessor: React.FC = () => {
   ): ImageData => {
     const data = imageData.data;
     const depthMap = new ImageData(width, height);
-    const threshold = 80;
-    const minStarSize = 3;
-    const maxStarSize = 500;
+    const threshold = 30; // Lower threshold to catch dim background stars
+    const minStarSize = 2; // Allow smaller stars
+    const maxStarSize = 800; // Allow larger stars with diffraction spikes
     
     interface DetectedStar {
       x: number;
@@ -383,7 +383,8 @@ const StereoscopeProcessor: React.FC = () => {
                     const nPixelIdx = nIdx * 4;
                     const nLum = 0.299 * data[nPixelIdx] + 0.587 * data[nPixelIdx + 1] + 0.114 * data[nPixelIdx + 2];
                     
-                    if (nLum > threshold * 0.25) {
+                    // More aggressive expansion for diffraction spikes and halos
+                    if (nLum > threshold * 0.15) {
                       visited[nIdx] = 1;
                       queue.push({x: nx, y: ny});
                     }
@@ -452,20 +453,110 @@ const StereoscopeProcessor: React.FC = () => {
       console.log(`Detected ${detectedStars.length} stars with astrophysical depth`);
       console.log(`Depth range: ${minDepth.toFixed(3)} to ${maxDepth.toFixed(3)}`);
       
-      // Paint depth map with normalized depth values
+      // Paint depth map with normalized depth values and feathering
       detectedStars.forEach(star => {
         const normalizedDepth = (star.depthScore - minDepth) / depthRange;
         const depthValue = Math.round(normalizedDepth * 255);
         
-        // Paint all pixels belonging to this star
+        // Calculate star center and radius for feathering
+        const centerX = star.x;
+        const centerY = star.y;
+        const maxRadius = Math.max(star.size, 3);
+        
+        // Paint all pixels with distance-based feathering
         star.pixels.forEach(p => {
           const idx = (p.y * width + p.x) * 4;
-          depthMap.data[idx] = depthValue;
-          depthMap.data[idx + 1] = depthValue;
-          depthMap.data[idx + 2] = depthValue;
+          
+          // Calculate distance from center for smooth falloff
+          const dx = p.x - centerX;
+          const dy = p.y - centerY;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          const normalizedDistance = Math.min(distance / maxRadius, 1);
+          
+          // Apply feathering: full depth at center, blend to background at edges
+          const featherFactor = 1 - (normalizedDistance * 0.3); // Keep 70% minimum
+          const featheredDepth = Math.round(depthValue * featherFactor);
+          
+          depthMap.data[idx] = featheredDepth;
+          depthMap.data[idx + 1] = featheredDepth;
+          depthMap.data[idx + 2] = featheredDepth;
           depthMap.data[idx + 3] = 255;
         });
       });
+      
+      // Apply Gaussian smoothing to eliminate blocky artifacts
+      const smoothedDepth = new ImageData(width, height);
+      const radius = 2;
+      const sigma = 1.5;
+      const kernelSize = radius * 2 + 1;
+      const kernel: number[] = [];
+      let kernelSum = 0;
+      
+      // Generate Gaussian kernel
+      for (let i = 0; i < kernelSize; i++) {
+        const x = i - radius;
+        const value = Math.exp(-(x * x) / (2 * sigma * sigma));
+        kernel.push(value);
+        kernelSum += value;
+      }
+      
+      // Normalize kernel
+      for (let i = 0; i < kernelSize; i++) {
+        kernel[i] /= kernelSum;
+      }
+      
+      // Apply horizontal blur
+      const tempData = new Uint8ClampedArray(width * height * 4);
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          let sum = 0;
+          let weightSum = 0;
+          
+          for (let i = 0; i < kernelSize; i++) {
+            const sampleX = x + i - radius;
+            if (sampleX >= 0 && sampleX < width) {
+              const idx = (y * width + sampleX) * 4;
+              if (depthMap.data[idx + 3] > 0) { // Only blur where we have data
+                sum += depthMap.data[idx] * kernel[i];
+                weightSum += kernel[i];
+              }
+            }
+          }
+          
+          const idx = (y * width + x) * 4;
+          tempData[idx] = weightSum > 0 ? sum / weightSum : depthMap.data[idx];
+          tempData[idx + 1] = tempData[idx];
+          tempData[idx + 2] = tempData[idx];
+          tempData[idx + 3] = 255;
+        }
+      }
+      
+      // Apply vertical blur
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          let sum = 0;
+          let weightSum = 0;
+          
+          for (let i = 0; i < kernelSize; i++) {
+            const sampleY = y + i - radius;
+            if (sampleY >= 0 && sampleY < height) {
+              const idx = (sampleY * width + x) * 4;
+              if (tempData[idx + 3] > 0) {
+                sum += tempData[idx] * kernel[i];
+                weightSum += kernel[i];
+              }
+            }
+          }
+          
+          const idx = (y * width + x) * 4;
+          smoothedDepth.data[idx] = weightSum > 0 ? sum / weightSum : tempData[idx];
+          smoothedDepth.data[idx + 1] = smoothedDepth.data[idx];
+          smoothedDepth.data[idx + 2] = smoothedDepth.data[idx];
+          smoothedDepth.data[idx + 3] = 255;
+        }
+      }
+      
+      return smoothedDepth;
     }
     
     return depthMap;
