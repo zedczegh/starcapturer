@@ -295,6 +295,273 @@ const StereoscopeProcessor: React.FC = () => {
     }
   };
 
+  // Generate astrophysically-informed depth map for stars
+  const generateStarDepthMap = useCallback((
+    imageData: ImageData,
+    width: number,
+    height: number
+  ): ImageData => {
+    const data = imageData.data;
+    const depthMap = new ImageData(width, height);
+    const threshold = 30; // Lower threshold to catch dim background stars
+    const minStarSize = 2; // Allow smaller stars
+    const maxStarSize = 800; // Allow larger stars with diffraction spikes
+    
+    interface DetectedStar {
+      x: number;
+      y: number;
+      brightness: number;
+      size: number;
+      color: { r: number; g: number; b: number };
+      maxLuminance: number;
+      avgBrightness: number;
+      depthScore: number;
+      pixels: { x: number; y: number }[];
+    }
+    
+    const detectedStars: DetectedStar[] = [];
+    const visited = new Uint8Array(width * height);
+    
+    // Scan for stars
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const idx = y * width + x;
+        if (visited[idx]) continue;
+        
+        const pixelIdx = idx * 4;
+        const luminance = 0.299 * data[pixelIdx] + 0.587 * data[pixelIdx + 1] + 0.114 * data[pixelIdx + 2];
+        
+        if (luminance > threshold) {
+          // Grow star region
+          const starPixels: {x: number, y: number, lum: number, r: number, g: number, b: number}[] = [];
+          const queue: {x: number, y: number}[] = [{x, y}];
+          visited[idx] = 1;
+          
+          let minX = x, maxX = x, minY = y, maxY = y;
+          let totalLum = 0, maxLum = 0;
+          let totalX = 0, totalY = 0;
+          let totalR = 0, totalG = 0, totalB = 0;
+          
+          while (queue.length > 0 && starPixels.length < maxStarSize) {
+            const curr = queue.shift()!;
+            const currIdx = curr.y * width + curr.x;
+            const currPixelIdx = currIdx * 4;
+            const currLum = 0.299 * data[currPixelIdx] + 0.587 * data[currPixelIdx + 1] + 0.114 * data[currPixelIdx + 2];
+            
+            const r = data[currPixelIdx];
+            const g = data[currPixelIdx + 1];
+            const b = data[currPixelIdx + 2];
+            
+            starPixels.push({x: curr.x, y: curr.y, lum: currLum, r, g, b});
+            totalLum += currLum;
+            if (currLum > maxLum) maxLum = currLum;
+            
+            totalR += r;
+            totalG += g;
+            totalB += b;
+            
+            const weight = currLum * currLum;
+            totalX += curr.x * weight;
+            totalY += curr.y * weight;
+            
+            minX = Math.min(minX, curr.x);
+            maxX = Math.max(maxX, curr.x);
+            minY = Math.min(minY, curr.y);
+            maxY = Math.max(maxY, curr.y);
+            
+            // Check neighbors
+            for (let dy = -1; dy <= 1; dy++) {
+              for (let dx = -1; dx <= 1; dx++) {
+                if (dx === 0 && dy === 0) continue;
+                
+                const nx = curr.x + dx;
+                const ny = curr.y + dy;
+                
+                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                  const nIdx = ny * width + nx;
+                  if (!visited[nIdx]) {
+                    const nPixelIdx = nIdx * 4;
+                    const nLum = 0.299 * data[nPixelIdx] + 0.587 * data[nPixelIdx + 1] + 0.114 * data[nPixelIdx + 2];
+                    
+                    // More aggressive expansion for diffraction spikes and halos
+                    if (nLum > threshold * 0.15) {
+                      visited[nIdx] = 1;
+                      queue.push({x: nx, y: ny});
+                    }
+                  }
+                }
+              }
+            }
+          }
+          
+          if (starPixels.length >= minStarSize && starPixels.length <= maxStarSize) {
+            const starWidth = maxX - minX + 1;
+            const starHeight = maxY - minY + 1;
+            const actualSize = Math.max(starWidth, starHeight);
+            
+            const avgR = totalR / starPixels.length;
+            const avgG = totalG / starPixels.length;
+            const avgB = totalB / starPixels.length;
+            const avgBrightness = totalLum / starPixels.length;
+            
+            // Calculate astrophysical depth score
+            const colorMax = Math.max(avgR, avgG, avgB, 1);
+            const normalizedR = avgR / colorMax;
+            const normalizedG = avgG / colorMax;
+            const normalizedB = avgB / colorMax;
+            
+            const colorTemp = (normalizedB - normalizedR + 1) / 2;
+            const intrinsicLuminosity = Math.pow(0.5 + colorTemp * 0.5, 3.5);
+            
+            const normalizedSize = Math.min(actualSize / 50, 1);
+            const normalizedLuminance = maxLum / 255;
+            const normalizedBrightness = avgBrightness / 255;
+            
+            const apparentMagnitude = (
+              normalizedBrightness * 0.5 +
+              normalizedSize * 0.3 +
+              normalizedLuminance * 0.2
+            );
+            
+            const estimatedDistance = Math.sqrt(intrinsicLuminosity / (apparentMagnitude + 0.01));
+            const baseDepthScore = 1 / (estimatedDistance + 0.1);
+            const randomVariation = 0.95 + Math.random() * 0.1;
+            const depthScore = baseDepthScore * randomVariation;
+            
+            detectedStars.push({
+              x: Math.round(totalX / starPixels.reduce((sum, p) => sum + p.lum * p.lum, 0)),
+              y: Math.round(totalY / starPixels.reduce((sum, p) => sum + p.lum * p.lum, 0)),
+              brightness: maxLum / 255,
+              size: actualSize,
+              color: { r: avgR, g: avgG, b: avgB },
+              maxLuminance: maxLum / 255,
+              avgBrightness: avgBrightness / 255,
+              depthScore,
+              pixels: starPixels.map(p => ({ x: p.x, y: p.y }))
+            });
+          }
+        }
+      }
+    }
+    
+    // Normalize depth scores
+    if (detectedStars.length > 0) {
+      const minDepth = Math.min(...detectedStars.map(s => s.depthScore));
+      const maxDepth = Math.max(...detectedStars.map(s => s.depthScore));
+      const depthRange = maxDepth - minDepth || 1;
+      
+      console.log(`Detected ${detectedStars.length} stars with astrophysical depth`);
+      console.log(`Depth range: ${minDepth.toFixed(3)} to ${maxDepth.toFixed(3)}`);
+      
+      // Paint depth map with normalized depth values and feathering
+      detectedStars.forEach(star => {
+        const normalizedDepth = (star.depthScore - minDepth) / depthRange;
+        const depthValue = Math.round(normalizedDepth * 255);
+        
+        // Calculate star center and radius for feathering
+        const centerX = star.x;
+        const centerY = star.y;
+        const maxRadius = Math.max(star.size, 3);
+        
+        // Paint all pixels with distance-based feathering
+        star.pixels.forEach(p => {
+          const idx = (p.y * width + p.x) * 4;
+          
+          // Calculate distance from center for smooth falloff
+          const dx = p.x - centerX;
+          const dy = p.y - centerY;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          const normalizedDistance = Math.min(distance / maxRadius, 1);
+          
+          // Apply feathering: full depth at center, blend to background at edges
+          const featherFactor = 1 - (normalizedDistance * 0.3); // Keep 70% minimum
+          const featheredDepth = Math.round(depthValue * featherFactor);
+          
+          depthMap.data[idx] = featheredDepth;
+          depthMap.data[idx + 1] = featheredDepth;
+          depthMap.data[idx + 2] = featheredDepth;
+          depthMap.data[idx + 3] = 255;
+        });
+      });
+      
+      // Apply Gaussian smoothing to eliminate blocky artifacts
+      const smoothedDepth = new ImageData(width, height);
+      const radius = 2;
+      const sigma = 1.5;
+      const kernelSize = radius * 2 + 1;
+      const kernel: number[] = [];
+      let kernelSum = 0;
+      
+      // Generate Gaussian kernel
+      for (let i = 0; i < kernelSize; i++) {
+        const x = i - radius;
+        const value = Math.exp(-(x * x) / (2 * sigma * sigma));
+        kernel.push(value);
+        kernelSum += value;
+      }
+      
+      // Normalize kernel
+      for (let i = 0; i < kernelSize; i++) {
+        kernel[i] /= kernelSum;
+      }
+      
+      // Apply horizontal blur
+      const tempData = new Uint8ClampedArray(width * height * 4);
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          let sum = 0;
+          let weightSum = 0;
+          
+          for (let i = 0; i < kernelSize; i++) {
+            const sampleX = x + i - radius;
+            if (sampleX >= 0 && sampleX < width) {
+              const idx = (y * width + sampleX) * 4;
+              if (depthMap.data[idx + 3] > 0) { // Only blur where we have data
+                sum += depthMap.data[idx] * kernel[i];
+                weightSum += kernel[i];
+              }
+            }
+          }
+          
+          const idx = (y * width + x) * 4;
+          tempData[idx] = weightSum > 0 ? sum / weightSum : depthMap.data[idx];
+          tempData[idx + 1] = tempData[idx];
+          tempData[idx + 2] = tempData[idx];
+          tempData[idx + 3] = 255;
+        }
+      }
+      
+      // Apply vertical blur
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          let sum = 0;
+          let weightSum = 0;
+          
+          for (let i = 0; i < kernelSize; i++) {
+            const sampleY = y + i - radius;
+            if (sampleY >= 0 && sampleY < height) {
+              const idx = (sampleY * width + x) * 4;
+              if (tempData[idx + 3] > 0) {
+                sum += tempData[idx] * kernel[i];
+                weightSum += kernel[i];
+              }
+            }
+          }
+          
+          const idx = (y * width + x) * 4;
+          smoothedDepth.data[idx] = weightSum > 0 ? sum / weightSum : tempData[idx];
+          smoothedDepth.data[idx + 1] = smoothedDepth.data[idx];
+          smoothedDepth.data[idx + 2] = smoothedDepth.data[idx];
+          smoothedDepth.data[idx + 3] = 255;
+        }
+      }
+      
+      return smoothedDepth;
+    }
+    
+    return depthMap;
+  }, []);
+
   const createStereoViews = useCallback((
     canvas: HTMLCanvasElement,
     ctx: CanvasRenderingContext2D,
@@ -445,13 +712,14 @@ const StereoscopeProcessor: React.FC = () => {
       starlessDepthCtx.putImageData(starlessDepthMap, 0, 0);
       setStarlessDepthMapUrl(starlessDepthCanvas.toDataURL('image/png'));
 
-      // STEP 2: Generate depth map for stars if provided
+      // STEP 2: Generate astrophysical depth map for stars if provided
+      let starsDepthMap: ImageData | null = null;
       if (starsCanvas && starsCtx) {
-        setProgressText(t('Generating stars depth map...', '生成恒星深度图...'));
+        setProgressText(t('Generating astrophysical stars depth map...', '生成天体物理恒星深度图...'));
         setProgress(35);
         
         const starsImageData = starsCtx.getImageData(0, 0, width, height);
-        const starsDepthMap = generateSimpleDepthMap(starsImageData, simpleParams);
+        starsDepthMap = generateStarDepthMap(starsImageData, width, height);
         
         // Save stars depth map
         const starsDepthCanvas = document.createElement('canvas');
@@ -485,14 +753,14 @@ const StereoscopeProcessor: React.FC = () => {
       let compositeLeft: ImageData;
       let compositeRight: ImageData;
       
-      if (starsCanvas && starsCtx) {
-        setProgressText(t('Processing stars displacement...', '处理恒星位移...'));
+      if (starsCanvas && starsCtx && starsDepthMap) {
+        setProgressText(t('Processing astrophysical stars displacement...', '处理天体物理恒星位移...'));
         setProgress(70);
         
         const { left: starsLeft, right: starsRight } = createStereoViews(
           starsCanvas, 
           starsCtx, 
-          starlessDepthMap, // Use starless depth map for stars
+          starsDepthMap, // Use astrophysical star depth map
           width, 
           height, 
           params, 
