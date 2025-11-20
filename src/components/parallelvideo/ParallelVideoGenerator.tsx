@@ -417,6 +417,221 @@ const ParallelVideoGenerator: React.FC = () => {
     return element; // Already loaded by handleImageUpload
   }, []);
 
+  // Generate star-specific depth map with astrophysically-informed layering
+  const generateStarDepthMap = useCallback((starsImageData: ImageData, width: number, height: number): ImageData => {
+    const depthMap = new ImageData(width, height);
+    const depthData = depthMap.data;
+    const data = starsImageData.data;
+    
+    // Detect and analyze individual stars
+    const threshold = 30; // Lower threshold to catch dimmer background stars
+    const minStarSize = 2;
+    const maxStarSize = 800; // Include large stars with diffraction spikes
+    
+    interface DetectedStar {
+      x: number;
+      y: number;
+      pixels: {x: number, y: number}[];
+      maxLuminance: number;
+      avgBrightness: number;
+      size: number;
+      colorTemp: number; // Blue stars (hot) vs red stars (cooler)
+      depthScore: number; // Combined score for depth assignment
+    }
+    
+    const stars: DetectedStar[] = [];
+    const visited = new Uint8Array(width * height);
+    
+    // Scan for stars
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = y * width + x;
+        if (visited[idx]) continue;
+        
+        const pixelIdx = idx * 4;
+        const luminance = 0.299 * data[pixelIdx] + 0.587 * data[pixelIdx + 1] + 0.114 * data[pixelIdx + 2];
+        
+        if (luminance > threshold) {
+          // Grow star region with more aggressive threshold for diffraction spikes
+          const starPixels: {x: number, y: number}[] = [];
+          const queue: {x: number, y: number}[] = [{x, y}];
+          visited[idx] = 1;
+          
+          let totalLum = 0, maxLum = 0;
+          let totalR = 0, totalG = 0, totalB = 0;
+          let pixelCount = 0;
+          
+          while (queue.length > 0 && starPixels.length < maxStarSize) {
+            const curr = queue.shift()!;
+            const currIdx = curr.y * width + curr.x;
+            const currPixelIdx = currIdx * 4;
+            const currLum = 0.299 * data[currPixelIdx] + 0.587 * data[currPixelIdx + 1] + 0.114 * data[currPixelIdx + 2];
+            
+            starPixels.push({x: curr.x, y: curr.y});
+            totalLum += currLum;
+            if (currLum > maxLum) maxLum = currLum;
+            
+            totalR += data[currPixelIdx];
+            totalG += data[currPixelIdx + 1];
+            totalB += data[currPixelIdx + 2];
+            pixelCount++;
+            
+            // Check 8-connected neighbors with lower threshold for spikes
+            for (let dy = -1; dy <= 1; dy++) {
+              for (let dx = -1; dx <= 1; dx++) {
+                if (dx === 0 && dy === 0) continue;
+                
+                const nx = curr.x + dx;
+                const ny = curr.y + dy;
+                
+                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                  const nIdx = ny * width + nx;
+                  if (!visited[nIdx]) {
+                    const nPixelIdx = nIdx * 4;
+                    const nLum = 0.299 * data[nPixelIdx] + 0.587 * data[nPixelIdx + 1] + 0.114 * data[nPixelIdx + 2];
+                    
+                    // More aggressive threshold for diffraction spikes
+                    if (nLum > threshold * 0.15) {
+                      visited[nIdx] = 1;
+                      queue.push({x: nx, y: ny});
+                    }
+                  }
+                }
+              }
+            }
+          }
+          
+          if (starPixels.length >= minStarSize && starPixels.length <= maxStarSize) {
+            const avgBrightness = totalLum / pixelCount;
+            const avgR = totalR / pixelCount;
+            const avgG = totalG / pixelCount;
+            const avgB = totalB / pixelCount;
+            
+            // Calculate color temperature (B-R index, higher = bluer/hotter)
+            const colorTemp = (avgB - avgR) / Math.max(avgR + avgB, 1);
+            
+            // Calculate astrophysical depth score
+            // Bright stars appear closer, hot/blue stars tend to be intrinsically brighter
+            const intrinsicLuminosity = maxLum + (colorTemp * 50); // Blue stars get boost
+            const apparentMagnitude = avgBrightness;
+            const estimatedDistance = intrinsicLuminosity / Math.max(apparentMagnitude, 1);
+            
+            const depthScore = 
+              (maxLum * 0.4) + // Peak brightness (bright = foreground)
+              (avgBrightness * 0.3) + // Average brightness
+              (colorTemp * 30) + // Color temperature (blue = closer)
+              (-estimatedDistance * 0.2); // Inverse distance
+            
+            // Find centroid
+            let cx = 0, cy = 0;
+            starPixels.forEach(p => { cx += p.x; cy += p.y; });
+            cx /= starPixels.length;
+            cy /= starPixels.length;
+            
+            stars.push({
+              x: cx,
+              y: cy,
+              pixels: starPixels,
+              maxLuminance: maxLum,
+              avgBrightness,
+              size: starPixels.length,
+              colorTemp,
+              depthScore
+            });
+          }
+        }
+      }
+    }
+    
+    // Normalize depth scores to 0-255 range
+    if (stars.length > 0) {
+      const minScore = Math.min(...stars.map(s => s.depthScore));
+      const maxScore = Math.max(...stars.map(s => s.depthScore));
+      const scoreRange = maxScore - minScore || 1;
+      
+      // Paint depth map for each star with feathering
+      stars.forEach(star => {
+        const normalizedDepth = ((star.depthScore - minScore) / scoreRange) * 255;
+        
+        star.pixels.forEach(pixel => {
+          const pixelIdx = (pixel.y * width + pixel.x) * 4;
+          
+          // Calculate distance from star centroid for feathering
+          const dx = pixel.x - star.x;
+          const dy = pixel.y - star.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          const maxDistance = Math.sqrt(star.size);
+          const normalizedDistance = Math.min(distance / maxDistance, 1);
+          
+          // Apply feathering - edges blend more with background
+          const featherFactor = 1 - (normalizedDistance * 0.3);
+          const finalDepth = normalizedDepth * featherFactor;
+          
+          depthData[pixelIdx] = finalDepth;
+          depthData[pixelIdx + 1] = finalDepth;
+          depthData[pixelIdx + 2] = finalDepth;
+          depthData[pixelIdx + 3] = 255;
+        });
+      });
+    }
+    
+    // Apply Gaussian blur to smooth transitions and eliminate artifacts
+    const blurredDepth = applyGaussianBlur(depthMap, width, height, 2, 1.5);
+    return blurredDepth;
+  }, []);
+  
+  // Gaussian blur helper for depth map smoothing
+  const applyGaussianBlur = (imageData: ImageData, width: number, height: number, radius: number, sigma: number): ImageData => {
+    const output = new ImageData(width, height);
+    const data = imageData.data;
+    const outData = output.data;
+    
+    // Generate Gaussian kernel
+    const kernel: number[] = [];
+    let kernelSum = 0;
+    for (let i = -radius; i <= radius; i++) {
+      const weight = Math.exp(-(i * i) / (2 * sigma * sigma));
+      kernel.push(weight);
+      kernelSum += weight;
+    }
+    kernel.forEach((_, i, arr) => arr[i] /= kernelSum);
+    
+    // Temporary buffer for horizontal pass
+    const temp = new Uint8ClampedArray(data.length);
+    
+    // Horizontal pass
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let sum = 0;
+        for (let i = -radius; i <= radius; i++) {
+          const sx = Math.max(0, Math.min(width - 1, x + i));
+          const idx = (y * width + sx) * 4;
+          sum += data[idx] * kernel[i + radius];
+        }
+        const idx = (y * width + x) * 4;
+        temp[idx] = temp[idx + 1] = temp[idx + 2] = sum;
+        temp[idx + 3] = 255;
+      }
+    }
+    
+    // Vertical pass
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let sum = 0;
+        for (let i = -radius; i <= radius; i++) {
+          const sy = Math.max(0, Math.min(height - 1, y + i));
+          const idx = (sy * width + x) * 4;
+          sum += temp[idx] * kernel[i + radius];
+        }
+        const idx = (y * width + x) * 4;
+        outData[idx] = outData[idx + 1] = outData[idx + 2] = sum;
+        outData[idx + 3] = 255;
+      }
+    }
+    
+    return output;
+  };
+
   // Extract star positions from original stars-only image - matching StarFieldGenerator logic
   const extractStarPositions = useCallback((img: HTMLImageElement, depthMap: HTMLCanvasElement): StarData[] => {
     const canvasPool = CanvasPool.getInstance();
@@ -429,9 +644,9 @@ const ParallelVideoGenerator: React.FC = () => {
       const data = imageData.data;
       
       const stars: StarData[] = [];
-      const threshold = 80; // Lowered to capture more star detail
-      const minStarSize = 3;
-      const maxStarSize = 500;
+      const threshold = 30; // Lower threshold to capture dimmer stars
+      const minStarSize = 2;
+      const maxStarSize = 800; // Include large stars with diffraction spikes
       const minDistance = 3;
       
       const visited = new Uint8Array(canvas.width * canvas.height);
@@ -501,7 +716,7 @@ const ParallelVideoGenerator: React.FC = () => {
               minY = Math.min(minY, curr.y);
               maxY = Math.max(maxY, curr.y);
               
-              // Check 8-connected neighbors
+              // Check 8-connected neighbors with more aggressive threshold for spikes
               for (let dy = -1; dy <= 1; dy++) {
                 for (let dx = -1; dx <= 1; dx++) {
                   if (dx === 0 && dy === 0) continue;
@@ -515,7 +730,8 @@ const ParallelVideoGenerator: React.FC = () => {
                       const nPixelIdx = nIdx * 4;
                       const nLum = 0.299 * data[nPixelIdx] + 0.587 * data[nPixelIdx + 1] + 0.114 * data[nPixelIdx + 2];
                       
-                      if (nLum > threshold * 0.25) { // Lowered expansion threshold to capture more halo
+                      // More aggressive for diffraction spikes
+                      if (nLum > threshold * 0.15) {
                         visited[nIdx] = 1;
                         queue.push({x: nx, y: ny});
                       }
@@ -752,12 +968,12 @@ const ParallelVideoGenerator: React.FC = () => {
       starlessDepthCtx.putImageData(starlessDepthMap, 0, 0);
       setStarlessDepthMapUrl(starlessDepthCanvas.toDataURL('image/png'));
 
-      // STEP 2: Generate depth map for stars (using same Fast Mode approach)
+      // STEP 2: Generate astrophysically-informed depth map for stars
       setProcessingStep(t('Generating stars depth map...', '生成恒星深度图...'));
       setProgress(30);
 
       const starsImageData = starsCtx.getImageData(0, 0, width, height);
-      const starsDepthMap = generateSimpleDepthMap(starsImageData, simpleParams);
+      const starsDepthMap = generateStarDepthMap(starsImageData, width, height);
 
       // Save stars depth map
       const starsDepthCanvas = document.createElement('canvas');
