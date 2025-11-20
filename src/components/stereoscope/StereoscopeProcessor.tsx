@@ -58,12 +58,16 @@ const StereoscopeProcessor: React.FC = () => {
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [leftImageUrl, setLeftImageUrl] = useState<string | null>(null);
   const [rightImageUrl, setRightImageUrl] = useState<string | null>(null);
+  const [anaglyphImageUrl, setAnaglyphImageUrl] = useState<string | null>(null);
   const [starlessDepthMapUrl, setStarlessDepthMapUrl] = useState<string | null>(null);
   const [starsDepthMapUrl, setStarsDepthMapUrl] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [progressText, setProgressText] = useState('');
   const starlessInputRef = useRef<HTMLInputElement>(null);
   const starsInputRef = useRef<HTMLInputElement>(null);
+  
+  // Output format selection
+  const [outputFormat, setOutputFormat] = useState<'stereo' | 'anaglyph' | 'both'>('stereo');
   
   const [params, setParams] = useState<ProcessingParams>({
     maxShift: 30,
@@ -113,6 +117,25 @@ const StereoscopeProcessor: React.FC = () => {
   const isTiffFile = (file: File): boolean => {
     return file.type === 'image/tiff' || file.type === 'image/tif' || 
            !!file.name.toLowerCase().match(/\.tiff?$/);
+  };
+
+  // Generate red-blue anaglyph from left and right stereo views
+  const generateAnaglyphImage = (leftData: ImageData, rightData: ImageData): ImageData => {
+    const width = leftData.width;
+    const height = leftData.height;
+    const anaglyphData = new ImageData(width, height);
+    
+    for (let i = 0; i < leftData.data.length; i += 4) {
+      // Red channel from left image
+      anaglyphData.data[i] = leftData.data[i];
+      // Green and blue channels from right image
+      anaglyphData.data[i + 1] = rightData.data[i + 1];
+      anaglyphData.data[i + 2] = rightData.data[i + 2];
+      // Alpha channel
+      anaglyphData.data[i + 3] = 255;
+    }
+    
+    return anaglyphData;
   };
 
   const convertTiffToDataURL = async (file: File): Promise<string> => {
@@ -815,9 +838,24 @@ const StereoscopeProcessor: React.FC = () => {
       rightCtx.putImageData(compositeRight, 0, 0);
       setRightImageUrl(rightCanvas.toDataURL('image/png'));
 
-      // STEP 7: Create final stereo pair
-      setProgressText(t('Creating final stereo pair...', '创建最终立体对...'));
-      setProgress(95);
+      // STEP 7: Generate anaglyph if requested
+      if (outputFormat === 'anaglyph' || outputFormat === 'both') {
+        setProgressText(t('Generating anaglyph image...', '生成红蓝立体图像...'));
+        setProgress(94);
+        
+        const anaglyphData = generateAnaglyphImage(compositeLeft, compositeRight);
+        const anaglyphCanvas = document.createElement('canvas');
+        const anaglyphCtx = anaglyphCanvas.getContext('2d')!;
+        anaglyphCanvas.width = width;
+        anaglyphCanvas.height = height;
+        anaglyphCtx.putImageData(anaglyphData, 0, 0);
+        setAnaglyphImageUrl(anaglyphCanvas.toDataURL('image/png'));
+      }
+
+      // STEP 8: Create final stereo pair if requested
+      if (outputFormat === 'stereo' || outputFormat === 'both') {
+        setProgressText(t('Creating final stereo pair...', '创建最终立体对...'));
+        setProgress(95);
 
       const resultCanvas = document.createElement('canvas');
       const resultCtx = resultCanvas.getContext('2d')!;
@@ -846,6 +884,11 @@ const StereoscopeProcessor: React.FC = () => {
       }
 
       setResultUrl(resultCanvas.toDataURL('image/png'));
+      } else if (outputFormat === 'anaglyph') {
+        // For anaglyph-only mode, clear stereo pair
+        setResultUrl(null);
+      }
+      
       setProgress(100);
       setProgressText(t('Processing complete!', '处理完成！'));
       
@@ -925,6 +968,15 @@ const StereoscopeProcessor: React.FC = () => {
     link.click();
   };
 
+  const downloadAnaglyphImage = () => {
+    if (!anaglyphImageUrl) return;
+    
+    const link = document.createElement('a');
+    link.href = anaglyphImageUrl;
+    link.download = `stereoscope-anaglyph.png`;
+    link.click();
+  };
+
   const downloadAllFiles = async () => {
     const zip = new JSZip();
     
@@ -963,6 +1015,11 @@ const StereoscopeProcessor: React.FC = () => {
     
     if (starsDepthMapUrl) {
       zip.file('depth-map-stars.png', dataURLtoBlob(starsDepthMapUrl));
+    }
+    
+    // Add anaglyph image
+    if (anaglyphImageUrl) {
+      zip.file('stereoscope-anaglyph.png', dataURLtoBlob(anaglyphImageUrl));
     }
     
     // Generate and download zip
@@ -1352,6 +1409,29 @@ const StereoscopeProcessor: React.FC = () => {
                 </div>
               )}
 
+              {/* Output Format Selection */}
+              <div className="space-y-2">
+                <Label className="text-cosmic-100">
+                  {t('Output Format', '输出格式')}
+                </Label>
+                <Select value={outputFormat} onValueChange={(value: 'stereo' | 'anaglyph' | 'both') => setOutputFormat(value)}>
+                  <SelectTrigger className="w-full bg-cosmic-800/50 border-cosmic-700 text-cosmic-100">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-cosmic-800 border-cosmic-700">
+                    <SelectItem value="stereo" className="text-cosmic-100">
+                      {t('Stereo Pairs', '立体对')}
+                    </SelectItem>
+                    <SelectItem value="anaglyph" className="text-cosmic-100">
+                      {t('Red-Blue Anaglyph', '红蓝立体')}
+                    </SelectItem>
+                    <SelectItem value="both" className="text-cosmic-100">
+                      {t('Both', '两者都要')}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <Button
                 onClick={processUnifiedMode}
                 disabled={!starlessImage || processing}
@@ -1362,7 +1442,7 @@ const StereoscopeProcessor: React.FC = () => {
                 ) : (
                   <Eye className="h-4 w-4 mr-2" />
                 )}
-                {processing ? t('Processing...', '处理中...') : t('Generate 3D Stereo', '生成3D立体')}
+                {processing ? t('Processing...', '处理中...') : t('Generate 3D Image(s)', '生成3D图像')}
               </Button>
             </div>
           </CardContent>
@@ -1446,6 +1526,37 @@ const StereoscopeProcessor: React.FC = () => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Anaglyph Result */}
+      {anaglyphImageUrl && (
+        <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
+          <CardHeader>
+            <CardTitle className="text-2xl text-white flex items-center gap-3">
+              <Eye className="h-6 w-6 text-red-400" />
+              {t('Red-Blue Anaglyph', '红蓝立体图像')}
+            </CardTitle>
+            <CardDescription className="text-cosmic-300">
+              {t('View with red-cyan 3D glasses for stereoscopic effect.', '使用红蓝3D眼镜观看以获得立体效果。')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <img
+                src={anaglyphImageUrl}
+                alt="Red-Blue Anaglyph"
+                className="w-full rounded-lg border border-cosmic-700"
+              />
+              <Button 
+                onClick={downloadAnaglyphImage}
+                className="w-full bg-gradient-to-r from-red-500 to-cyan-500 hover:from-red-600 hover:to-cyan-600"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {t('Download Anaglyph', '下载红蓝立体图')}
+              </Button>
             </div>
           </CardContent>
         </Card>
