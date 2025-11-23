@@ -169,27 +169,22 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
       }),
       title: 'Your Location',
       anchor: 'bottom-center',
+      zIndex: 200,
     });
+
+    mapInstance.current.add(marker);
+    userMarkerRef.current = marker;
 
     // Setup location details handler
     (window as any).viewUserLocationDetails = () => {
       window.location.href = `/location/${userLocation.latitude.toFixed(6)},${userLocation.longitude.toFixed(6)}`;
     };
 
-    // Fetch location name and create popup
-    const setupPopup = async () => {
-      let locationName = 'Your Location';
-      try {
-        const { getEnhancedLocationDetails } = await import('@/services/geocoding/enhancedReverseGeocoding');
-        const details = await getEnhancedLocationDetails(userLocation.latitude, userLocation.longitude, 'en');
-        locationName = details.formattedName || 'Your Location';
-      } catch (error) {
-        console.error('Error fetching location name:', error);
-      }
+    // Create popup content
+    const currentSiqs = realTimeSiqsMap.get('user-location') || 0;
 
-      const currentSiqs = realTimeSiqsMap.get('user-location') || 0;
-
-      const popupContent = `
+    const createPopupContent = (locationName: string) => {
+      return `
         <div style="
           background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.95) 100%);
           border-left: 4px solid #e11d48;
@@ -275,21 +270,35 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
           </button>
         </div>
       `;
-
-      const infoWindow = new (window as any).AMap.InfoWindow({
-        content: popupContent,
-        offset: new (window as any).AMap.Pixel(0, -42),
-      });
-
-      marker.on('click', () => {
-        infoWindow.open(mapInstance.current, marker.getPosition());
-      });
     };
 
-    setupPopup();
+    // Create info window with initial content
+    const infoWindow = new (window as any).AMap.InfoWindow({
+      content: createPopupContent('Loading...'),
+      offset: new (window as any).AMap.Pixel(0, -42),
+      closeWhenClickMap: true,
+    });
 
-    mapInstance.current.add(marker);
-    userMarkerRef.current = marker;
+    // Add click event to marker
+    marker.on('click', () => {
+      console.log('User location marker clicked');
+      infoWindow.open(mapInstance.current, marker.getPosition());
+    });
+
+    // Fetch location name and update popup
+    const fetchLocationName = async () => {
+      try {
+        const { getEnhancedLocationDetails } = await import('@/services/geocoding/enhancedReverseGeocoding');
+        const details = await getEnhancedLocationDetails(userLocation.latitude, userLocation.longitude, 'en');
+        const locationName = details.formattedName || 'Your Location';
+        infoWindow.setContent(createPopupContent(locationName));
+      } catch (error) {
+        console.error('Error fetching location name:', error);
+        infoWindow.setContent(createPopupContent('Your Location'));
+      }
+    };
+
+    fetchLocationName();
 
     // Add radius circle
     if (showRadiusCircles && searchRadius > 0) {
