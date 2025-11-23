@@ -29,6 +29,7 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
   const { position: userPosition, updatePosition } = useUserGeolocation();
 
   const handleLocationUpdate = (lat: number, lng: number) => {
+    console.log("CommunityMap: Location updated to:", lat, lng);
     updatePosition(lat, lng);
     if (onLocationUpdate) {
       onLocationUpdate(lat, lng);
@@ -66,7 +67,7 @@ const CommunityMap: React.FC<CommunityMapProps> = ({
             onMarkerClick={onMarkerClick}
           />
         ))}
-        {onLocationUpdate && <MapClickHandler onClick={onLocationUpdate} />}
+        {onLocationUpdate && <MapClickHandler onClick={handleLocationUpdate} />}
       </MapContainer>
     </div>
   );
