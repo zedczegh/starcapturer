@@ -2,7 +2,7 @@
 import React from "react";
 import { SharedAstroSpot } from "@/lib/api/astroSpots";
 import { Loader2 } from "@/components/ui/loader";
-import CommunityMap from "@/components/community/CommunityMap";
+import UnifiedCommunityMap from "@/components/maps/UnifiedCommunityMap";
 import LocationUpdateInput from "@/components/community/LocationUpdateInput";
 import { motion } from "framer-motion";
 
@@ -57,7 +57,7 @@ const CommunityMapSection: React.FC<CommunityMapSectionProps> = React.memo(({
           <Loader2 className="h-8 w-8 animate-spin text-primary/80" />
         </motion.div>
       ) : (
-        <CommunityMap
+        <UnifiedCommunityMap
           center={userLocation || DEFAULT_CENTER}
           locations={sortedAstroSpots ?? []}
           hoveredLocationId={null}

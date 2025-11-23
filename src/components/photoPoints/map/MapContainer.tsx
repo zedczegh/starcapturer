@@ -2,7 +2,7 @@
 import React from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
-import LazyMapContainer from './LazyMapContainer';
+import UnifiedMapContainer from '@/components/maps/UnifiedMapContainer';
 import MapLegend from './MapLegend';
 import PinpointButton from './PinpointButton';
 
@@ -64,7 +64,7 @@ const MapContainer: React.FC<MapContainerProps> = ({
         </div>
       )}
       
-      <LazyMapContainer
+      <UnifiedMapContainer
         center={mapCenter}
         userLocation={userLocation}
         locations={locations}
