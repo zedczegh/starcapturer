@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Star, Sparkles, Video, Music, Calculator, TrendingUp, BookOpen, ExternalLink } from "lucide-react";
+import { Star, Sparkles, Video, Music, Calculator, TrendingUp, BookOpen, ExternalLink, Zap } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { motion } from "framer-motion";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -129,6 +129,43 @@ const UtilitiesSection = () => {
                 <li>{t("Independent left/right eye depth processing", "独立的左/右眼深度处理")}</li>
                 <li>{t("Customizable stereo separation and border size", "可定制的立体分离和边框大小")}</li>
                 <li>{t("Full motion control with zoom, pan, and spin", "全运动控制，包括缩放、平移和旋转")}</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Motion Animation */}
+          <div className="bg-gradient-to-br from-indigo-950/30 to-violet-950/30 border border-indigo-700/30 rounded-lg p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center">
+                <div className="bg-gradient-to-r from-indigo-600 to-violet-600 p-2.5 rounded-lg mr-3">
+                  <Zap className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-indigo-200">
+                    {t("Motion Animation", "动态动画")}
+                  </h3>
+                  <p className="text-xs text-indigo-300/70">
+                    {t("Create cinemagraph-style loops", "创建电影照片式循环")}
+                  </p>
+                </div>
+              </div>
+              <Link to="/motion-animation">
+                <Button variant="outline" size="sm" className="gap-2 border-indigo-600 hover:border-indigo-500 hover:bg-indigo-800">
+                  {t("Try It", "尝试")}
+                  <ExternalLink className="h-3 w-3" />
+                </Button>
+              </Link>
+            </div>
+            <p className="text-xs text-muted-foreground mb-2">
+              {t("Transform still images into captivating animated loops with motion arrows and anchor points. Similar to Motion Leap, create cinemagraph effects with selective motion in your photos.", "使用运动箭头和锚点将静态图像转换为迷人的动画循环。类似于Motion Leap，在照片中创建具有选择性运动的电影照片效果。")}
+            </p>
+            <div className="space-y-2 text-xs">
+              <p className="font-medium text-indigo-200">{t("Features:", "功能：")}</p>
+              <ul className="list-disc list-inside space-y-0.5 text-muted-foreground ml-2">
+                <li>{t("Draw motion arrows for directional animation", "绘制运动箭头以实现方向动画")}</li>
+                <li>{t("Paint anchor points to freeze areas", "绘制锚点以冻结区域")}</li>
+                <li>{t("Real-time preview with adjustable speed", "具有可调速度的实时预览")}</li>
+                <li>{t("Export as MP4 or WebM video format", "导出为MP4或WebM视频格式")}</li>
               </ul>
             </div>
           </div>
