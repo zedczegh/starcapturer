@@ -9,8 +9,14 @@ interface CommunityUserLocationMarkerProps {
 }
 
 const CommunityUserLocationMarker = ({ position, onLocationUpdate, draggable = true }: CommunityUserLocationMarkerProps) => {
-  // Pass null as currentSiqs to ensure the RealTimeSiqsProvider inside UserLocationMarker will calculate it
-  return <UserLocationMarker position={position} onLocationUpdate={onLocationUpdate} draggable={draggable} />;
+  return (
+    <UserLocationMarker 
+      position={position}
+      currentSiqs={null}
+      onLocationUpdate={onLocationUpdate}
+      draggable={draggable}
+    />
+  );
 };
 
 export default CommunityUserLocationMarker;
