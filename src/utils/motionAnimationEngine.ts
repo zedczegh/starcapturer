@@ -1,7 +1,7 @@
 /**
- * Motion Animation Engine
- * Creates animated loops with motion vectors and anchor points
- * Similar to Motion Leap / Pixaloop functionality
+ * Motion Animation Engine - Simplified Keyframe Approach
+ * Creates smooth looping animations by interpolating between 2 keyframes
+ * Much more stable than continuous displacement accumulation
  */
 
 interface MotionVector {
@@ -22,34 +22,36 @@ interface RangePoint {
   radius: number;
 }
 
+interface Keyframe {
+  imageData: ImageData;
+}
+
 export class MotionAnimationEngine {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private sourceImage: HTMLImageElement;
-  private originalImageData: ImageData; // Store original image data
+  private originalImageData: ImageData;
   private motionVectors: MotionVector[] = [];
   private motionTrails: MotionTrail[] = [];
   private rangePoints: RangePoint[] = [];
   private animationFrame: number | null = null;
-  private currentFrame: number = 0;
   private isAnimating: boolean = false;
-  private speedFactor: number = 1; // User-controlled speed multiplier
-  private lastTimestamp: number | null = null; // For time-based animation
+  
+  // Keyframe-based animation
+  private keyframes: Keyframe[] = [];
+  private currentTime: number = 0;
+  private animationDuration: number = 3000; // 3 seconds for full loop
 
   constructor(canvas: HTMLCanvasElement, sourceImage: HTMLImageElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.sourceImage = sourceImage;
     
-    // CRITICAL: Store the original image data once at initialization
-    // This prevents cumulative distortion by always sampling from the original
+    // Store original image data
     this.ctx.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
     this.originalImageData = this.ctx.getImageData(0, 0, canvas.width, canvas.height);
   }
 
-  /**
-   * Add a motion vector (arrow) to the canvas
-   */
   addMotionVector(x1: number, y1: number, x2: number, y2: number, strength: number) {
     this.motionVectors.push({
       x: x1,
@@ -58,58 +60,51 @@ export class MotionAnimationEngine {
       dy: y2 - y1,
       strength
     });
+    
+    // Regenerate keyframes when motion changes
+    this.generateKeyframes();
   }
 
-  /**
-   * Add a motion trail for display (single arrow at end)
-   */
   addMotionTrail(points: { x: number; y: number }[]) {
     this.motionTrails.push({ points });
   }
 
-  /**
-   * Add a range point (area that should move)
-   */
   addRangePoint(x: number, y: number, radius: number) {
     this.rangePoints.push({ x, y, radius });
+    
+    // Regenerate keyframes when range changes
+    this.generateKeyframes();
   }
 
-  /**
-   * Remove motion vectors or range points at a location
-   */
   removeAtPoint(x: number, y: number, radius: number) {
-    // Remove motion vectors
     this.motionVectors = this.motionVectors.filter(v => {
       const dist = Math.sqrt((v.x - x) ** 2 + (v.y - y) ** 2);
       return dist > radius;
     });
 
-    // Remove range points
     this.rangePoints = this.rangePoints.filter(r => {
       const dist = Math.sqrt((r.x - x) ** 2 + (r.y - y) ** 2);
       return dist > radius;
     });
+    
+    // Regenerate keyframes after removal
+    this.generateKeyframes();
   }
 
-  /**
-   * Clear all motion vectors and range points
-   */
   clear() {
     this.motionVectors = [];
     this.motionTrails = [];
     this.rangePoints = [];
+    this.keyframes = [];
     this.stop();
   }
 
-  /**
-   * Draw overlay showing motion trails and range points
-   */
   drawOverlay(overlayCtx: CanvasRenderingContext2D) {
     overlayCtx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Draw range points (areas that will move)
+    // Draw range points
     this.rangePoints.forEach(range => {
-      overlayCtx.fillStyle = "rgba(34, 197, 94, 0.3)"; // Green for motion areas
+      overlayCtx.fillStyle = "rgba(34, 197, 94, 0.3)";
       overlayCtx.beginPath();
       overlayCtx.arc(range.x, range.y, range.radius, 0, Math.PI * 2);
       overlayCtx.fill();
@@ -119,12 +114,10 @@ export class MotionAnimationEngine {
       overlayCtx.stroke();
     });
 
-    // Draw motion trails (one arrow per trail at the end)
+    // Draw motion trails
     this.motionTrails.forEach(trail => {
-      const points = trail.points;
-      if (points.length < 2) return;
+      if (trail.points.length < 2) return;
 
-      // Draw smooth trail line
       overlayCtx.strokeStyle = "#3b82f6";
       overlayCtx.lineWidth = 4;
       overlayCtx.lineCap = "round";
@@ -133,16 +126,16 @@ export class MotionAnimationEngine {
       overlayCtx.shadowBlur = 10;
 
       overlayCtx.beginPath();
-      overlayCtx.moveTo(points[0].x, points[0].y);
+      overlayCtx.moveTo(trail.points[0].x, trail.points[0].y);
       
-      for (let i = 1; i < points.length; i++) {
-        overlayCtx.lineTo(points[i].x, points[i].y);
+      for (let i = 1; i < trail.points.length; i++) {
+        overlayCtx.lineTo(trail.points[i].x, trail.points[i].y);
       }
       overlayCtx.stroke();
 
-      // Draw single arrowhead at the end
-      const last = points[points.length - 1];
-      const secondLast = points[points.length - 2];
+      // Draw arrowhead
+      const last = trail.points[trail.points.length - 1];
+      const secondLast = trail.points[trail.points.length - 2];
       const angle = Math.atan2(last.y - secondLast.y, last.x - secondLast.x);
       const headLength = 15;
 
@@ -164,113 +157,51 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Calculate displacement for a pixel based on motion vectors and range points
-   * Uses proper motion mapping similar to Motion Leap/Pixaloop
+   * Generate 2 keyframes: original and displaced
+   * This creates a simple, stable animation loop
    */
-  /**
-   * Calculate pixel displacement using smooth oscillating motion (Motion Leap technique)
-   * Key principle: Displacement oscillates smoothly from original position, creating living photo effect
-   */
-  private calculateDisplacement(x: number, y: number, frame: number): { dx: number; dy: number } {
-    let totalDx = 0;
-    let totalDy = 0;
-    let totalWeight = 0;
+  private generateKeyframes() {
+    if (this.motionVectors.length === 0) {
+      this.keyframes = [];
+      return;
+    }
 
-    // Check if pixel is in a range point - if range points exist, only animate those areas
-    let inRange = this.rangePoints.length === 0; // If no range points, animate everything
+    console.log('Generating keyframes...');
     
-    if (this.rangePoints.length > 0) {
-      for (const range of this.rangePoints) {
-        const dist = Math.sqrt((x - range.x) ** 2 + (y - range.y) ** 2);
-        if (dist < range.radius) {
-          inRange = true;
-          break;
-        }
-      }
-    }
+    // Keyframe 0: Original image
+    this.keyframes = [{
+      imageData: this.cloneImageData(this.originalImageData)
+    }];
 
-    // If not in range, no movement
-    if (!inRange) {
-      return { dx: 0, dy: 0 };
-    }
+    // Keyframe 1: Maximum displacement (small, controlled amount)
+    const displacedImageData = this.createDisplacedFrame(0.5); // 50% displacement
+    this.keyframes.push({
+      imageData: displacedImageData
+    });
 
-    // Motion Leap technique: Smooth oscillating displacement using sine wave with easing
-    // The motion smoothly goes forward and back, creating a natural "living photo" effect
-    for (const vector of this.motionVectors) {
-      const dist = Math.sqrt((x - vector.x) ** 2 + (y - vector.y) ** 2);
-      const maxDist = 200; // Influence radius
-      
-      if (dist < maxDist) {
-        // Smooth exponential falloff for natural motion field
-        const normalizedDist = dist / maxDist;
-        const falloff = Math.exp(-normalizedDist * 3); // Exponential decay
-        const weight = falloff * vector.strength;
-        
-        // Sine wave oscillation: smooth forward and backward motion
-        // This creates the characteristic Motion Leap "breathing" effect
-        const cycleLength = 180; // Frames per complete cycle (adjust for speed)
-        const phase = (frame % cycleLength) / cycleLength;
-        const sineValue = Math.sin(phase * Math.PI * 2);
-        
-        // Apply ease-in-out to sine wave for ultra-smooth motion
-        const eased = sineValue * Math.abs(sineValue); // Quadratic easing
-        
-        // Small displacement magnitude (2-6 pixels typical for Motion Leap)
-        const maxDisplacement = 4;
-        const displacement = eased * maxDisplacement;
-        
-        totalDx += vector.dx * weight * displacement;
-        totalDy += vector.dy * weight * displacement;
-        totalWeight += weight;
-      }
-    }
-
-    if (totalWeight > 0) {
-      // Normalize by total weight for smooth blending
-      return {
-        dx: totalDx / totalWeight,
-        dy: totalDy / totalWeight
-      };
-    }
-
-    return { dx: 0, dy: 0 };
+    console.log('Generated 2 keyframes for smooth looping');
   }
 
   /**
-   * Render a single frame of the animation using bilinear interpolation
-   * CRITICAL: Always samples from the ORIGINAL image to prevent cumulative distortion
+   * Create a single displaced frame with controlled displacement
    */
-  private renderFrame(timestamp: number) {
-    if (!this.isAnimating) return;
-
-    // Time-based animation for consistent motion across devices
-    if (this.lastTimestamp === null) {
-      this.lastTimestamp = timestamp;
-    }
-    const deltaSeconds = (timestamp - this.lastTimestamp) / 1000;
-    this.lastTimestamp = timestamp;
-
-    // Advance a virtual "frame" counter at 60fps, scaled by speedFactor
-    const effectiveSpeed = this.speedFactor;
-
+  private createDisplacedFrame(intensity: number): ImageData {
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
-    // CRITICAL: Sample from ORIGINAL image data, not the modified canvas
     const sourceData = this.originalImageData;
 
-    // Apply displacement to each pixel with bilinear interpolation (backward warping)
     for (let y = 0; y < this.canvas.height; y++) {
       for (let x = 0; x < this.canvas.width; x++) {
-        const displacement = this.calculateDisplacement(x, y, this.currentFrame);
+        const displacement = this.calculateDisplacement(x, y, intensity);
         
-        // Backward warping: where should we sample FROM to fill this pixel?
+        // Backward warping
         const sourceX = x - displacement.dx;
         const sourceY = y - displacement.dy;
 
-        // Clamp to image bounds to prevent artifacts
+        // Clamp to bounds
         const clampedX = Math.max(0, Math.min(this.canvas.width - 1, sourceX));
         const clampedY = Math.max(0, Math.min(this.canvas.height - 1, sourceY));
 
-        // Bilinear interpolation for smooth sampling
+        // Bilinear interpolation
         const x1 = Math.floor(clampedX);
         const y1 = Math.floor(clampedY);
         const x2 = Math.min(x1 + 1, this.canvas.width - 1);
@@ -281,13 +212,11 @@ export class MotionAnimationEngine {
 
         const targetIdx = (y * this.canvas.width + x) * 4;
 
-        // Sample four neighboring pixels
         const idx11 = (y1 * this.canvas.width + x1) * 4;
         const idx21 = (y1 * this.canvas.width + x2) * 4;
         const idx12 = (y2 * this.canvas.width + x1) * 4;
         const idx22 = (y2 * this.canvas.width + x2) * 4;
 
-        // Interpolate each color channel
         for (let channel = 0; channel < 4; channel++) {
           const c11 = sourceData.data[idx11 + channel];
           const c21 = sourceData.data[idx21 + channel];
@@ -303,31 +232,128 @@ export class MotionAnimationEngine {
       }
     }
 
-    this.ctx.putImageData(imageData, 0, 0);
-
-    // Advance virtual frame based on real time for smooth, consistent motion
-    this.currentFrame += deltaSeconds * 60 * effectiveSpeed;
-
-    this.animationFrame = requestAnimationFrame((nextTimestamp) => this.renderFrame(nextTimestamp));
+    return imageData;
   }
 
   /**
-   * Start playing the animation
+   * Calculate displacement for a pixel with controlled, small motion
    */
+  private calculateDisplacement(x: number, y: number, intensity: number): { dx: number; dy: number } {
+    let totalDx = 0;
+    let totalDy = 0;
+    let totalWeight = 0;
+
+    // Check if in range
+    let inRange = this.rangePoints.length === 0;
+    
+    if (this.rangePoints.length > 0) {
+      for (const range of this.rangePoints) {
+        const dist = Math.sqrt((x - range.x) ** 2 + (y - range.y) ** 2);
+        if (dist < range.radius) {
+          inRange = true;
+          break;
+        }
+      }
+    }
+
+    if (!inRange) {
+      return { dx: 0, dy: 0 };
+    }
+
+    // Calculate smooth motion field
+    for (const vector of this.motionVectors) {
+      const dist = Math.sqrt((x - vector.x) ** 2 + (y - vector.y) ** 2);
+      const maxDist = 200;
+      
+      if (dist < maxDist) {
+        const normalizedDist = dist / maxDist;
+        const falloff = Math.exp(-normalizedDist * 3);
+        const weight = falloff * vector.strength;
+        
+        // Small, controlled displacement (max 6 pixels)
+        const maxDisplacement = 6;
+        const normalizedDx = vector.dx / Math.max(Math.abs(vector.dx), Math.abs(vector.dy), 1);
+        const normalizedDy = vector.dy / Math.max(Math.abs(vector.dx), Math.abs(vector.dy), 1);
+        
+        totalDx += normalizedDx * weight * maxDisplacement * intensity;
+        totalDy += normalizedDy * weight * maxDisplacement * intensity;
+        totalWeight += weight;
+      }
+    }
+
+    if (totalWeight > 0) {
+      return {
+        dx: totalDx / totalWeight,
+        dy: totalDy / totalWeight
+      };
+    }
+
+    return { dx: 0, dy: 0 };
+  }
+
+  /**
+   * Render animation by smoothly interpolating between keyframes
+   */
+  private renderLoop(timestamp: number) {
+    if (!this.isAnimating) return;
+
+    // Calculate smooth loop progress (0 to 1 and back)
+    const elapsed = timestamp - (this.currentTime || timestamp);
+    this.currentTime = timestamp;
+
+    // Use sine wave for smooth back-and-forth motion
+    const progress = (timestamp % this.animationDuration) / this.animationDuration;
+    const sineProgress = (Math.sin(progress * Math.PI * 2 - Math.PI / 2) + 1) / 2;
+
+    if (this.keyframes.length === 2) {
+      // Blend between keyframe 0 and keyframe 1
+      this.blendKeyframes(sineProgress);
+    } else {
+      // No keyframes, just show original
+      this.ctx.putImageData(this.originalImageData, 0, 0);
+    }
+
+    this.animationFrame = requestAnimationFrame((t) => this.renderLoop(t));
+  }
+
+  /**
+   * Smoothly blend between two keyframes
+   */
+  private blendKeyframes(t: number) {
+    const frame0 = this.keyframes[0].imageData;
+    const frame1 = this.keyframes[1].imageData;
+    
+    const blendedImageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
+
+    for (let i = 0; i < frame0.data.length; i++) {
+      blendedImageData.data[i] = Math.round(
+        frame0.data[i] * (1 - t) + frame1.data[i] * t
+      );
+    }
+
+    this.ctx.putImageData(blendedImageData, 0, 0);
+  }
+
+  /**
+   * Clone ImageData
+   */
+  private cloneImageData(imageData: ImageData): ImageData {
+    const cloned = new ImageData(imageData.width, imageData.height);
+    cloned.data.set(imageData.data);
+    return cloned;
+  }
+
   play(speed: number = 1) {
     if (this.isAnimating) return;
-
-    // Clamp speed to a reasonable range to avoid jumpy motion
-    this.speedFactor = Math.max(0.25, Math.min(speed, 5));
+    
+    // Adjust duration based on speed (higher speed = shorter duration)
+    this.animationDuration = 3000 / speed;
+    
     this.isAnimating = true;
-    this.currentFrame = 0;
-    this.lastTimestamp = null;
-    this.animationFrame = requestAnimationFrame((timestamp) => this.renderFrame(timestamp));
+    this.currentTime = performance.now();
+    this.animationFrame = requestAnimationFrame((t) => this.renderLoop(t));
   }
 
-  /**
-   * Stop the animation
-   */
   stop() {
     this.isAnimating = false;
     if (this.animationFrame !== null) {
@@ -335,20 +361,14 @@ export class MotionAnimationEngine {
       this.animationFrame = null;
     }
     
-    // Redraw original image
+    // Show original image
     this.ctx.drawImage(this.sourceImage, 0, 0, this.canvas.width, this.canvas.height);
   }
 
-  /**
-   * Export animation as video
-   */
   async export(format: "mp4" | "webm", fps: number = 30, duration: number = 6): Promise<Blob> {
-    // This is a placeholder - actual video encoding would require FFmpeg or similar
-    // For now, we'll create a canvas recording
-    
     const stream = this.canvas.captureStream(fps);
     const mediaRecorder = new MediaRecorder(stream, {
-      mimeType: format === "webm" ? "video/webm" : "video/webm", // MP4 requires additional setup
+      mimeType: format === "webm" ? "video/webm" : "video/webm",
       videoBitsPerSecond: 5000000
     });
 
