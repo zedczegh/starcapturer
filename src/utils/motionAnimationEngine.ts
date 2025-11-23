@@ -304,7 +304,7 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Render loop with restart and fade in/out for smooth looping effect
+   * Render loop with smooth easing for natural motion
    */
   private renderLoop(timestamp: number) {
     if (!this.isAnimating) return;
@@ -318,35 +318,24 @@ export class MotionAnimationEngine {
     const progress = (timestamp % this.animationDuration) / this.animationDuration;
     const numFrames = this.keyframes.length;
     
-    // Restart before reaching the end (at 85% instead of 100%)
-    const playDuration = 0.85;
-    const fadeInDuration = 0.1;  // First 10% fade in
-    const fadeOutStart = 0.75;    // Start fading out at 75%
+    // Use ease-in-out for smooth acceleration and deceleration
+    // This creates natural-looking motion without harsh stops
+    const easeInOutCubic = (t: number): number => {
+      return t < 0.5
+        ? 4 * t * t * t
+        : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    };
     
-    let alpha = 1.0;
-    let adjustedProgress = progress;
+    const easedProgress = easeInOutCubic(progress);
     
-    if (progress < fadeInDuration) {
-      // Fade in at the start
-      alpha = progress / fadeInDuration;
-      adjustedProgress = 0;
-    } else if (progress >= fadeOutStart) {
-      // Fade out at the end
-      alpha = 1 - ((progress - fadeOutStart) / (playDuration - fadeOutStart));
-      adjustedProgress = (fadeOutStart - fadeInDuration) / (playDuration - fadeInDuration);
-    } else {
-      // Normal playback in the middle
-      adjustedProgress = (progress - fadeInDuration) / (playDuration - fadeInDuration);
-    }
-    
-    // Calculate which frames to blend
-    const framePosition = adjustedProgress * (numFrames - 1);
-    const frame1Index = Math.floor(framePosition);
-    const frame2Index = Math.min(frame1Index + 1, numFrames - 1);
-    const blendFactor = framePosition - frame1Index;
+    // Calculate which frames to blend with seamless wraparound
+    const framePosition = easedProgress * numFrames;
+    const frame1Index = Math.floor(framePosition) % numFrames;
+    const frame2Index = (frame1Index + 1) % numFrames;
+    const blendFactor = framePosition - Math.floor(framePosition);
 
-    // Blend frames and apply alpha
-    this.blendTwoFramesWithAlpha(frame1Index, frame2Index, blendFactor, alpha);
+    // Blend frames normally without alpha (no darkening)
+    this.blendTwoFrames(frame1Index, frame2Index, blendFactor);
 
     this.animationFrame = requestAnimationFrame((t) => this.renderLoop(t));
   }
@@ -364,33 +353,6 @@ export class MotionAnimationEngine {
       blendedImageData.data[i] = Math.round(
         frame1.data[i] * (1 - t) + frame2.data[i] * t
       );
-    }
-
-    this.ctx.putImageData(blendedImageData, 0, 0);
-  }
-
-  /**
-   * Blend between two keyframes with alpha for fade in/out
-   */
-  private blendTwoFramesWithAlpha(index1: number, index2: number, t: number, alpha: number) {
-    const frame1 = this.keyframes[index1].imageData;
-    const frame2 = this.keyframes[index2].imageData;
-    const originalFrame = this.originalImageData;
-    
-    const blendedImageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
-
-    for (let i = 0; i < frame1.data.length; i += 4) {
-      // Blend between the two keyframes
-      const r = frame1.data[i] * (1 - t) + frame2.data[i] * t;
-      const g = frame1.data[i + 1] * (1 - t) + frame2.data[i + 1] * t;
-      const b = frame1.data[i + 2] * (1 - t) + frame2.data[i + 2] * t;
-      const a = frame1.data[i + 3] * (1 - t) + frame2.data[i + 3] * t;
-      
-      // Apply alpha to blend with original image
-      blendedImageData.data[i] = Math.round(r * alpha + originalFrame.data[i] * (1 - alpha));
-      blendedImageData.data[i + 1] = Math.round(g * alpha + originalFrame.data[i + 1] * (1 - alpha));
-      blendedImageData.data[i + 2] = Math.round(b * alpha + originalFrame.data[i + 2] * (1 - alpha));
-      blendedImageData.data[i + 3] = Math.round(a * alpha + originalFrame.data[i + 3] * (1 - alpha));
     }
 
     this.ctx.putImageData(blendedImageData, 0, 0);
