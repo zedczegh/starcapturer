@@ -347,7 +347,8 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
                           <img 
                             src={comment.image_url} 
                             alt="Comment" 
-                            className="mt-2 rounded-lg max-w-xs max-h-48 object-cover"
+                            className="mt-2 rounded-lg w-full max-h-64 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => window.open(comment.image_url!, '_blank')}
                           />
                         )}
                       </div>
@@ -511,7 +512,8 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
                                     <img 
                                       src={reply.image_url} 
                                       alt="Reply" 
-                                      className="mt-2 rounded-lg max-w-xs max-h-48 object-cover"
+                                      className="mt-2 rounded-lg w-full max-h-64 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                                      onClick={() => window.open(reply.image_url!, '_blank')}
                                     />
                                   )}
                                 </div>
