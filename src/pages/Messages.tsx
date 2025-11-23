@@ -63,8 +63,8 @@ const MessageContent = memo(({ user }: { user: any }) => {
     <div className={`min-h-[calc(100vh-80px)] ${isMobile ? 'pt-16' : 'pt-20'}`}>
       <div className="container mx-auto px-2 md:px-4 py-4 max-w-6xl">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-white via-primary to-purple-400 bg-clip-text text-transparent">Messages</h1>
-          <p className="text-cosmic-300">Connect with other astronomers and track your applications</p>
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary via-primary-glow to-primary bg-clip-text text-transparent">Messages</h1>
+          <p className="text-muted-foreground">Connect with other astronomers and track your applications</p>
         </div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -136,7 +136,7 @@ const Messages = memo(() => {
   const { user } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cosmic-900 via-cosmic-950 to-purple-950/30">
+    <div className="min-h-screen bg-gradient-to-br from-cosmic-900 via-cosmic-950 to-cosmic-900">
       <NavBar />
       
       {!user ? (
