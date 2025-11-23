@@ -282,8 +282,8 @@ export class MotionAnimationEngine {
         const falloff = Math.exp(-normalizedDist * 3);
         const weight = falloff * vector.strength;
         
-        // Increased displacement for more visible motion (max 20 pixels instead of 6)
-        const maxDisplacement = 20;
+        // Increased displacement for much more visible motion (max 100 pixels)
+        const maxDisplacement = 100;
         const normalizedDx = vector.dx / Math.max(Math.abs(vector.dx), Math.abs(vector.dy), 1);
         const normalizedDy = vector.dy / Math.max(Math.abs(vector.dx), Math.abs(vector.dy), 1);
         

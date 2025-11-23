@@ -124,9 +124,15 @@ export const MotionAnimationCanvas = ({
       // Add point to trail
       setMotionTrailPoints(prev => [...prev, { x, y }]);
       
-      // Draw temporary trail
-      redrawOverlay();
-      drawMotionTrail([...motionTrailPoints, { x, y }]);
+      // Throttled redraw using requestAnimationFrame
+      if (!canvas.dataset.drawing) {
+        canvas.dataset.drawing = "true";
+        requestAnimationFrame(() => {
+          redrawOverlay();
+          drawMotionTrail([...motionTrailPoints, { x, y }]);
+          canvas.dataset.drawing = "";
+        });
+      }
     } else if ((activeTool === "range" || activeTool === "erase") && isDrawing) {
       // Only draw if moved enough distance from last point (throttle)
       if (lastBrushPoint) {
@@ -138,7 +144,15 @@ export const MotionAnimationCanvas = ({
         if (dist >= brushSize / 3) {
           setRangeStrokePoints(prev => [...prev, { x, y }]);
           setLastBrushPoint({ x, y });
-          drawBrushAtPoint(x, y);
+          
+          // Throttled redraw
+          if (!canvas.dataset.drawing) {
+            canvas.dataset.drawing = "true";
+            requestAnimationFrame(() => {
+              drawBrushAtPoint(x, y);
+              canvas.dataset.drawing = "";
+            });
+          }
         }
       }
     }
@@ -272,8 +286,11 @@ export const MotionAnimationCanvas = ({
     const ctx = canvas?.getContext("2d");
     if (!ctx || !canvas || !animationEngineRef.current) return;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    animationEngineRef.current.drawOverlay(ctx);
+    // Use requestAnimationFrame for smooth rendering
+    requestAnimationFrame(() => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      animationEngineRef.current?.drawOverlay(ctx);
+    });
   };
 
   const handlePlayPause = () => {
