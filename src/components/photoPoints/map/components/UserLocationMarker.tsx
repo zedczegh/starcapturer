@@ -163,8 +163,10 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
         isVisible={true}
         latitude={position[0]}
         longitude={position[1]}
+        existingSiqs={currentSiqs}
         onSiqsCalculated={handleSiqsCalculated}
         forceUpdate={forceUpdate}
+        priorityLevel="high"
       />
       
       <Marker 
