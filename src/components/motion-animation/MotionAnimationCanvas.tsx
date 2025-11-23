@@ -165,17 +165,22 @@ export const MotionAnimationCanvas = ({
         const start = motionTrailPoints[i];
         const end = motionTrailPoints[i + 1];
         
+        // Skip keyframe generation for each vector (batch mode)
         animationEngineRef.current.addMotionVector(
           start.x,
           start.y,
           end.x,
           end.y,
-          motionStrength / 100
+          motionStrength / 100,
+          true
         );
       }
 
       // Store the trail as a single path for display (not individual vectors)
       animationEngineRef.current.addMotionTrail(trailData);
+      
+      // Generate keyframes once after all vectors are added
+      animationEngineRef.current.updateKeyframes();
       
       setMotionArrowStart(null);
       setMotionTrailPoints([]);
@@ -192,6 +197,9 @@ export const MotionAnimationCanvas = ({
       } else {
         addToHistory('erase', strokeData);
       }
+      
+      // Now generate keyframes once after the complete stroke
+      animationEngineRef.current.updateKeyframes();
       
       setRangeStrokePoints([]);
       setLastBrushPoint(null);
@@ -249,9 +257,11 @@ export const MotionAnimationCanvas = ({
     if (!animationEngineRef.current) return;
 
     if (activeTool === "range") {
-      animationEngineRef.current.addRangePoint(x, y, brushSize);
+      // Skip keyframe generation during stroke (batch mode)
+      animationEngineRef.current.addRangePoint(x, y, brushSize, true);
     } else if (activeTool === "erase") {
-      animationEngineRef.current.removeAtPoint(x, y, brushSize);
+      // Skip keyframe generation during stroke (batch mode)
+      animationEngineRef.current.removeAtPoint(x, y, brushSize, true);
     }
 
     redrawOverlay();
@@ -337,7 +347,7 @@ export const MotionAnimationCanvas = ({
       
       if (action.type === 'motion') {
         const { points, strength } = action.data;
-        // Add motion vectors for animation
+        // Add motion vectors for animation (skip keyframe generation in batch)
         for (let j = 0; j < points.length - 1; j++) {
           const start = points[j];
           const end = points[j + 1];
@@ -346,7 +356,8 @@ export const MotionAnimationCanvas = ({
             start.y,
             end.x,
             end.y,
-            strength
+            strength,
+            true
           );
         }
         // Add trail for display
@@ -354,32 +365,35 @@ export const MotionAnimationCanvas = ({
       } else if (action.type === 'range') {
         // Handle both old single-point format and new stroke format
         if (action.data.points) {
-          // New stroke format - add all points in the stroke
+          // New stroke format - add all points in the stroke (skip keyframe generation in batch)
           const { points, radius } = action.data;
           for (const point of points) {
-            animationEngineRef.current.addRangePoint(point.x, point.y, radius);
+            animationEngineRef.current.addRangePoint(point.x, point.y, radius, true);
           }
         } else {
           // Old single-point format
           const { x, y, radius } = action.data;
-          animationEngineRef.current.addRangePoint(x, y, radius);
+          animationEngineRef.current.addRangePoint(x, y, radius, true);
         }
       } else if (action.type === 'erase') {
         // Handle both old single-point format and new stroke format
         if (action.data.points) {
-          // New stroke format - erase all points in the stroke
+          // New stroke format - erase all points in the stroke (skip keyframe generation in batch)
           const { points, radius } = action.data;
           for (const point of points) {
-            animationEngineRef.current.removeAtPoint(point.x, point.y, radius);
+            animationEngineRef.current.removeAtPoint(point.x, point.y, radius, true);
           }
         } else {
           // Old single-point format
           const { x, y, radius } = action.data;
-          animationEngineRef.current.removeAtPoint(x, y, radius);
+          animationEngineRef.current.removeAtPoint(x, y, radius, true);
         }
       }
     }
 
+    // Generate keyframes once after rebuilding all history
+    animationEngineRef.current.updateKeyframes();
+    
     redrawOverlay();
   };
 

@@ -52,7 +52,7 @@ export class MotionAnimationEngine {
     this.originalImageData = this.ctx.getImageData(0, 0, canvas.width, canvas.height);
   }
 
-  addMotionVector(x1: number, y1: number, x2: number, y2: number, strength: number) {
+  addMotionVector(x1: number, y1: number, x2: number, y2: number, strength: number, skipKeyframeGen: boolean = false) {
     this.motionVectors.push({
       x: x1,
       y: y1,
@@ -61,22 +61,26 @@ export class MotionAnimationEngine {
       strength
     });
     
-    // Regenerate keyframes when motion changes
-    this.generateKeyframes();
+    // Only regenerate keyframes if not batching
+    if (!skipKeyframeGen) {
+      this.generateKeyframes();
+    }
   }
 
   addMotionTrail(points: { x: number; y: number }[]) {
     this.motionTrails.push({ points });
   }
 
-  addRangePoint(x: number, y: number, radius: number) {
+  addRangePoint(x: number, y: number, radius: number, skipKeyframeGen: boolean = false) {
     this.rangePoints.push({ x, y, radius });
     
-    // Regenerate keyframes when range changes
-    this.generateKeyframes();
+    // Only regenerate keyframes if not batching
+    if (!skipKeyframeGen) {
+      this.generateKeyframes();
+    }
   }
 
-  removeAtPoint(x: number, y: number, radius: number) {
+  removeAtPoint(x: number, y: number, radius: number, skipKeyframeGen: boolean = false) {
     this.motionVectors = this.motionVectors.filter(v => {
       const dist = Math.sqrt((v.x - x) ** 2 + (v.y - y) ** 2);
       return dist > radius;
@@ -87,7 +91,14 @@ export class MotionAnimationEngine {
       return dist > radius;
     });
     
-    // Regenerate keyframes after removal
+    // Only regenerate keyframes if not batching
+    if (!skipKeyframeGen) {
+      this.generateKeyframes();
+    }
+  }
+
+  // Public method to manually trigger keyframe generation (for batch operations)
+  public updateKeyframes() {
     this.generateKeyframes();
   }
 
