@@ -306,15 +306,17 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
         const details = await getEnhancedLocationDetails(userPosition[0], userPosition[1], 'en');
         const locationName = details.formattedName || 'Your Location';
         
-        // Use AMap Geocoder to get Chinese location name
-        const geocoder = new (window as any).AMap.Geocoder({ city: '全国', radius: 1000 });
-        geocoder.getAddress([userPosition[1], userPosition[0]], (status: string, result: any) => {
-          if (status === 'complete' && result.regeocode) {
-            const chineseLocationName = result.regeocode.formattedAddress;
-            infoWindow.setContent(createPopupContent(locationName, chineseLocationName));
-          } else {
-            infoWindow.setContent(createPopupContent(locationName));
-          }
+        // Use AMap Geocoder to get Chinese location name (load plugin first)
+        (window as any).AMap.plugin('AMap.Geocoder', function() {
+          const geocoder = new (window as any).AMap.Geocoder({ city: '全国', radius: 1000 });
+          geocoder.getAddress([userPosition[1], userPosition[0]], (status: string, result: any) => {
+            if (status === 'complete' && result.regeocode) {
+              const chineseLocationName = result.regeocode.formattedAddress;
+              infoWindow.setContent(createPopupContent(locationName, chineseLocationName));
+            } else {
+              infoWindow.setContent(createPopupContent(locationName));
+            }
+          });
         });
       } catch (error) {
         console.error('Error fetching location name:', error);
@@ -420,26 +422,28 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
         offset: new (window as any).AMap.Pixel(0, -markerIcon.size[1] / 2),
       });
 
-      // Fetch Chinese name using AMap Geocoder
-      const geocoder = new (window as any).AMap.Geocoder({ city: '全国', radius: 1000 });
-      geocoder.getAddress([spot.longitude, spot.latitude], (status: string, result: any) => {
-        if (status === 'complete' && result.regeocode) {
-          chineseLocationName = result.regeocode.formattedAddress;
-          // Update info window with Chinese name
-          infoWindow.setContent(createAMapPopupContent({
-            location: spot,
-            siqsScore: currentSiqs,
-            siqsLoading: false,
-            displayName: spot.name,
-            isCertified,
-            onViewDetails: () => {},
-            userId: spot.user_id,
-            isMobile,
-            userAvatarUrl: userProfile?.avatar_url,
-            distance: spot.distance,
-            chineseLocationName,
-          }));
-        }
+      // Fetch Chinese name using AMap Geocoder (load plugin first)
+      (window as any).AMap.plugin('AMap.Geocoder', function() {
+        const geocoder = new (window as any).AMap.Geocoder({ city: '全国', radius: 1000 });
+        geocoder.getAddress([spot.longitude, spot.latitude], (status: string, result: any) => {
+          if (status === 'complete' && result.regeocode) {
+            chineseLocationName = result.regeocode.formattedAddress;
+            // Update info window with Chinese name
+            infoWindow.setContent(createAMapPopupContent({
+              location: spot,
+              siqsScore: currentSiqs,
+              siqsLoading: false,
+              displayName: spot.name,
+              isCertified,
+              onViewDetails: () => {},
+              userId: spot.user_id,
+              isMobile,
+              userAvatarUrl: userProfile?.avatar_url,
+              distance: spot.distance,
+              chineseLocationName,
+            }));
+          }
+        });
       });
 
       marker.on('click', () => {
