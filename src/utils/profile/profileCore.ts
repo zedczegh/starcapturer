@@ -3,6 +3,44 @@ import { toast } from 'sonner';
 import { fetchUserTags } from './profileTagUtils';
 
 /**
+ * Retry utility for transient network errors
+ */
+const retryWithBackoff = async <T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  baseDelay = 500
+): Promise<T> => {
+  let lastError: any;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      
+      // Check if it's a transient network error
+      const isNetworkError = 
+        error?.message?.includes('Failed to fetch') ||
+        error?.message?.includes('Network request failed') ||
+        error?.code === 'ECONNREFUSED' ||
+        error?.code === 'ETIMEDOUT';
+      
+      // If not a network error or last attempt, throw
+      if (!isNetworkError || attempt === maxRetries - 1) {
+        throw error;
+      }
+      
+      // Wait with exponential backoff
+      const delay = baseDelay * Math.pow(2, attempt);
+      console.log(`Transient network error, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError;
+};
+
+/**
  * Check if a user profile exists and create one if it doesn't
  * With improved error handling and robust validation
  */
@@ -36,18 +74,40 @@ export const ensureUserProfile = async (
       return false;
     }
     
-    // Check if profile exists
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', userId)
-      .maybeSingle();
-      
-    if (profileError) {
-      console.error('Error checking profile:', profileError);
-      toast.error('Profile check failed', { 
-        description: `Database error: ${profileError.message}. Code: ${profileError.code}` 
+    // Check if profile exists with retry logic
+    let profile: any = null;
+    let profileError: any = null;
+    
+    try {
+      const result = await retryWithBackoff(async () => {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle();
+        
+        if (error) throw error;
+        return data;
       });
+      
+      profile = result;
+    } catch (error: any) {
+      profileError = error;
+      
+      // Only show toast for non-transient errors
+      const isTransientError = 
+        error?.message?.includes('Failed to fetch') ||
+        error?.message?.includes('Network request failed');
+      
+      if (!isTransientError) {
+        console.error('Error checking profile:', error);
+        toast.error('Profile check failed', { 
+          description: `Database error: ${error.message}. Code: ${error.code}` 
+        });
+      } else {
+        console.warn('Transient network error checking profile, will retry on next attempt:', error.message);
+      }
+      
       return false;
     }
     
@@ -96,7 +156,18 @@ export const ensureUserProfile = async (
     }
   } catch (error: any) {
     console.error('Exception in ensureUserProfile:', error);
-    toast.error('Profile check failed', { description: error.message });
+    
+    // Only show toast for non-transient errors
+    const isTransientError = 
+      error?.message?.includes('Failed to fetch') ||
+      error?.message?.includes('Network request failed');
+    
+    if (!isTransientError) {
+      toast.error('Profile check failed', { description: error.message });
+    } else {
+      console.warn('Transient network error in profile check, will retry on next attempt');
+    }
+    
     return false;
   }
 };
