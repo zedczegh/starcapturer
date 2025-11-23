@@ -198,10 +198,11 @@ export class MotionAnimationEngine {
         const normalizedDist = dist / maxDist;
         const weight = (1 - normalizedDist) * (1 - normalizedDist) * (1 - normalizedDist) * vector.strength;
         
-        // Create directional motion that loops seamlessly
-        // Use modulo to create continuous forward motion without oscillation
-        const phase = (frame % 120) / 120; // Loop every 120 frames
-        const amplitude = phase * 0.5; // 50% displacement for more visible motion
+        // Create seamless looping motion using sine wave (like Motion Leap/Pixaloop)
+        // Sine wave naturally returns to 0, creating perfect loops without visible restart
+        const phase = (frame % 240) / 240; // Longer cycle for smoother motion
+        const sineWave = Math.sin(phase * Math.PI * 2); // Complete sine cycle: 0 -> 1 -> 0 -> -1 -> 0
+        const amplitude = sineWave * 0.6; // 60% displacement with smooth easing
         
         totalDx += vector.dx * weight * amplitude;
         totalDy += vector.dy * weight * amplitude;
