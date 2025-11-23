@@ -345,7 +345,7 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Render loop with continuous smooth fade for seamless infinite loop
+   * Render loop with continuous fade in/out for seamless infinite loop
    */
   private renderLoop(timestamp: number) {
     if (!this.isAnimating) return;
@@ -368,14 +368,10 @@ export class MotionAnimationEngine {
     
     const easedProgress = easeInOutCubic(progress);
     
-    // Ultra-smooth continuous rolling fade with higher minimum alpha
-    // Uses smoothstep function for even smoother transitions
+    // Continuous rolling fade - smooth sine wave for seamless infinite loop
+    // Alpha oscillates smoothly between 0.3 and 1.0
     const fadePhase = progress * Math.PI * 2; // Full sine wave cycle
-    const rawSine = Math.sin(fadePhase);
-    // Smoothstep the sine wave for ultra-smooth fade
-    const smoothedFade = rawSine * rawSine * (3 - 2 * rawSine);
-    // Alpha oscillates between 0.85 and 1.0 - keeps animation always visible
-    const alpha = 0.925 + 0.075 * smoothedFade;
+    const alpha = 0.65 + 0.35 * Math.sin(fadePhase); // Oscillates 0.3 to 1.0
     
     // Calculate which frames to blend
     const framePosition = easedProgress * numFrames;
@@ -383,7 +379,7 @@ export class MotionAnimationEngine {
     const frame2Index = (frame1Index + 1) % numFrames;
     const blendFactor = framePosition - Math.floor(framePosition);
 
-    // Blend frames with ultra-smooth rolling fade effect
+    // Blend frames with rolling fade effect
     this.blendTwoFramesWithFade(frame1Index, frame2Index, blendFactor, alpha);
 
     this.animationFrame = requestAnimationFrame((t) => this.renderLoop(t));
