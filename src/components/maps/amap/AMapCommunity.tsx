@@ -68,7 +68,7 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
   useEffect(() => {
     if (!mapInstance.current || !userPosition) return;
 
-    if (userMarkerRef.current) {
+    if (userMarkerRef.current && mapInstance.current) {
       mapInstance.current.remove(userMarkerRef.current);
     }
 
@@ -98,7 +98,7 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
     userMarkerRef.current = marker;
 
     return () => {
-      if (userMarkerRef.current) {
+      if (userMarkerRef.current && mapInstance.current) {
         mapInstance.current.remove(userMarkerRef.current);
         userMarkerRef.current = null;
       }
@@ -111,7 +111,9 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
 
     // Clear existing markers
     markersRef.current.forEach((marker) => {
-      mapInstance.current.remove(marker);
+      if (marker && mapInstance.current) {
+        mapInstance.current.remove(marker);
+      }
     });
     markersRef.current = [];
 
@@ -149,7 +151,9 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
 
     return () => {
       markersRef.current.forEach((marker) => {
-        mapInstance.current.remove(marker);
+        if (marker && mapInstance.current) {
+          mapInstance.current.remove(marker);
+        }
       });
       markersRef.current = [];
     };

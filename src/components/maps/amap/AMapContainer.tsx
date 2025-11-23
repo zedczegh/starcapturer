@@ -119,7 +119,9 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
 
     // Clear existing markers
     markersRef.current.forEach((marker) => {
-      mapInstance.current.remove(marker);
+      if (marker && mapInstance.current) {
+        mapInstance.current.remove(marker);
+      }
     });
     markersRef.current = [];
 
@@ -157,7 +159,9 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
 
     return () => {
       markersRef.current.forEach((marker) => {
-        mapInstance.current.remove(marker);
+        if (marker && mapInstance.current) {
+          mapInstance.current.remove(marker);
+        }
       });
       markersRef.current = [];
     };
