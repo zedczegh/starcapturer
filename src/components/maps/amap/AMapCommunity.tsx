@@ -146,6 +146,7 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
       title: 'Your Location',
       draggable: !!onLocationUpdate,
       anchor: 'bottom-center',
+      zIndex: 200,
     });
 
     if (onLocationUpdate) {
@@ -156,41 +157,19 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
       });
     }
 
-    // Setup click handler to show location details
-    (window as any).viewUserLocationDetails = async () => {
-      try {
-        const { getEnhancedLocationDetails } = await import('@/services/geocoding/enhancedReverseGeocoding');
-        const details = await getEnhancedLocationDetails(userPosition[0], userPosition[1], 'en');
-        
-        // Navigate to location details
-        const { useNavigate } = await import('react-router-dom');
-        window.location.href = `/location/${userPosition[0].toFixed(6)},${userPosition[1].toFixed(6)}`;
-      } catch (error) {
-        console.error('Error navigating to location:', error);
-      }
+    mapInstance.current.add(marker);
+    userMarkerRef.current = marker;
+
+    // Setup location details handler
+    (window as any).viewUserLocationDetails = () => {
+      window.location.href = `/location/${userPosition[0].toFixed(6)},${userPosition[1].toFixed(6)}`;
     };
 
-    // Setup create spot handler
-    (window as any).openCreateSpotDialog = () => {
-      // Trigger create spot dialog - will be handled by the component
-      console.log('Create spot at:', userPosition);
-    };
+    // Create and setup popup immediately
+    const currentSiqs = realTimeSiqsMap.get('user-location') || 0;
 
-    // Fetch location name and create popup
-    const setupPopup = async () => {
-      let locationName = 'Your Location';
-      try {
-        const { getEnhancedLocationDetails } = await import('@/services/geocoding/enhancedReverseGeocoding');
-        const details = await getEnhancedLocationDetails(userPosition[0], userPosition[1], 'en');
-        locationName = details.formattedName || 'Your Location';
-      } catch (error) {
-        console.error('Error fetching location name:', error);
-      }
-
-      // Get current SIQS from RealTimeSiqsProvider
-      const currentSiqs = realTimeSiqsMap.get('user-location') || 0;
-
-      const popupContent = `
+    const createPopupContent = (locationName: string) => {
+      return `
         <div style="
           background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.95) 100%);
           border-left: 4px solid #e11d48;
@@ -276,25 +255,38 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
           </button>
         </div>
       `;
-
-      const infoWindow = new (window as any).AMap.InfoWindow({
-        content: popupContent,
-        offset: new (window as any).AMap.Pixel(0, -42),
-      });
-
-      marker.on('click', () => {
-        infoWindow.open(mapInstance.current, marker.getPosition());
-      });
     };
 
-    setupPopup();
+    // Create info window with initial content
+    const infoWindow = new (window as any).AMap.InfoWindow({
+      content: createPopupContent('Loading...'),
+      offset: new (window as any).AMap.Pixel(0, -42),
+      closeWhenClickMap: true,
+    });
 
-    mapInstance.current.add(marker);
-    userMarkerRef.current = marker;
+    // Add click event to marker
+    marker.on('click', () => {
+      console.log('User location marker clicked');
+      infoWindow.open(mapInstance.current, marker.getPosition());
+    });
+
+    // Fetch location name and update popup
+    const fetchLocationName = async () => {
+      try {
+        const { getEnhancedLocationDetails } = await import('@/services/geocoding/enhancedReverseGeocoding');
+        const details = await getEnhancedLocationDetails(userPosition[0], userPosition[1], 'en');
+        const locationName = details.formattedName || 'Your Location';
+        infoWindow.setContent(createPopupContent(locationName));
+      } catch (error) {
+        console.error('Error fetching location name:', error);
+        infoWindow.setContent(createPopupContent('Your Location'));
+      }
+    };
+
+    fetchLocationName();
 
     return () => {
       delete (window as any).viewUserLocationDetails;
-      delete (window as any).openCreateSpotDialog;
       if (userMarkerRef.current && mapInstance.current) {
         mapInstance.current.remove(userMarkerRef.current);
         userMarkerRef.current = null;
