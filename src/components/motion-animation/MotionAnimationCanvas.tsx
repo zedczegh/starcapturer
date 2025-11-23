@@ -41,6 +41,7 @@ export const MotionAnimationCanvas = ({
   const [brushSize, setBrushSize] = useState(30);
   const [motionStrength, setMotionStrength] = useState(50);
   const [animationSpeed, setAnimationSpeed] = useState(50);
+  const [feathering, setFeathering] = useState(20);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [motionArrowStart, setMotionArrowStart] = useState<{x: number, y: number} | null>(null);
@@ -74,9 +75,16 @@ export const MotionAnimationCanvas = ({
     ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
 
     // Initialize animation engine
-    animationEngineRef.current = new MotionAnimationEngine(canvas, imageElement);
+    animationEngineRef.current = new MotionAnimationEngine(canvas, imageElement, feathering);
 
   }, [imageElement]);
+
+  // Update feathering when it changes
+  useEffect(() => {
+    if (animationEngineRef.current) {
+      animationEngineRef.current.setFeathering(feathering);
+    }
+  }, [feathering]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = overlayCanvasRef.current;
@@ -480,6 +488,20 @@ export const MotionAnimationCanvas = ({
                   min={1}
                   max={100}
                   step={1}
+                  className="mt-2"
+                />
+              </div>
+            )}
+
+            {activeTool === "range" && (
+              <div>
+                <Label>{t("Edge Softness", "边缘柔和度")}: {feathering}px</Label>
+                <Slider
+                  value={[feathering]}
+                  onValueChange={([value]) => setFeathering(value)}
+                  min={0}
+                  max={50}
+                  step={5}
                   className="mt-2"
                 />
               </div>
