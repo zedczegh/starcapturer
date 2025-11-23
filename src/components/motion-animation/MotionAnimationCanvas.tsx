@@ -323,16 +323,40 @@ export const MotionAnimationCanvas = ({
   };
 
   const handleClear = () => {
+    const canvas = canvasRef.current;
     const overlayCanvas = overlayCanvasRef.current;
-    if (!animationEngineRef.current || !overlayCanvas) return;
+    if (!animationEngineRef.current || !canvas || !overlayCanvas) return;
     
+    // Stop animation if playing
+    if (isPlaying) {
+      animationEngineRef.current.stop();
+      setIsPlaying(false);
+    }
+    
+    // Clear the animation engine (motion vectors, trails, range points)
     animationEngineRef.current.clear();
+    
+    // Clear history
     historyRef.current = [];
     setHistoryIndex(-1);
-    overlayCanvas.style.opacity = "1"; // Show overlay after clearing
-    setIsPlaying(false);
-    redrawOverlay();
-    toast.success(t("Canvas cleared", "画布已清空"));
+    
+    // Clear and redraw original image on main canvas
+    const ctx = canvas.getContext("2d");
+    if (ctx && imageElement) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
+    }
+    
+    // Clear overlay canvas completely
+    const overlayCtx = overlayCanvas.getContext("2d");
+    if (overlayCtx) {
+      overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+    }
+    
+    // Show overlay
+    overlayCanvas.style.opacity = "1";
+    
+    toast.success(t("Reset complete - all animations cleared", "重置完成 - 所有动画已清除"));
   };
 
   return (
@@ -409,10 +433,10 @@ export const MotionAnimationCanvas = ({
               variant="outline"
               size="sm"
               onClick={handleClear}
-              title={t("Clear All", "全部清空")}
+              title={t("Reset - Clear all animations and return to original image", "重置 - 清除所有动画并返回原始图像")}
             >
               <RotateCcw className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">{t("Clear", "清空")}</span>
+              <span className="hidden sm:inline">{t("Reset", "重置")}</span>
             </Button>
             <Button
               variant="default"
