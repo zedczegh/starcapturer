@@ -157,6 +157,7 @@ export class MotionAnimationEngine {
 
   /**
    * Calculate displacement for a pixel based on motion vectors and range points
+   * Uses proper motion mapping similar to Motion Leap/Pixaloop
    */
   private calculateDisplacement(x: number, y: number, frame: number): { dx: number; dy: number } {
     let totalDx = 0;
@@ -181,17 +182,19 @@ export class MotionAnimationEngine {
       return { dx: 0, dy: 0 };
     }
 
-    // Calculate displacement from motion vectors
+    // Calculate displacement from motion vectors with much more subtle motion
     for (const vector of this.motionVectors) {
       const dist = Math.sqrt((x - vector.x) ** 2 + (y - vector.y) ** 2);
-      const maxDist = 200; // Influence radius
+      const maxDist = 150; // Influence radius
       
       if (dist < maxDist) {
-        const weight = Math.pow(1 - dist / maxDist, 2) * vector.strength;
+        // Smoother falloff using cubic easing
+        const normalizedDist = dist / maxDist;
+        const weight = (1 - normalizedDist) * (1 - normalizedDist) * (1 - normalizedDist) * vector.strength;
         
-        // Create oscillating motion for loop effect
+        // Create smooth oscillating motion with much smaller amplitude
         const phase = (frame % 60) / 60 * Math.PI * 2;
-        const amplitude = Math.sin(phase);
+        const amplitude = Math.sin(phase) * 0.15; // CRITICAL: Much smaller displacement (15% instead of 100%)
         
         totalDx += vector.dx * weight * amplitude;
         totalDy += vector.dy * weight * amplitude;
@@ -200,17 +203,29 @@ export class MotionAnimationEngine {
     }
 
     if (totalWeight > 0) {
-      return {
-        dx: totalDx / totalWeight,
-        dy: totalDy / totalWeight
-      };
+      // Normalize and limit maximum displacement to prevent artifacts
+      const dx = totalDx / totalWeight;
+      const dy = totalDy / totalWeight;
+      const maxDisplacement = 5; // Maximum 5 pixels displacement
+      const magnitude = Math.sqrt(dx * dx + dy * dy);
+      
+      if (magnitude > maxDisplacement) {
+        const scale = maxDisplacement / magnitude;
+        return {
+          dx: dx * scale,
+          dy: dy * scale
+        };
+      }
+      
+      return { dx, dy };
     }
 
     return { dx: 0, dy: 0 };
   }
 
   /**
-   * Render a single frame of the animation
+   * Render a single frame of the animation using bilinear interpolation
+   * This prevents artifacts and creates smooth motion like Motion Leap
    */
   private renderFrame(speed: number) {
     if (!this.isAnimating) return;
@@ -218,24 +233,47 @@ export class MotionAnimationEngine {
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
     const sourceData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
 
-    // Apply displacement to each pixel
+    // Apply displacement to each pixel with bilinear interpolation
     for (let y = 0; y < this.canvas.height; y++) {
       for (let x = 0; x < this.canvas.width; x++) {
         const displacement = this.calculateDisplacement(x, y, this.currentFrame);
         
-        const sourceX = Math.round(x - displacement.dx);
-        const sourceY = Math.round(y - displacement.dy);
+        const sourceX = x - displacement.dx;
+        const sourceY = y - displacement.dy;
 
-        // Bounds checking
-        if (sourceX >= 0 && sourceX < this.canvas.width && 
-            sourceY >= 0 && sourceY < this.canvas.height) {
-          const sourceIdx = (sourceY * this.canvas.width + sourceX) * 4;
-          const targetIdx = (y * this.canvas.width + x) * 4;
+        // Clamp to image bounds to prevent artifacts
+        const clampedX = Math.max(0, Math.min(this.canvas.width - 1, sourceX));
+        const clampedY = Math.max(0, Math.min(this.canvas.height - 1, sourceY));
 
-          imageData.data[targetIdx] = sourceData.data[sourceIdx];
-          imageData.data[targetIdx + 1] = sourceData.data[sourceIdx + 1];
-          imageData.data[targetIdx + 2] = sourceData.data[sourceIdx + 2];
-          imageData.data[targetIdx + 3] = sourceData.data[sourceIdx + 3];
+        // Bilinear interpolation for smooth sampling
+        const x1 = Math.floor(clampedX);
+        const y1 = Math.floor(clampedY);
+        const x2 = Math.min(x1 + 1, this.canvas.width - 1);
+        const y2 = Math.min(y1 + 1, this.canvas.height - 1);
+        
+        const fx = clampedX - x1;
+        const fy = clampedY - y1;
+
+        const targetIdx = (y * this.canvas.width + x) * 4;
+
+        // Sample four neighboring pixels
+        const idx11 = (y1 * this.canvas.width + x1) * 4;
+        const idx21 = (y1 * this.canvas.width + x2) * 4;
+        const idx12 = (y2 * this.canvas.width + x1) * 4;
+        const idx22 = (y2 * this.canvas.width + x2) * 4;
+
+        // Interpolate each color channel
+        for (let channel = 0; channel < 4; channel++) {
+          const c11 = sourceData.data[idx11 + channel];
+          const c21 = sourceData.data[idx21 + channel];
+          const c12 = sourceData.data[idx12 + channel];
+          const c22 = sourceData.data[idx22 + channel];
+
+          const c1 = c11 * (1 - fx) + c21 * fx;
+          const c2 = c12 * (1 - fx) + c22 * fx;
+          const interpolated = c1 * (1 - fy) + c2 * fy;
+
+          imageData.data[targetIdx + channel] = Math.round(interpolated);
         }
       }
     }
