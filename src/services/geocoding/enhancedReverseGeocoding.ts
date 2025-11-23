@@ -1,6 +1,6 @@
 
 import { Language } from './types';
-import { EnhancedLocationDetails } from './types/enhancedLocationTypes';
+import { EnhancedLocationDetails, GeocodingResult } from './types/enhancedLocationTypes';
 import { fetchLocationDetails } from './providers/nominatimGeocodingProvider';
 import { GeocodeCache, addToCache, getFromCache } from './cache/geocodingCache';
 import { normalizeCoordinates } from './utils/coordinateUtils';
@@ -8,6 +8,51 @@ import { findNearestTown } from '@/utils/nearestTownCalculator';
 import { isWaterLocation } from '@/utils/locationWaterCheck';
 import { formatAddressComponents } from './formatters/addressFormatter';
 import { formatDistance } from '@/utils/location/formatDistance';
+
+/**
+ * Fetch location details using AMap Geocoder (for Chinese locations)
+ */
+async function fetchFromAMap(
+  latitude: number,
+  longitude: number,
+  language: Language = 'en'
+): Promise<GeocodingResult | null> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || !(window as any).AMap) {
+      resolve(null);
+      return;
+    }
+
+    (window as any).AMap.plugin('AMap.Geocoder', function() {
+      const geocoder = new (window as any).AMap.Geocoder({ 
+        city: '全国', 
+        radius: 1000,
+        extensions: 'all'
+      });
+      
+      geocoder.getAddress([longitude, latitude], (status: string, result: any) => {
+        if (status === 'complete' && result.regeocode) {
+          const regeocode = result.regeocode;
+          const addressComponent = regeocode.addressComponent;
+          const formattedAddress = regeocode.formattedAddress;
+          
+          resolve({
+            streetName: addressComponent.street || addressComponent.streetNumber,
+            townName: addressComponent.township,
+            cityName: addressComponent.city,
+            countyName: addressComponent.district,
+            stateName: addressComponent.province,
+            countryName: addressComponent.country,
+            formattedName: formattedAddress,
+            chineseName: formattedAddress,
+          });
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  });
+}
 
 export async function getEnhancedLocationDetails(
   latitude: number,
@@ -36,9 +81,15 @@ export async function getEnhancedLocationDetails(
     // This ensures we have the best chance to identify land locations correctly
     let geocodingResult = null;
     try {
-      geocodingResult = await fetchLocationDetails(normalizedLat, normalizedLng, language);
+      // Try AMap first if available (better for Chinese locations)
+      geocodingResult = await fetchFromAMap(normalizedLat, normalizedLng, language);
+      
+      // Fall back to Nominatim if AMap not available or failed
+      if (!geocodingResult) {
+        geocodingResult = await fetchLocationDetails(normalizedLat, normalizedLng, language);
+      }
     } catch (error) {
-      console.warn("Error fetching location details from Nominatim API:", error);
+      console.warn("Error fetching location details from geocoding API:", error);
       // Continue with local detection if API fails
     }
     

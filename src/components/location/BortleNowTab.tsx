@@ -135,27 +135,61 @@ const BortleNowTab: React.FC<BortleNowTabProps> = ({
         setIsLoadingLocation(false);
         onLocationChange(position.coords.latitude, position.coords.longitude);
         
-        fetch(`https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json&accept-language=${language}`, {
-          headers: {
-            'User-Agent': 'StarCaptureApp/1.0',
-            'Accept': 'application/json'
-          }
-        })
-          .then(response => {
+        // Fetch location name - try AMap first if available, then fall back to Nominatim
+        const fetchLocationName = async () => {
+          try {
+            // Try AMap Geocoder first if available
+            if (typeof window !== 'undefined' && (window as any).AMap) {
+              const amapResult = await new Promise<string | null>((resolve) => {
+                (window as any).AMap.plugin('AMap.Geocoder', function() {
+                  const geocoder = new (window as any).AMap.Geocoder({ 
+                    city: '全国', 
+                    radius: 1000,
+                    extensions: 'all'
+                  });
+                  
+                  geocoder.getAddress([position.coords.longitude, position.coords.latitude], (status: string, result: any) => {
+                    if (status === 'complete' && result.regeocode) {
+                      const formattedAddress = result.regeocode.formattedAddress;
+                      const parts = formattedAddress.split(/省|市|区|县/);
+                      const shortName = parts.slice(0, 2).join('') || formattedAddress;
+                      resolve(shortName);
+                    } else {
+                      resolve(null);
+                    }
+                  });
+                });
+              });
+              
+              if (amapResult) {
+                setLocationName(amapResult);
+                return;
+              }
+            }
+            
+            // Fall back to Nominatim
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${position.coords.latitude}&lon=${position.coords.longitude}&format=json&accept-language=${language}`, {
+              headers: {
+                'User-Agent': 'StarCaptureApp/1.0',
+                'Accept': 'application/json'
+              }
+            });
+            
             if (!response.ok) {
               throw new Error(`HTTP error! status: ${response.status}`);
             }
-            return response.json();
-          })
-          .then(data => {
+            
+            const data = await response.json();
             if (data.display_name) {
               setLocationName(data.display_name.split(',').slice(0, 2).join(','));
             }
-          })
-          .catch(err => {
+          } catch (err) {
             console.error("Error fetching location name:", err);
             setLocationName(t('Unknown Location', '未知位置'));
-          });
+          }
+        };
+        
+        fetchLocationName();
       },
       (error) => {
         setIsLoadingLocation(false);
