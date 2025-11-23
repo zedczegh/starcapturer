@@ -21,7 +21,7 @@ const ScienceSection: React.FC = () => {
       </div>
       <div className="absolute inset-0 bg-cosmic-glow -z-10" />
       
-      <div className="container mx-auto px-4 text-center relative z-10">
+      <div className="container mx-auto px-0 sm:px-4 text-center relative z-10">
         <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 mb-6">
           <Sparkles className="h-3.5 w-3.5 mr-2 text-primary" />
           <span className="text-xs font-medium text-primary">

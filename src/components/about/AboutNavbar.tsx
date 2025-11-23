@@ -25,7 +25,7 @@ const AboutNavbar = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
     >
-      <div className="container max-w-4xl mx-auto px-5">
+      <div className="container max-w-4xl mx-auto px-0 sm:px-5 flex flex-col items-center justify-center">
         <div className="flex items-center gap-2 py-3 overflow-x-auto scrollbar-hide">
           {sections.map((section) => (
             <button

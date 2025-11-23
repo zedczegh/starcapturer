@@ -161,7 +161,7 @@ const SamplingCalculator: React.FC = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 max-w-6xl">
+      <div className="container mx-auto px-0 sm:px-4 max-w-6xl">
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           {/* Input Parameters - Takes 2/3 width on large screens */}
           <div className="xl:col-span-2">

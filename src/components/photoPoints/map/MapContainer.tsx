@@ -54,7 +54,7 @@ const MapContainer: React.FC<MapContainerProps> = ({
   return (
     <div 
       style={{ height: mapContainerHeight }} 
-      className="w-full relative rounded-md overflow-hidden transition-all duration-300 mb-4 mt-2"
+      className="w-full relative rounded-none sm:rounded-md overflow-hidden transition-all duration-300 mb-3 sm:mb-4 mt-2"
     >
       {!mapReady && (
         <div className="absolute inset-0 z-20">

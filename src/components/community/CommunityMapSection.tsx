@@ -40,7 +40,7 @@ const CommunityMapSection: React.FC<CommunityMapSectionProps> = React.memo(({
       
       {/* Map Container */}
       <motion.div 
-        className="rounded-xl mb-9 shadow-glow overflow-hidden ring-1 ring-cosmic-700/10 bg-gradient-to-tr from-cosmic-900 via-cosmic-800/90 to-blue-950/70 relative" 
+        className="rounded-none sm:rounded-xl mb-6 sm:mb-9 shadow-glow overflow-hidden ring-1 ring-cosmic-700/10 bg-gradient-to-tr from-cosmic-900 via-cosmic-800/90 to-blue-950/70 relative" 
         style={{ height: 380, minHeight: 275 }}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}

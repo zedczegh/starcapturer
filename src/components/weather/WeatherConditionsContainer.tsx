@@ -95,14 +95,14 @@ const WeatherConditionsContainer: React.FC<WeatherConditionsContainerProps> = ({
       animate="visible"
       variants={containerVariants}
     >
-      <Card className="backdrop-blur-sm border-cosmic-700/30 sm:border-cosmic-700/30 border-transparent hover:border-cosmic-600/50 transition-all duration-300 shadow-lg overflow-hidden hover:shadow-cosmic-600/10">
-        <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-transparent sm:border-cosmic-700/30">
-          <CardTitle className="text-xl flex items-center gap-2">
-            <Cloud className="w-5 h-5 text-blue-400" />
+      <Card className="backdrop-blur-sm border-l-0 border-r-0 sm:border-l sm:border-r border-y sm:border border-cosmic-700/30 hover:border-cosmic-600/50 transition-all duration-300 shadow-lg overflow-hidden hover:shadow-cosmic-600/10 rounded-none sm:rounded-lg">
+        <CardHeader className="pb-2 bg-gradient-to-r from-cosmic-900 to-cosmic-800 border-b border-transparent sm:border-cosmic-700/30 px-3 sm:px-6">
+          <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+            <Cloud className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
             {t("Current Conditions", "当前状况")}
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-3 sm:p-6 bg-gradient-to-b from-cosmic-800/30 to-cosmic-900/30 sm:bg-gradient-to-b sm:from-cosmic-800/30 sm:to-cosmic-900/30 bg-transparent">
+        <CardContent className="p-3 sm:p-6 bg-gradient-to-b from-cosmic-800/30 to-cosmic-900/30">
           {isLoading ? (
             <div className="min-h-[200px] flex items-center justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-cosmic-400" />

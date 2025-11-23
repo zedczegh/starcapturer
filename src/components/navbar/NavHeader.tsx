@@ -25,7 +25,7 @@ const NavHeader: React.FC<NavHeaderProps> = ({
         scrolled ? "py-2 glassmorphism shadow-lg" : "py-4 bg-transparent"
       )}
     >
-      <div className="container mx-auto px-4 flex items-center justify-between">
+      <div className="container mx-auto px-0 sm:px-4 flex items-center justify-between">
         <Link 
           to="/" 
           className="flex items-center space-x-2 z-20 transition-all duration-300 hover:opacity-80 hover:scale-[1.02]"
