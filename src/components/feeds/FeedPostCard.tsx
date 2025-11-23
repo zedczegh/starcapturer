@@ -70,7 +70,7 @@ export const FeedPostCard: React.FC<FeedPostCardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ delay: Math.min(index * 0.03, 0.3) }}
-      className="bg-cosmic-800/40 backdrop-blur-xl border border-primary/10 rounded-lg overflow-hidden"
+      className="bg-cosmic-800/40 backdrop-blur-xl border-l-0 border-r-0 sm:border-l sm:border-r border-y sm:border border-primary/10 rounded-none sm:rounded-lg overflow-hidden"
     >
       {/* Image Loading Skeleton */}
       {!allImagesLoaded && (
@@ -99,21 +99,21 @@ export const FeedPostCard: React.FC<FeedPostCardProps> = ({
 
       {/* Post Description with User Info */}
       {post.description && (
-        <div className="px-4 py-3">
-          <div className="flex items-start gap-3">
+        <div className="px-3 sm:px-4 py-2.5 sm:py-3">
+          <div className="flex items-start gap-2 sm:gap-3">
             <Avatar 
-              className="h-8 w-8 border border-primary/20 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+              className="h-7 w-7 sm:h-8 sm:w-8 border border-primary/20 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all flex-shrink-0"
               onClick={() => navigateToUserProfile(navigate, post.user_id, currentUserId)}
             >
               <AvatarImage src={post.profiles?.avatar_url || ''} alt={post.profiles?.username || 'User'} />
-              <AvatarFallback className="bg-primary/20 text-primary">
+              <AvatarFallback className="bg-primary/20 text-primary text-xs">
                 {post.profiles?.username?.[0]?.toUpperCase() || 'U'}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <span 
-                  className="text-sm font-medium text-foreground cursor-pointer hover:text-primary transition-colors"
+                  className="text-xs sm:text-sm font-medium text-foreground cursor-pointer hover:text-primary transition-colors"
                   onClick={() => navigateToUserProfile(navigate, post.user_id, currentUserId)}
                 >
                   {post.profiles?.username || 'User'}
@@ -122,7 +122,7 @@ export const FeedPostCard: React.FC<FeedPostCardProps> = ({
                   {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
                 </span>
               </div>
-              <p className="text-cosmic-200 text-sm text-left">
+              <p className="text-cosmic-200 text-xs sm:text-sm text-left">
                 <ParsedPostContent 
                   content={post.description} 
                   onHashtagClick={onHashtagClick}
@@ -134,7 +134,7 @@ export const FeedPostCard: React.FC<FeedPostCardProps> = ({
       )}
 
       {/* Post Interactions */}
-      <div className="px-2 py-2 border-t border-primary/10">
+      <div className="px-2 sm:px-2 py-1.5 sm:py-2 border-t border-primary/10">
         <PostInteractions 
           postId={post.id}
           userId={post.user_id}
