@@ -157,8 +157,8 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Generate 2 keyframes: original and displaced
-   * This creates a simple, stable animation loop
+   * Generate 4 keyframes for continuous one-directional loop
+   * Each frame progressively displaces in motion direction
    */
   private generateKeyframes() {
     if (this.motionVectors.length === 0) {
@@ -166,20 +166,17 @@ export class MotionAnimationEngine {
       return;
     }
 
-    console.log('Generating keyframes...');
+    console.log('Generating keyframes for continuous loop...');
     
-    // Keyframe 0: Original image
-    this.keyframes = [{
-      imageData: this.cloneImageData(this.originalImageData)
-    }];
+    // Generate 4 progressive displacement frames
+    this.keyframes = [
+      { imageData: this.cloneImageData(this.originalImageData) },           // 0%
+      { imageData: this.createDisplacedFrame(0.33) },                       // 33%
+      { imageData: this.createDisplacedFrame(0.66) },                       // 66%
+      { imageData: this.createDisplacedFrame(1.0) }                         // 100%
+    ];
 
-    // Keyframe 1: Maximum displacement (small, controlled amount)
-    const displacedImageData = this.createDisplacedFrame(0.5); // 50% displacement
-    this.keyframes.push({
-      imageData: displacedImageData
-    });
-
-    console.log('Generated 2 keyframes for smooth looping');
+    console.log('Generated 4 keyframes for continuous one-directional loop');
   }
 
   /**
@@ -292,42 +289,45 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Render animation by smoothly interpolating between keyframes
+   * Render continuous one-directional loop by cycling through keyframes
    */
   private renderLoop(timestamp: number) {
     if (!this.isAnimating) return;
 
-    // Calculate smooth loop progress (0 to 1 and back)
-    const elapsed = timestamp - (this.currentTime || timestamp);
-    this.currentTime = timestamp;
-
-    // Use sine wave for smooth back-and-forth motion
-    const progress = (timestamp % this.animationDuration) / this.animationDuration;
-    const sineProgress = (Math.sin(progress * Math.PI * 2 - Math.PI / 2) + 1) / 2;
-
-    if (this.keyframes.length === 2) {
-      // Blend between keyframe 0 and keyframe 1
-      this.blendKeyframes(sineProgress);
-    } else {
-      // No keyframes, just show original
+    if (this.keyframes.length < 2) {
       this.ctx.putImageData(this.originalImageData, 0, 0);
+      this.animationFrame = requestAnimationFrame((t) => this.renderLoop(t));
+      return;
     }
+
+    // Linear progress through all keyframes
+    const progress = (timestamp % this.animationDuration) / this.animationDuration;
+    const numFrames = this.keyframes.length;
+    
+    // Calculate which two frames to blend between
+    const framePosition = progress * numFrames;
+    const frame1Index = Math.floor(framePosition) % numFrames;
+    const frame2Index = (frame1Index + 1) % numFrames;
+    const blendFactor = framePosition - Math.floor(framePosition);
+
+    // Blend between current frame and next frame
+    this.blendTwoFrames(frame1Index, frame2Index, blendFactor);
 
     this.animationFrame = requestAnimationFrame((t) => this.renderLoop(t));
   }
 
   /**
-   * Smoothly blend between two keyframes
+   * Blend between two specific keyframes
    */
-  private blendKeyframes(t: number) {
-    const frame0 = this.keyframes[0].imageData;
-    const frame1 = this.keyframes[1].imageData;
+  private blendTwoFrames(index1: number, index2: number, t: number) {
+    const frame1 = this.keyframes[index1].imageData;
+    const frame2 = this.keyframes[index2].imageData;
     
     const blendedImageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
 
-    for (let i = 0; i < frame0.data.length; i++) {
+    for (let i = 0; i < frame1.data.length; i++) {
       blendedImageData.data[i] = Math.round(
-        frame0.data[i] * (1 - t) + frame1.data[i] * t
+        frame1.data[i] * (1 - t) + frame2.data[i] * t
       );
     }
 
