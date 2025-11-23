@@ -76,10 +76,9 @@ export const MotionAnimationCanvas = ({
     // Draw image
     ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
 
-    // Initialize animation engine with displacement amount
     animationEngineRef.current = new MotionAnimationEngine(canvas, imageElement, displacementAmount);
-
-  }, [imageElement, displacementAmount]);
+ 
+  }, [imageElement]);
 
   // When displacement amount changes, update the engine
   useEffect(() => {

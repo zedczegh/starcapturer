@@ -221,13 +221,17 @@ export class MotionAnimationEngine {
 
     console.log('Generating keyframes for continuous loop...');
     
-    // Generate 12 progressive displacement frames for ultra-smooth animation
+    // Generate 12 progressive displacement frames forming a seamless loop
     this.keyframes = [];
-    for (let i = 0; i < 12; i++) {
-      const intensity = i / 11; // 0 to 1 across 12 frames
+    const numFrames = 12;
+    for (let i = 0; i < numFrames; i++) {
+      // Use sine wave so displacement ramps up then down (0 -> 1 -> 0)
+      const phase = i / (numFrames - 1);
+      const base = Math.sin(phase * Math.PI); // 0..1..0
+      const intensity = 0.15 + 0.85 * base;   // Never fully static, 0.15..1..0.15
       this.keyframes.push({
-        imageData: i === 0 
-          ? this.cloneImageData(this.originalImageData) 
+        imageData: i === 0
+          ? this.cloneImageData(this.originalImageData)
           : this.createDisplacedFrame(intensity)
       });
     }
@@ -297,31 +301,54 @@ export class MotionAnimationEngine {
     let totalDy = 0;
     let totalWeight = 0;
 
-    // Check if in range using stroke paths (continuous brush strokes)
-    let inRange = this.rangeStrokes.length === 0 && this.rangePoints.length === 0;
-    
-    // First check strokes (continuous brush areas)
-    if (this.rangeStrokes.length > 0) {
+    // Selection feathering based on continuous strokes / points
+    let selectionWeight = 1;
+
+    // If we have any selection strokes or points, compute a soft mask 0..1
+    if (this.rangeStrokes.length > 0 || this.rangePoints.length > 0) {
+      let minDist = Infinity;
+      let radiusForMin = 1;
+
+      // Check strokes first (continuous brush areas)
       for (const stroke of this.rangeStrokes) {
-        if (this.isPointInStroke(x, y, stroke)) {
-          inRange = true;
-          break;
+        const { points, radius } = stroke;
+        radiusForMin = radius;
+
+        if (points.length === 1) {
+          const d = Math.sqrt((x - points[0].x) ** 2 + (y - points[0].y) ** 2);
+          if (d < minDist) minDist = d;
+        } else {
+          for (let i = 0; i < points.length - 1; i++) {
+            const p1 = points[i];
+            const p2 = points[i + 1];
+            const d = this.distanceToLineSegment(x, y, p1.x, p1.y, p2.x, p2.y);
+            if (d < minDist) {
+              minDist = d;
+              radiusForMin = radius;
+            }
+          }
         }
       }
-    }
-    
-    // Fallback to individual points if no strokes
-    if (!inRange && this.rangePoints.length > 0) {
+
+      // Fallback / combination with individual range points
       for (const range of this.rangePoints) {
-        const dist = Math.sqrt((x - range.x) ** 2 + (y - range.y) ** 2);
-        if (dist < range.radius) {
-          inRange = true;
-          break;
+        const d = Math.sqrt((x - range.x) ** 2 + (y - range.y) ** 2);
+        if (d < minDist) {
+          minDist = d;
+          radiusForMin = range.radius;
         }
+      }
+
+      if (minDist === Infinity) {
+        selectionWeight = 0;
+      } else {
+        // Soft edge: 1 at center, smoothly falls to 0 at radius
+        const normalized = Math.min(1, Math.max(0, minDist / radiusForMin));
+        selectionWeight = 1 - normalized;
       }
     }
 
-    if (!inRange) {
+    if (selectionWeight <= 0) {
       return { dx: 0, dy: 0 };
     }
 
@@ -346,10 +373,9 @@ export class MotionAnimationEngine {
     }
 
     if (totalWeight > 0) {
-      return {
-        dx: totalDx / totalWeight,
-        dy: totalDy / totalWeight
-      };
+      const dx = (totalDx / totalWeight) * selectionWeight;
+      const dy = (totalDy / totalWeight) * selectionWeight;
+      return { dx, dy };
     }
 
     return { dx: 0, dy: 0 };
