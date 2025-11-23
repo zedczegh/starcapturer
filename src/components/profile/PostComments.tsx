@@ -466,8 +466,18 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
                                 </Button>
                               </div>
                               {showReplyEmojiPicker && (
-                                <div className="absolute z-50 bottom-full mb-2">
-                                  <EmojiPicker onEmojiClick={(emoji) => onEmojiClick(emoji, true)} />
+                                <div className="absolute z-50 bottom-full mb-2 right-0">
+                                  <div className="relative bg-background border border-border rounded-lg shadow-lg">
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background border border-border z-10"
+                                      onClick={() => setShowReplyEmojiPicker(false)}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                    <EmojiPicker onEmojiClick={(emoji) => onEmojiClick(emoji, true)} />
+                                  </div>
                                 </div>
                               )}
                             </div>
@@ -616,8 +626,18 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId, currentUserI
                 </div>
               </div>
               {showEmojiPicker && (
-                <div className="absolute z-50 bottom-16">
-                  <EmojiPicker onEmojiClick={(emoji) => onEmojiClick(emoji, false)} />
+                <div className="absolute z-50 bottom-16 right-0">
+                  <div className="relative bg-background border border-border rounded-lg shadow-lg">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background border border-border z-10"
+                      onClick={() => setShowEmojiPicker(false)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                    <EmojiPicker onEmojiClick={(emoji) => onEmojiClick(emoji, false)} />
+                  </div>
                 </div>
               )}
             </div>

@@ -318,7 +318,17 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
           </div>
           {showEmojiPicker && (
             <div className="absolute z-50 bottom-full mb-2 right-0">
-              <EmojiPicker onEmojiClick={handleEmojiSelect} />
+              <div className="relative bg-background border border-border rounded-lg shadow-lg">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background border border-border z-10"
+                  onClick={() => setShowEmojiPicker(false)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+                <EmojiPicker onEmojiClick={handleEmojiSelect} />
+              </div>
             </div>
           )}
           <input 
