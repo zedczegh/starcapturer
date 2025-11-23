@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useFeedsCache } from '@/hooks/cache/useFeedsCache';
 
 interface Post {
   id: string;
@@ -35,6 +36,7 @@ export const useFeedInfiniteScroll = ({
   const [page, setPage] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const loadingRef = useRef(false);
+  const { getCachedFeeds, cacheFeeds } = useFeedsCache();
 
   const fetchPosts = useCallback(async (pageNum: number, isRefresh: boolean = false) => {
     if (loadingRef.current) return;
@@ -46,6 +48,17 @@ export const useFeedInfiniteScroll = ({
         setRefreshing(true);
       } else if (pageNum === 0) {
         setLoading(true);
+        
+        // Check cache for initial load
+        if (userId && !hashtag) {
+          const cached = getCachedFeeds(userId, 1);
+          if (cached && cached.length > 0) {
+            setPosts(cached);
+            setLoading(false);
+            loadingRef.current = false;
+            return;
+          }
+        }
       }
 
       let query = supabase
@@ -58,7 +71,7 @@ export const useFeedInfiniteScroll = ({
           )
         `);
 
-      // Filter by following if enabled and user is logged in
+      // Filter by following
       if (feedFilter === 'following' && userId) {
         const { data: followingData } = await supabase
           .from('user_follows')
@@ -79,7 +92,7 @@ export const useFeedInfiniteScroll = ({
         query = query.in('user_id', followingIds);
       }
 
-      // Filter by hashtag if provided
+      // Filter by hashtag
       if (hashtag) {
         query = query.ilike('description', `%#${hashtag}%`);
       }
@@ -98,8 +111,17 @@ export const useFeedInfiniteScroll = ({
       if (isRefresh) {
         setPosts(newPosts);
         setPage(0);
+        // Cache first page after refresh
+        if (userId && !hashtag && newPosts.length > 0) {
+          cacheFeeds(userId, newPosts, 1);
+        }
       } else {
-        setPosts(prev => pageNum === 0 ? newPosts : [...prev, ...newPosts]);
+        const updatedPosts = pageNum === 0 ? newPosts : [...posts, ...newPosts];
+        setPosts(updatedPosts);
+        // Cache first page
+        if (pageNum === 0 && userId && !hashtag && newPosts.length > 0) {
+          cacheFeeds(userId, newPosts, 1);
+        }
       }
       
       setHasMore(newPosts.length === pageSize);
@@ -112,7 +134,7 @@ export const useFeedInfiniteScroll = ({
       setRefreshing(false);
       loadingRef.current = false;
     }
-  }, [feedFilter, userId, hashtag, pageSize]);
+  }, [feedFilter, userId, hashtag, pageSize, getCachedFeeds, cacheFeeds, posts]);
 
   // Initial load
   useEffect(() => {
