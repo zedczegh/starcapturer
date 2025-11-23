@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { fetchWithCache } from "@/utils/fetchWithCache";
+import { useMapProvider } from "@/contexts/MapProviderContext";
 
 interface UseLocationNameEnhancerProps {
   latitude?: number;
@@ -13,6 +14,7 @@ export function useLocationNameEnhancer({ latitude, longitude, language }: UseLo
   const [chineseName, setChineseName] = useState<string | null>(null);
   const [locationDetails, setLocationDetails] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { provider, isAMapReady } = useMapProvider();
   
   useEffect(() => {
     if (!latitude || !longitude) return;
@@ -20,6 +22,55 @@ export function useLocationNameEnhancer({ latitude, longitude, language }: UseLo
     const fetchLocationInfo = async () => {
       setIsLoading(true);
       try {
+        // If using AMap and it's ready, use AMap Geocoder for Chinese names
+        if (provider === 'amap' && isAMapReady && typeof window !== 'undefined' && (window as any).AMap) {
+          try {
+            await new Promise<void>((resolve, reject) => {
+              (window as any).AMap.plugin('AMap.Geocoder', function() {
+                const geocoder = new (window as any).AMap.Geocoder({ 
+                  city: '全国', 
+                  radius: 1000,
+                  extensions: 'all'
+                });
+                
+                geocoder.getAddress([longitude, latitude], (status: string, result: any) => {
+                  if (status === 'complete' && result.regeocode) {
+                    const regeocode = result.regeocode;
+                    const formattedAddress = regeocode.formattedAddress;
+                    const addressComponent = regeocode.addressComponent;
+                    
+                    // Set Chinese name from AMap
+                    setChineseName(formattedAddress);
+                    
+                    // Create enhanced name with city and province
+                    const enhancedParts = [];
+                    if (addressComponent.township) enhancedParts.push(addressComponent.township);
+                    if (addressComponent.district) enhancedParts.push(addressComponent.district);
+                    if (addressComponent.city) enhancedParts.push(addressComponent.city);
+                    if (addressComponent.province) enhancedParts.push(addressComponent.province);
+                    
+                    if (enhancedParts.length > 0) {
+                      const enhanced = enhancedParts.slice(0, 2).join(', ');
+                      setEnhancedName(language === 'zh' ? enhanced : formattedAddress);
+                      setLocationDetails(formattedAddress);
+                    }
+                    
+                    resolve();
+                  } else {
+                    reject(new Error('AMap geocoding failed'));
+                  }
+                });
+              });
+            });
+            
+            setIsLoading(false);
+            return; // Exit early if AMap succeeded
+          } catch (amapError) {
+            console.log('AMap geocoding failed, falling back to BigDataCloud:', amapError);
+          }
+        }
+        
+        // Fallback to BigDataCloud API
         const apiUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=${language}`;
         
         const data = await fetchWithCache(apiUrl, undefined, 24 * 60 * 60 * 1000); // Cache for 24 hours
@@ -79,7 +130,7 @@ export function useLocationNameEnhancer({ latitude, longitude, language }: UseLo
     };
     
     fetchLocationInfo();
-  }, [latitude, longitude, language]);
+  }, [latitude, longitude, language, provider, isAMapReady]);
   
   return { enhancedName, chineseName, locationDetails, isLoading };
 }
