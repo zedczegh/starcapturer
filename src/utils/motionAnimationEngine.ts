@@ -223,12 +223,11 @@ export class MotionAnimationEngine {
       if (dist < maxDist) {
         const weight = Math.pow(1 - dist / maxDist, 2) * vector.strength;
         
-        // Create smooth oscillating motion for loop effect
-        const phase = (frame % 60) / 60 * Math.PI * 2;
-        const amplitude = Math.sin(phase);
+        // Linear progression for one-directional motion (0 to 1 repeating)
+        const progress = (frame % 60) / 60;
         
-        totalDx += vector.dx * weight * amplitude;
-        totalDy += vector.dy * weight * amplitude;
+        totalDx += vector.dx * weight * progress;
+        totalDy += vector.dy * weight * progress;
         totalWeight += weight;
       }
     }
@@ -244,17 +243,10 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Render a single frame of the animation using canvas transforms (much faster)
+   * Render a single frame of the animation - pixel perfect with proper looping
    */
   private renderFrame(speed: number) {
     if (!this.isAnimating) return;
-
-    // Clear main canvas
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    
-    // Calculate animation phase
-    const phase = (this.currentFrame % 60) / 60 * Math.PI * 2;
-    const amplitude = Math.sin(phase);
 
     // If no motion vectors, just draw the work canvas
     if (this.motionVectors.length === 0) {
@@ -264,68 +256,42 @@ export class MotionAnimationEngine {
       return;
     }
 
-    // Draw the base image
-    this.ctx.drawImage(this.workCanvas, 0, 0);
+    const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
+    const sourceData = this.workCtx.getImageData(0, 0, this.canvas.width, this.canvas.height);
 
-    // Apply displacement effect in chunks for affected areas
-    const chunkSize = 32; // Process in 32x32 chunks for better performance
+    // Sample every 2nd pixel for performance (bilinear sampling happens naturally)
+    const step = 2;
     
-    for (let cy = 0; cy < this.canvas.height; cy += chunkSize) {
-      for (let cx = 0; cx < this.canvas.width; cx += chunkSize) {
-        const centerX = cx + chunkSize / 2;
-        const centerY = cy + chunkSize / 2;
+    for (let y = 0; y < this.canvas.height; y += step) {
+      for (let x = 0; x < this.canvas.width; x += step) {
+        const displacement = this.calculateDisplacement(x, y, this.currentFrame);
         
-        // Check if this chunk is affected by any motion vector or range point
-        let isAffected = false;
-        let rangeWeight = this.rangePoints.length === 0 ? 1 : 0;
+        // Sample from work canvas with displacement
+        let sourceX = Math.round(x - displacement.dx);
+        let sourceY = Math.round(y - displacement.dy);
         
-        // Check range points
-        if (this.rangePoints.length > 0) {
-          for (const range of this.rangePoints) {
-            const dist = Math.sqrt((centerX - range.x) ** 2 + (centerY - range.y) ** 2);
-            if (dist < range.radius + chunkSize) {
-              rangeWeight = 1;
-              break;
-            }
+        // Wrap coordinates for seamless loop
+        sourceX = ((sourceX % this.canvas.width) + this.canvas.width) % this.canvas.width;
+        sourceY = ((sourceY % this.canvas.height) + this.canvas.height) % this.canvas.height;
+
+        const sourceIdx = (sourceY * this.canvas.width + sourceX) * 4;
+        
+        // Fill the step x step block with the sampled color
+        for (let dy = 0; dy < step && y + dy < this.canvas.height; dy++) {
+          for (let dx = 0; dx < step && x + dx < this.canvas.width; dx++) {
+            const targetIdx = ((y + dy) * this.canvas.width + (x + dx)) * 4;
+            imageData.data[targetIdx] = sourceData.data[sourceIdx];
+            imageData.data[targetIdx + 1] = sourceData.data[sourceIdx + 1];
+            imageData.data[targetIdx + 2] = sourceData.data[sourceIdx + 2];
+            imageData.data[targetIdx + 3] = sourceData.data[sourceIdx + 3];
           }
-        }
-        
-        if (rangeWeight === 0) continue; // Skip chunks outside range
-        
-        // Check motion vectors
-        for (const vector of this.motionVectors) {
-          const dist = Math.sqrt((centerX - vector.x) ** 2 + (centerY - vector.y) ** 2);
-          if (dist < 250) { // 200 + chunkSize buffer
-            isAffected = true;
-            break;
-          }
-        }
-        
-        if (!isAffected) continue;
-        
-        // Calculate average displacement for this chunk
-        const displacement = this.calculateDisplacement(centerX, centerY, this.currentFrame);
-        
-        if (Math.abs(displacement.dx) < 0.5 && Math.abs(displacement.dy) < 0.5) continue;
-        
-        // Apply displacement to this chunk
-        const actualWidth = Math.min(chunkSize, this.canvas.width - cx);
-        const actualHeight = Math.min(chunkSize, this.canvas.height - cy);
-        
-        try {
-          const chunkData = this.workCtx.getImageData(cx, cy, actualWidth, actualHeight);
-          this.ctx.putImageData(
-            chunkData,
-            cx + displacement.dx,
-            cy + displacement.dy
-          );
-        } catch (e) {
-          // Skip chunks that go out of bounds
         }
       }
     }
 
+    this.ctx.putImageData(imageData, 0, 0);
     this.currentFrame += speed;
+
     this.animationFrame = requestAnimationFrame(() => this.renderFrame(speed));
   }
 
