@@ -202,6 +202,7 @@ export const createAMapPopupContent = (props: {
   userAvatarUrl?: string;
   distance?: number;
   locationType?: string;
+  chineseLocationName?: string;
 }): string => {
   const { 
     location, 
@@ -211,7 +212,8 @@ export const createAMapPopupContent = (props: {
     isMobile = false,
     userAvatarUrl,
     distance,
-    locationType
+    locationType,
+    chineseLocationName
   } = props;
   
   // Get display score
@@ -285,6 +287,11 @@ export const createAMapPopupContent = (props: {
     </span>`;
   }
   
+  // Chinese location name display
+  const chineseNameHtml = chineseLocationName ? `<div style="font-size: 12px; color: #cbd5e1; margin-bottom: 6px;">
+    ${chineseLocationName}
+  </div>` : '';
+  
   // Coordinates display
   const coordsHtml = `<div style="font-size: 11px; color: #94a3b8; margin-bottom: 8px;">
     ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}
@@ -307,6 +314,8 @@ export const createAMapPopupContent = (props: {
       <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px; color: #f1f5f9;">
         ${displayName}
       </div>
+      
+      ${chineseNameHtml}
       
       ${coordsHtml}
       
@@ -353,7 +362,7 @@ export const createAMapPopupContent = (props: {
           <polyline points="15 3 21 3 21 9"></polyline>
           <line x1="10" y1="14" x2="21" y2="3"></line>
         </svg>
-        View ${isMobile ? 'Profile' : 'Details'}
+        查看详情 / View Details
       </button>
     </div>
   `;
