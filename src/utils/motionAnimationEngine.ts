@@ -199,16 +199,15 @@ export class MotionAnimationEngine {
         const falloff = 1 - normalizedDist;
         const weight = falloff * falloff * falloff * falloff * vector.strength;
         
-        // Create ultra-smooth seamless looping using eased sine wave (like Motion Leap/Pixaloop)
-        // Combining sine with cubic easing for buttery smooth transitions
-        const phase = (frame % 240) / 240; // Longer cycle for smoother motion
-        const sineWave = Math.sin(phase * Math.PI * 2); // Complete sine cycle
-        // Apply cubic ease in-out for even smoother acceleration/deceleration
-        const eased = sineWave < 0 
-          ? -Math.pow(Math.abs(sineWave), 0.7) // Smooth negative motion
-          : Math.pow(sineWave, 0.7); // Smooth positive motion
-        const amplitude = eased * 0.6; // 60% displacement with ultra-smooth easing
-        
+        // One-direction seamless motion using eased ramp (no back-and-forth)
+        const loopFrames = 240; // Longer cycle for smoother motion
+        const phase = (frame % loopFrames) / loopFrames; // 0 → 1, then reset
+        // Cubic ease-in-out for smooth acceleration without reversing direction
+        const eased = phase < 0.5
+          ? 4 * phase * phase * phase
+          : 1 - Math.pow(-2 * phase + 2, 3) / 2;
+        const amplitude = eased * 0.6; // 60% displacement with smooth easing
+
         totalDx += vector.dx * weight * amplitude;
         totalDy += vector.dy * weight * amplitude;
         totalWeight += weight;
