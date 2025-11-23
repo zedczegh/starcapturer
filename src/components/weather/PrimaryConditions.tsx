@@ -58,7 +58,7 @@ const PrimaryConditions = memo<PrimaryConditionsProps>(({
   };
 
   return (
-    <Card className="p-3 sm:p-4 bg-cosmic-900/50 border-cosmic-800">
+    <Card className="p-3 sm:p-4 bg-transparent sm:bg-cosmic-900/50 border-transparent sm:border-cosmic-800">
       <div className="space-y-2 sm:space-y-3">
         <div className="flex items-center justify-between mb-1 sm:mb-2">
           <div className="flex items-center space-x-2 sm:space-x-3">
@@ -75,7 +75,7 @@ const PrimaryConditions = memo<PrimaryConditionsProps>(({
 
         <TooltipProvider>
           {/* Temperature */}
-          <div className="space-y-1 border-b border-cosmic-700/30 pb-1.5 sm:pb-2">
+          <div className="space-y-1 border-b border-cosmic-700/20 sm:border-cosmic-700/30 pb-1.5 sm:pb-2">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
                 <ThermometerSun className="w-4 h-4 text-yellow-400" />
@@ -98,7 +98,7 @@ const PrimaryConditions = memo<PrimaryConditionsProps>(({
           </div>
           
           {/* Humidity */}
-          <div className="space-y-1 border-b border-cosmic-700/30 pb-1.5 pt-1.5 sm:pb-2 sm:pt-2">
+          <div className="space-y-1 border-b border-cosmic-700/20 sm:border-cosmic-700/30 pb-1.5 pt-1.5 sm:pb-2 sm:pt-2">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
                 <Droplets className="w-4 h-4 text-blue-400" />
@@ -121,7 +121,7 @@ const PrimaryConditions = memo<PrimaryConditionsProps>(({
           </div>
           
           {/* Wind Speed */}
-          <div className="space-y-1 border-b border-cosmic-700/30 pb-1.5 pt-1.5 sm:pb-2 sm:pt-2">
+          <div className="space-y-1 border-b border-cosmic-700/20 sm:border-cosmic-700/30 pb-1.5 pt-1.5 sm:pb-2 sm:pt-2">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
                 <Wind className="w-4 h-4 text-blue-300" />

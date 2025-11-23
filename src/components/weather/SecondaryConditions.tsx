@@ -33,7 +33,7 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
   const { language, t } = useLanguage();
   
   return (
-    <Card className="bg-cosmic-900/50 border-cosmic-800 hover:bg-cosmic-800/50 transition-all duration-300">
+    <Card className="bg-transparent sm:bg-cosmic-900/50 border-transparent sm:border-cosmic-800 hover:bg-cosmic-800/50 transition-all duration-300">
       <div className="p-3 sm:p-4 md:p-5">
         <div className="flex items-center justify-between mb-2 sm:mb-4">
           <div className="flex items-center gap-2">
@@ -49,25 +49,25 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
         <TooltipProvider>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
             {/* Cloud Cover */}
-            <div className="bg-cosmic-800/30 rounded-lg p-2 sm:p-3">
+            <div className="bg-cosmic-800/20 sm:bg-cosmic-800/30 rounded-lg p-2 sm:p-3 border border-transparent sm:border-cosmic-700/20">
               <CloudCoverItem cloudCover={cloudCover} />
             </div>
             
             {/* Nighttime Cloud Data */}
             {nighttimeCloudData && (
-              <div className="bg-cosmic-800/30 rounded-lg p-2 sm:p-3">
+              <div className="bg-cosmic-800/20 sm:bg-cosmic-800/30 rounded-lg p-2 sm:p-3 border border-transparent sm:border-cosmic-700/20">
                 <NighttimeCloudItem nighttimeCloudData={nighttimeCloudData} />
               </div>
             )}
             
             {/* Bortle Scale */}
-            <div className="bg-cosmic-800/30 rounded-lg p-2 sm:p-3">
+            <div className="bg-cosmic-800/20 sm:bg-cosmic-800/30 rounded-lg p-2 sm:p-3 border border-transparent sm:border-cosmic-700/20">
               <BortleScaleItem bortleScale={bortleScale} />
             </div>
             
             {/* Air Quality */}
             {aqi !== undefined && (
-              <div className="bg-cosmic-800/30 rounded-lg p-2 sm:p-3">
+              <div className="bg-cosmic-800/20 sm:bg-cosmic-800/30 rounded-lg p-2 sm:p-3 border border-transparent sm:border-cosmic-700/20">
                 <AirQualityItem aqi={aqi} />
               </div>
             )}
