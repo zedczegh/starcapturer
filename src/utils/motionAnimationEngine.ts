@@ -32,29 +32,11 @@ export class MotionAnimationEngine {
   private animationFrame: number | null = null;
   private currentFrame: number = 0;
   private isAnimating: boolean = false;
-  private workCanvas: HTMLCanvasElement;
-  private workCtx: CanvasRenderingContext2D;
-  private originalImageData: ImageData | null = null;
 
   constructor(canvas: HTMLCanvasElement, sourceImage: HTMLImageElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.sourceImage = sourceImage;
-    
-    // Use existing canvas size (already scaled by outer component)
-    const width = canvas.width;
-    const height = canvas.height;
-    
-    // Create work canvas matching display canvas
-    this.workCanvas = document.createElement("canvas");
-    this.workCanvas.width = width;
-    this.workCanvas.height = height;
-    this.workCtx = this.workCanvas.getContext("2d")!;
-    
-    // Draw original image scaled to canvas once and cache pixels
-    this.ctx.drawImage(sourceImage, 0, 0, width, height);
-    this.workCtx.drawImage(sourceImage, 0, 0, width, height);
-    this.originalImageData = this.workCtx.getImageData(0, 0, width, height);
   }
 
   /**
@@ -181,29 +163,21 @@ export class MotionAnimationEngine {
     let totalDy = 0;
     let totalWeight = 0;
 
-    // Check if pixel is in a range point with feathering
-    let rangeWeight = 0;
+    // Check if pixel is in a range point - if range points exist, only animate those areas
+    let inRange = this.rangePoints.length === 0; // If no range points, animate everything
     
-    if (this.rangePoints.length === 0) {
-      rangeWeight = 1; // If no range points, animate everything
-    } else {
+    if (this.rangePoints.length > 0) {
       for (const range of this.rangePoints) {
         const dist = Math.sqrt((x - range.x) ** 2 + (y - range.y) ** 2);
         if (dist < range.radius) {
-          // Feathering: full strength at center, fades at edges
-          const featherDistance = 20; // pixels to fade over
-          const edgeDist = range.radius - dist;
-          if (edgeDist < featherDistance) {
-            rangeWeight = Math.max(rangeWeight, edgeDist / featherDistance);
-          } else {
-            rangeWeight = 1;
-          }
+          inRange = true;
+          break;
         }
       }
     }
 
     // If not in range, no movement
-    if (rangeWeight === 0) {
+    if (!inRange) {
       return { dx: 0, dy: 0 };
     }
 
@@ -215,19 +189,20 @@ export class MotionAnimationEngine {
       if (dist < maxDist) {
         const weight = Math.pow(1 - dist / maxDist, 2) * vector.strength;
         
-        // Linear progression for one-directional motion (0 to 1 repeating)
-        const progress = (frame % 60) / 60;
+        // Create oscillating motion for loop effect
+        const phase = (frame % 60) / 60 * Math.PI * 2;
+        const amplitude = Math.sin(phase);
         
-        totalDx += vector.dx * weight * progress;
-        totalDy += vector.dy * weight * progress;
+        totalDx += vector.dx * weight * amplitude;
+        totalDy += vector.dy * weight * amplitude;
         totalWeight += weight;
       }
     }
 
     if (totalWeight > 0) {
       return {
-        dx: (totalDx / totalWeight) * rangeWeight,
-        dy: (totalDy / totalWeight) * rangeWeight
+        dx: totalDx / totalWeight,
+        dy: totalDy / totalWeight
       };
     }
 
@@ -235,48 +210,32 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Render a single frame of the animation - pixel perfect with proper looping
+   * Render a single frame of the animation
    */
   private renderFrame(speed: number) {
     if (!this.isAnimating) return;
 
-    // If no motion vectors, just draw the work canvas
-    if (this.motionVectors.length === 0) {
-      this.ctx.drawImage(this.workCanvas, 0, 0);
-      this.currentFrame += speed;
-      this.animationFrame = requestAnimationFrame(() => this.renderFrame(speed));
-      return;
-    }
-
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
-    const sourceData = this.originalImageData!;
+    const sourceData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
 
-    // Sample every 2nd pixel for performance (bilinear sampling happens naturally)
-    const step = 2;
-    
-    for (let y = 0; y < this.canvas.height; y += step) {
-      for (let x = 0; x < this.canvas.width; x += step) {
+    // Apply displacement to each pixel
+    for (let y = 0; y < this.canvas.height; y++) {
+      for (let x = 0; x < this.canvas.width; x++) {
         const displacement = this.calculateDisplacement(x, y, this.currentFrame);
         
-        // Sample from work canvas with displacement
-        let sourceX = Math.round(x - displacement.dx);
-        let sourceY = Math.round(y - displacement.dy);
-        
-        // Wrap coordinates for seamless loop
-        sourceX = ((sourceX % this.canvas.width) + this.canvas.width) % this.canvas.width;
-        sourceY = ((sourceY % this.canvas.height) + this.canvas.height) % this.canvas.height;
+        const sourceX = Math.round(x - displacement.dx);
+        const sourceY = Math.round(y - displacement.dy);
 
-        const sourceIdx = (sourceY * this.canvas.width + sourceX) * 4;
-        
-        // Fill the step x step block with the sampled color
-        for (let dy = 0; dy < step && y + dy < this.canvas.height; dy++) {
-          for (let dx = 0; dx < step && x + dx < this.canvas.width; dx++) {
-            const targetIdx = ((y + dy) * this.canvas.width + (x + dx)) * 4;
-            imageData.data[targetIdx] = sourceData.data[sourceIdx];
-            imageData.data[targetIdx + 1] = sourceData.data[sourceIdx + 1];
-            imageData.data[targetIdx + 2] = sourceData.data[sourceIdx + 2];
-            imageData.data[targetIdx + 3] = sourceData.data[sourceIdx + 3];
-          }
+        // Bounds checking
+        if (sourceX >= 0 && sourceX < this.canvas.width && 
+            sourceY >= 0 && sourceY < this.canvas.height) {
+          const sourceIdx = (sourceY * this.canvas.width + sourceX) * 4;
+          const targetIdx = (y * this.canvas.width + x) * 4;
+
+          imageData.data[targetIdx] = sourceData.data[sourceIdx];
+          imageData.data[targetIdx + 1] = sourceData.data[sourceIdx + 1];
+          imageData.data[targetIdx + 2] = sourceData.data[sourceIdx + 2];
+          imageData.data[targetIdx + 3] = sourceData.data[sourceIdx + 3];
         }
       }
     }
@@ -307,10 +266,8 @@ export class MotionAnimationEngine {
       this.animationFrame = null;
     }
     
-    // Redraw original image from cached data
-    if (this.originalImageData) {
-      this.ctx.putImageData(this.originalImageData, 0, 0);
-    }
+    // Redraw original image
+    this.ctx.drawImage(this.sourceImage, 0, 0, this.canvas.width, this.canvas.height);
   }
 
   /**
