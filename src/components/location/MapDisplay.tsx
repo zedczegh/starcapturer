@@ -1,13 +1,21 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useMapProvider } from '@/contexts/MapProviderContext';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMap, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import '@/components/photoPoints/map/AMapStyles.css';
 import L from 'leaflet';
 import { createCustomMarker } from './map/MapMarkerUtils';
 import MapTooltip from './map/MapTooltip';
 import MapClickHandler from '../location/map/MapClickHandler';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import SiqsScoreBadge from '@/components/photoPoints/cards/SiqsScoreBadge';
+import RealTimeSiqsProvider from '@/components/photoPoints/cards/RealTimeSiqsProvider';
+import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
+import { getEnhancedLocationDetails } from '@/services/geocoding/enhancedReverseGeocoding';
+import { MapPin, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface MapDisplayProps {
   position: [number, number];
@@ -33,10 +41,35 @@ const LeafletMapDisplay: React.FC<MapDisplayProps> = ({
   siqs
 }) => {
   const mapRef = useRef<L.Map | null>(null);
+  const { t, language } = useLanguage();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(siqs || null);
+  const [siqsLoading, setSiqsLoading] = useState(false);
+  const [forceUpdate, setForceUpdate] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // Custom marker icon
   const markerColor = isDarkSkyReserve || certification ? '#8b5cf6' : '#e11d48';
   const markerIcon = createCustomMarker(markerColor);
+
+  const handleSiqsCalculated = useCallback((siqsValue: number | null, loading: boolean) => {
+    setRealTimeSiqs(siqsValue);
+    setSiqsLoading(loading);
+  }, []);
+
+  const handleRefreshSiqs = () => {
+    setForceUpdate(true);
+    setTimeout(() => setForceUpdate(false), 100);
+  };
+
+  const handleOpenDialog = useCallback(() => {
+    setIsDialogOpen(true);
+  }, []);
+
+  const handleCloseDialog = useCallback(() => {
+    setIsDialogOpen(false);
+  }, []);
   
   // MapReady component to handle initialization
   const MapReady = () => {
@@ -61,44 +94,90 @@ const LeafletMapDisplay: React.FC<MapDisplayProps> = ({
   };
   
   return (
-    <MapContainer
-      center={position}
-      zoom={13}
-      scrollWheelZoom={false}
-      style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}
-      className="z-0"
-      attributionControl={false}
-    >
-      <TileLayer
-        attribution=""
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+    <>
+      <RealTimeSiqsProvider
+        isVisible={true}
+        latitude={position[0]}
+        longitude={position[1]}
+        onSiqsCalculated={handleSiqsCalculated}
+        forceUpdate={forceUpdate}
       />
       
-      <Marker position={position} icon={markerIcon}>
-        <MapTooltip 
-          name={locationName} 
-          latitude={position[0]} 
-          longitude={position[1]}
-          isDarkSkyReserve={isDarkSkyReserve}
-          certification={certification}
-          siqs={siqs}
+      <MapContainer
+        center={position}
+        zoom={13}
+        scrollWheelZoom={false}
+        style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}
+        className="z-0"
+        attributionControl={false}
+      >
+        <TileLayer
+          attribution=""
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-      </Marker>
+        
+        <Marker 
+          position={position} 
+          icon={markerIcon}
+        >
+          <Popup>
+            <div className="p-2 min-w-[200px]">
+              <div className="font-medium text-sm mb-2 flex items-center">
+                <MapPin className="h-4 w-4 mr-1 text-primary" />
+                {locationName}
+              </div>
+              
+              <div className="mb-2">
+                <div className="text-xs text-muted-foreground mt-1">
+                  {position[0].toFixed(4)}, {position[1].toFixed(4)}
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between mb-3">
+                <SiqsScoreBadge 
+                  score={realTimeSiqs} 
+                  compact={true}
+                  loading={siqsLoading}
+                />
+              </div>
+
+              {user && (
+                <button
+                  onClick={handleOpenDialog}
+                  className="text-xs flex items-center justify-center w-full bg-gradient-to-br from-primary/80 to-accent/80 text-white py-2 px-2 rounded-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] shadow-md shadow-primary/30 border border-primary/20"
+                >
+                  {t("Create My Spot", "创建我的地点")}
+                </button>
+              )}
+            </div>
+          </Popup>
+        </Marker>
+        
+        {/* Map initialization event */}
+        <MapReady />
+        
+        {/* Map click handler */}
+        {editable && onMapClick && (
+          <MapClickHandler onClick={onMapClick} />
+        )}
+      </MapContainer>
       
-      {/* Map initialization event */}
-      <MapReady />
-      
-      {/* Map click handler */}
-      {editable && onMapClick && (
-        <MapClickHandler onClick={onMapClick} />
+      {user && isDialogOpen && (
+        <CreateAstroSpotDialog
+          latitude={position[0]}
+          longitude={position[1]}
+          defaultName={locationName || t("My Spot", "我的地点")}
+          onClose={handleCloseDialog}
+        />
       )}
-    </MapContainer>
+    </>
   );
 };
 
 // AMap Component
 const AMapDisplay: React.FC<MapDisplayProps> = ({
   position,
+  locationName,
   editable = false,
   onMapReady,
   onMapClick,
@@ -106,6 +185,98 @@ const AMapDisplay: React.FC<MapDisplayProps> = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const markerRef = useRef<any>(null);
+  const infoWindowRef = useRef<any>(null);
+  const { t, language } = useLanguage();
+  const { user } = useAuth();
+  const [realTimeSiqs, setRealTimeSiqs] = useState<number | null>(null);
+  const [siqsLoading, setSiqsLoading] = useState(false);
+  const [forceUpdate, setForceUpdate] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [detailedLocationName, setDetailedLocationName] = useState<string>(locationName);
+
+  const handleSiqsCalculated = useCallback((siqsValue: number | null, loading: boolean) => {
+    setRealTimeSiqs(siqsValue);
+    setSiqsLoading(loading);
+  }, []);
+
+  const handleRefreshSiqs = () => {
+    setForceUpdate(true);
+    setTimeout(() => setForceUpdate(false), 100);
+  };
+
+  // Fetch detailed location name
+  useEffect(() => {
+    const fetchLocationName = async () => {
+      try {
+        const details = await getEnhancedLocationDetails(position[0], position[1], language === 'zh' ? 'zh' : 'en');
+        setDetailedLocationName(details.formattedName || locationName);
+      } catch (error) {
+        console.error('Error fetching location name:', error);
+      }
+    };
+
+    fetchLocationName();
+  }, [position, language, locationName]);
+
+  const createPopupContent = useCallback(() => {
+    const siqsDisplay = siqsLoading 
+      ? '<div class="animate-pulse bg-muted-foreground/20 rounded h-5 w-12"></div>'
+      : realTimeSiqs 
+        ? `<span class="text-sm font-medium ${
+            realTimeSiqs >= 8 ? 'text-green-500' : 
+            realTimeSiqs >= 6 ? 'text-yellow-400' : 
+            realTimeSiqs >= 4 ? 'text-amber-500' : 
+            realTimeSiqs >= 2 ? 'text-orange-500' : 'text-red-500'
+          }">${realTimeSiqs.toFixed(1)}</span>`
+        : '<span class="text-sm text-muted-foreground">--</span>';
+
+    return `
+      <div class="p-2 min-w-[200px]" style="font-family: system-ui, -apple-system, sans-serif;">
+        <div class="font-medium text-sm mb-2 flex items-center" style="color: hsl(var(--primary));">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          ${detailedLocationName}
+        </div>
+        
+        <div class="mb-2">
+          <div class="text-xs" style="color: hsl(var(--muted-foreground));">
+            ${position[0].toFixed(4)}, ${position[1].toFixed(4)}
+          </div>
+        </div>
+        
+        <div class="flex items-center justify-between mb-3">
+          ${siqsDisplay}
+        </div>
+
+        ${user ? `
+          <button
+            onclick="window.openAMapCreateSpotDialog(${position[0]}, ${position[1]}, '${detailedLocationName.replace(/'/g, "\\'")}')"
+            class="text-xs flex items-center justify-center w-full py-2 px-2 rounded-lg transition-all duration-300 shadow-md border"
+            style="background: linear-gradient(to bottom right, hsl(var(--primary) / 0.8), hsl(var(--accent) / 0.8)); color: white; box-shadow: 0 4px 6px -1px hsl(var(--primary) / 0.3); border-color: hsl(var(--primary) / 0.2);"
+          >
+            ${t("Create My Spot", "创建我的地点")}
+          </button>
+        ` : ''}
+      </div>
+    `;
+  }, [realTimeSiqs, siqsLoading, detailedLocationName, position, user, t]);
+
+  // Setup global function for dialog
+  useEffect(() => {
+    (window as any).openAMapCreateSpotDialog = (lat: number, lng: number, name: string) => {
+      setIsDialogOpen(true);
+    };
+
+    return () => {
+      delete (window as any).openAMapCreateSpotDialog;
+    };
+  }, []);
+
+  // Update popup content when SIQS changes
+  useEffect(() => {
+    if (infoWindowRef.current && mapInstance.current) {
+      infoWindowRef.current.setContent(createPopupContent());
+    }
+  }, [realTimeSiqs, siqsLoading, createPopupContent]);
 
   useEffect(() => {
     if (!mapContainer.current || mapInstance.current) return;
@@ -141,6 +312,20 @@ const AMapDisplay: React.FC<MapDisplayProps> = ({
     map.add(marker);
     markerRef.current = marker;
 
+    // Create InfoWindow
+    const infoWindow = new (window as any).AMap.InfoWindow({
+      content: createPopupContent(),
+      offset: new (window as any).AMap.Pixel(0, -35),
+      closeWhenClickMap: true,
+    });
+    infoWindowRef.current = infoWindow;
+
+    // Add click handler to marker
+    marker.on('click', () => {
+      handleRefreshSiqs();
+      infoWindow.open(map, marker.getPosition());
+    });
+
     if (editable && onMapClick) {
       map.on('click', (e: any) => {
         onMapClick(e.lnglat.lat, e.lnglat.lng);
@@ -152,6 +337,9 @@ const AMapDisplay: React.FC<MapDisplayProps> = ({
     }
 
     return () => {
+      if (infoWindowRef.current) {
+        infoWindowRef.current.close();
+      }
       if (mapInstance.current) {
         mapInstance.current.destroy();
         mapInstance.current = null;
@@ -170,11 +358,30 @@ const AMapDisplay: React.FC<MapDisplayProps> = ({
   }, [position]);
 
   return (
-    <div 
-      ref={mapContainer} 
-      style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}
-      className="z-0"
-    />
+    <>
+      <RealTimeSiqsProvider
+        isVisible={true}
+        latitude={position[0]}
+        longitude={position[1]}
+        onSiqsCalculated={handleSiqsCalculated}
+        forceUpdate={forceUpdate}
+      />
+      
+      <div 
+        ref={mapContainer} 
+        style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}
+        className="z-0"
+      />
+      
+      {user && isDialogOpen && (
+        <CreateAstroSpotDialog
+          latitude={position[0]}
+          longitude={position[1]}
+          defaultName={detailedLocationName || t("My Spot", "我的地点")}
+          onClose={() => setIsDialogOpen(false)}
+        />
+      )}
+    </>
   );
 };
 
