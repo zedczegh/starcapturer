@@ -78,6 +78,13 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
     }
   }, [locations, userProfilesMap, isMobile]);
 
+  // Handler for user location SIQS
+  const handleUserLocationSiqs = useCallback((siqs: number | null) => {
+    if (siqs !== null) {
+      handleSiqsUpdate('user-location', siqs);
+    }
+  }, [handleSiqsUpdate]);
+
   // Initialize map
   useEffect(() => {
     if (!mapContainer.current || mapInstance.current) return;
@@ -114,7 +121,7 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
     }
   }, [center]);
 
-  // Add user location marker
+  // Add user location marker with popup
   useEffect(() => {
     if (!mapInstance.current || !userPosition) return;
 
@@ -123,18 +130,22 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
       userMarkerRef.current = null;
     }
 
+    // Red marker icon for user location
     const marker = new (window as any).AMap.Marker({
       position: [userPosition[1], userPosition[0]], // [lng, lat]
       icon: new (window as any).AMap.Icon({
-        size: new (window as any).AMap.Size(32, 32),
+        size: new (window as any).AMap.Size(32, 42),
         image: 'data:image/svg+xml;base64,' + btoa(`
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-            <circle cx="16" cy="16" r="8" fill="#3b82f6" stroke="white" stroke-width="3"/>
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42">
+            <path d="M16 0C7.2 0 0 7.2 0 16c0 11 16 26 16 26s16-15 16-26c0-8.8-7.2-16-16-16z" fill="#e11d48"/>
+            <circle cx="16" cy="16" r="6" fill="white"/>
           </svg>
         `),
+        imageSize: new (window as any).AMap.Size(32, 42),
       }),
       title: 'Your Location',
       draggable: !!onLocationUpdate,
+      anchor: 'bottom-center',
     });
 
     if (onLocationUpdate) {
@@ -145,16 +156,151 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
       });
     }
 
+    // Setup click handler to show location details
+    (window as any).viewUserLocationDetails = async () => {
+      try {
+        const { getEnhancedLocationDetails } = await import('@/services/geocoding/enhancedReverseGeocoding');
+        const details = await getEnhancedLocationDetails(userPosition[0], userPosition[1], 'en');
+        
+        // Navigate to location details
+        const { useNavigate } = await import('react-router-dom');
+        window.location.href = `/location/${userPosition[0].toFixed(6)},${userPosition[1].toFixed(6)}`;
+      } catch (error) {
+        console.error('Error navigating to location:', error);
+      }
+    };
+
+    // Setup create spot handler
+    (window as any).openCreateSpotDialog = () => {
+      // Trigger create spot dialog - will be handled by the component
+      console.log('Create spot at:', userPosition);
+    };
+
+    // Fetch location name and create popup
+    const setupPopup = async () => {
+      let locationName = 'Your Location';
+      try {
+        const { getEnhancedLocationDetails } = await import('@/services/geocoding/enhancedReverseGeocoding');
+        const details = await getEnhancedLocationDetails(userPosition[0], userPosition[1], 'en');
+        locationName = details.formattedName || 'Your Location';
+      } catch (error) {
+        console.error('Error fetching location name:', error);
+      }
+
+      // Get current SIQS from RealTimeSiqsProvider
+      const currentSiqs = realTimeSiqsMap.get('user-location') || 0;
+
+      const popupContent = `
+        <div style="
+          background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.95) 100%);
+          border-left: 4px solid #e11d48;
+          border-radius: 8px;
+          padding: 12px;
+          min-width: 200px;
+          max-width: 280px;
+          color: white;
+        ">
+          <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px; color: #f1f5f9; display: flex; align-items: center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#e11d48" stroke="#e11d48" stroke-width="2" style="margin-right: 6px;">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            Your Location
+          </div>
+          
+          <div style="font-size: 12px; color: #cbd5e1; margin-bottom: 8px;">
+            ${locationName}
+          </div>
+          
+          <div style="font-size: 11px; color: #94a3b8; margin-bottom: 12px;">
+            ${userPosition[0].toFixed(4)}, ${userPosition[1].toFixed(4)}
+          </div>
+          
+          ${currentSiqs > 0 ? `
+          <div style="margin-bottom: 12px;">
+            <span style="color: ${currentSiqs >= 7.5 ? '#10b981' : currentSiqs >= 5.5 ? '#f59e0b' : '#ef4444'}; font-weight: 600; font-size: 16px;">
+              SIQS: ${currentSiqs.toFixed(1)}
+            </span>
+          </div>
+          ` : ''}
+          
+          <button 
+            onclick="viewUserLocationDetails()" 
+            style="
+              width: 100%;
+              padding: 8px 12px;
+              background: rgba(59, 130, 246, 0.2);
+              color: #dbeafe;
+              border: none;
+              border-radius: 6px;
+              cursor: pointer;
+              font-size: 13px;
+              font-weight: 500;
+              margin-bottom: 8px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 6px;
+            "
+            onmouseover="this.style.background='rgba(59, 130, 246, 0.3)'"
+            onmouseout="this.style.background='rgba(59, 130, 246, 0.2)'"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+              <polyline points="15 3 21 3 21 9"></polyline>
+              <line x1="10" y1="14" x2="21" y2="3"></line>
+            </svg>
+            View Details
+          </button>
+          
+          <button 
+            onclick="window.location.href='/create-spot?lat=${userPosition[0]}&lng=${userPosition[1]}'" 
+            style="
+              width: 100%;
+              padding: 10px 12px;
+              background: linear-gradient(135deg, rgba(155, 135, 245, 0.3), rgba(147, 51, 234, 0.3));
+              color: #ddd6fe;
+              border: 1px solid rgba(155, 135, 245, 0.4);
+              border-radius: 6px;
+              cursor: pointer;
+              font-size: 13px;
+              font-weight: 600;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
+            onmouseover="this.style.background='linear-gradient(135deg, rgba(155, 135, 245, 0.4), rgba(147, 51, 234, 0.4))'"
+            onmouseout="this.style.background='linear-gradient(135deg, rgba(155, 135, 245, 0.3), rgba(147, 51, 234, 0.3))'"
+          >
+            Create My Spot
+          </button>
+        </div>
+      `;
+
+      const infoWindow = new (window as any).AMap.InfoWindow({
+        content: popupContent,
+        offset: new (window as any).AMap.Pixel(0, -42),
+      });
+
+      marker.on('click', () => {
+        infoWindow.open(mapInstance.current, marker.getPosition());
+      });
+    };
+
+    setupPopup();
+
     mapInstance.current.add(marker);
     userMarkerRef.current = marker;
 
     return () => {
+      delete (window as any).viewUserLocationDetails;
+      delete (window as any).openCreateSpotDialog;
       if (userMarkerRef.current && mapInstance.current) {
         mapInstance.current.remove(userMarkerRef.current);
         userMarkerRef.current = null;
       }
     };
-  }, [userPosition, onLocationUpdate]);
+  }, [userPosition, onLocationUpdate, realTimeSiqsMap]);
 
   // Fetch user profiles for avatars
   useEffect(() => {
@@ -277,6 +423,22 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
 
   return (
     <div className="relative w-full h-full">
+      {/* Real-time SIQS provider for user location */}
+      {userPosition && (
+        <RealTimeSiqsProvider
+          key="user-location"
+          isVisible={true}
+          latitude={userPosition[0]}
+          longitude={userPosition[1]}
+          bortleScale={4}
+          onSiqsCalculated={(siqs) => {
+            if (siqs !== null) {
+              handleUserLocationSiqs(siqs);
+            }
+          }}
+        />
+      )}
+      
       {/* Real-time SIQS providers for each visible location */}
       {locations.slice(0, 50).map((location) => (
         <RealTimeSiqsProvider
