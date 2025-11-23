@@ -4,7 +4,7 @@ import { useUserGeolocation } from '@/hooks/community/useUserGeolocation';
 import { createAMapMarkerIcon, createAMapPopupContent } from './AMapMarkerUtils';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import RealTimeSiqsProvider from '@/components/photoPoints/cards/RealTimeSiqsProvider';
-import '../photoPoints/map/AMapStyles.css';
+import '../../photoPoints/map/AMapStyles.css';
 
 interface AMapCommunityProps {
   center: [number, number];
