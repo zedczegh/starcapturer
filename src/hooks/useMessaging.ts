@@ -13,12 +13,12 @@ export function useMessaging() {
     deleteConversation
   } = useMessageActions(fetchMessages, fetchConversations, setMessages);
 
-  // Optimized sendMessage with optimistic updates
   const sendMessage = async (
     partnerId: string,
     text: string,
     imageFile?: File | null,
-    locationData?: any
+    locationData?: any,
+    replyToMessageId?: string
   ) => {
     try {
       // Optimistic update - add temporary message immediately
@@ -30,13 +30,14 @@ export function useMessaging() {
         image_url: null,
         created_at: new Date().toISOString(),
         read: false,
-        sending: true
+        sending: true,
+        parent_message_id: replyToMessageId || null,
       };
       
       setMessages(prev => [...prev, tempMessage]);
       
       // Send the actual message
-      await sendMessageAction(partnerId, text, imageFile, locationData);
+      await sendMessageAction(partnerId, text, imageFile, locationData, replyToMessageId);
       
       // Fetch fresh messages and conversations in parallel
       await Promise.all([

@@ -11,6 +11,7 @@ import { UploadProgress } from '@/components/ui/upload-progress';
 import { LinkPreview } from './LinkPreview';
 import { supabase } from '@/integrations/supabase/client';
 import { Textarea } from "@/components/ui/textarea";
+import { ReplyPreview } from './ReplyPreview';
 
 interface LinkPreviewData {
   postId: string;
@@ -21,11 +22,18 @@ interface LinkPreviewData {
 }
 
 interface MessageInputProps {
-  onSend: (text: string, imageFile?: File | null, locationData?: any) => void;
+  onSend: (text: string, imageFile?: File | null, locationData?: any, replyToMessageId?: string) => void;
   sending: boolean;
+  replyToMessage?: {
+    id: string;
+    text?: string;
+    image_url?: string;
+    sender_id: string;
+  } | null;
+  onCancelReply?: () => void;
 }
 
-const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
+const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending, replyToMessage, onCancelReply }) => {
   const { t } = useLanguage();
   const [message, setMessage] = useState("");
   const [displayMessage, setDisplayMessage] = useState<React.ReactNode>(null);
@@ -44,12 +52,13 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
   const handleSend = () => {
     if ((!message.trim() && !imageFile) || sending) return;
     
-    onSend(message, imageFile);
+    onSend(message, imageFile, undefined, replyToMessage?.id);
     setMessage("");
     setDisplayMessage(null);
     setImageFile(null);
     setImagePreview(null);
     setLinkPreview(null);
+    if (onCancelReply) onCancelReply();
     
     // Focus back on textarea after sending
     setTimeout(() => {
@@ -205,12 +214,17 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
   };
 
   return (
-    <div className="border-t border-cosmic-700/40 p-4 bg-gradient-to-t from-slate-900/95 via-slate-800/85 to-slate-700/70 space-y-3 sticky bottom-0 backdrop-blur-xl z-20 shadow-[0_-8px_24px_-12px_rgba(6,182,212,0.15)]">
-      <UploadProgress 
-        progress={uploadProgress} 
-        fileName={imageFile?.name || ''}
-        show={uploading} 
-      />
+    <div className="border-t border-cosmic-700/40 bg-gradient-to-t from-slate-900/95 via-slate-800/85 to-slate-700/70 sticky bottom-0 backdrop-blur-xl z-20 shadow-[0_-8px_24px_-12px_rgba(6,182,212,0.15)]">
+      {replyToMessage && onCancelReply && (
+        <ReplyPreview replyToMessage={replyToMessage} onCancel={onCancelReply} />
+      )}
+      
+      <div className="p-4 space-y-3">
+        <UploadProgress 
+          progress={uploadProgress} 
+          fileName={imageFile?.name || ''}
+          show={uploading} 
+        />
       
       {linkPreview && (
         <LinkPreview 
@@ -339,6 +353,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
             onChange={handleFileChange}
             disabled={sending}
           />
+        </div>
         </div>
       </div>
     </div>

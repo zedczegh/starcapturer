@@ -18,7 +18,7 @@ interface MessageContainerProps {
   setSearchQuery: (query: string) => void;
   onSelectConversation: (conversation: ConversationPartner) => void;
   onBack: () => void;
-  onSendMessage: (message: string, imageFile?: File | null, locationData?: any) => Promise<void>;
+  onSendMessage: (message: string, imageFile?: File | null, locationData?: any, replyToMessageId?: string) => Promise<void>;
   onUnsendMessage: (messageId: string) => Promise<boolean>;
   onDeleteConversation: (partnerId: string) => Promise<boolean>;
   sending: boolean;
@@ -44,10 +44,16 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
 }) => {
   const messageListRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
+  const [replyToMessage, setReplyToMessage] = React.useState<any>(null);
 
   const conversationListVisible = !activeConversation || !isMobile;
   const messagesVisible = activeConversation || !isMobile;
   const showMessageSkeleton = loading && activeConversation && messages.length === 0;
+
+  const handleSendMessage = async (text: string, imageFile?: File | null, locationData?: any, replyToMessageId?: string) => {
+    await onSendMessage(text, imageFile, locationData, replyToMessageId);
+    setReplyToMessage(null);
+  };
 
   return (
     <div className={`flex flex-col md:flex-row gap-4 ${isMobile ? 'h-[calc(100vh-5rem)]' : 'h-[80vh]'} scrollbar-hide`}>
@@ -82,11 +88,14 @@ const MessageContainer: React.FC<MessageContainerProps> = ({
                 activeConversation={activeConversation}
                 onBack={onBack}
                 onUnsendMessage={onUnsendMessage}
+                onReplyToMessage={setReplyToMessage}
               />
             )}
             <MessageInput 
-              onSend={onSendMessage}
+              onSend={handleSendMessage}
               sending={sending || isProcessingAction}
+              replyToMessage={replyToMessage}
+              onCancelReply={() => setReplyToMessage(null)}
             />
           </div>
         ) : (
