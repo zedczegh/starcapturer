@@ -61,24 +61,24 @@ const PreferencesForm = () => {
   };
 
   return (
-    <Card className="glassmorphism px-8 py-12 rounded-2xl shadow-glow space-y-8 flex flex-col">
+    <Card className="glassmorphism px-3 py-6 sm:px-8 sm:py-12 rounded-xl sm:rounded-2xl shadow-glow space-y-5 sm:space-y-8 flex flex-col border-transparent sm:border-cosmic-700/30">
       {/* Language Switch */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Globe className="h-6 w-6 text-primary" />
-          <span className="font-medium text-lg">{t("Default Language", "默认语言")}</span>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Globe className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0" />
+          <span className="font-medium text-base sm:text-lg">{t("Default Language", "默认语言")}</span>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-2">
           <Button
             variant={prefs.language === "en" ? "default" : "outline"}
-            className="px-4 py-1"
+            className="px-6 py-1.5 text-sm flex-1 sm:flex-none"
             onClick={() => handleChange("language", "en")}
           >
             English
           </Button>
           <Button
             variant={prefs.language === "zh" ? "default" : "outline"}
-            className="px-4 py-1"
+            className="px-6 py-1.5 text-sm flex-1 sm:flex-none"
             onClick={() => handleChange("language", "zh")}
           >
             中文
@@ -86,10 +86,10 @@ const PreferencesForm = () => {
         </div>
       </div>
       {/* SIQS Cache on login */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Trash className="h-5 w-5 text-destructive" />
-          <span className="font-medium text-lg">{t("Clear SIQS cache on login", "登录时清除SIQS缓存")}</span>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+          <Trash className="h-4 w-4 sm:h-5 sm:w-5 text-destructive flex-shrink-0" />
+          <span className="font-medium text-sm sm:text-lg leading-tight">{t("Clear SIQS cache on login", "登录时清除SIQS缓存")}</span>
         </div>
         <Switch
           checked={prefs.clearSiqsCacheOnLogin}
@@ -97,20 +97,20 @@ const PreferencesForm = () => {
         />
       </div>
       {/* Immediate clear cache */}
-      <div className="flex justify-end">
+      <div className="flex justify-stretch sm:justify-end">
         <Button
           variant="destructive"
           onClick={handleClearSiqsCacheNow}
-          className="rounded-full px-6"
+          className="rounded-full px-6 w-full sm:w-auto"
         >
           {t("Clear Now", "立即清除")}
         </Button>
       </div>
       {/* Location Service */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <MapPin className="h-5 w-5 text-primary" />
-          <span className="font-medium text-lg">{t("Enable location service by default", "默认启用定位服务")}</span>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+          <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+          <span className="font-medium text-sm sm:text-lg leading-tight">{t("Enable location service by default", "默认启用定位服务")}</span>
         </div>
         <Switch
           checked={prefs.allowLocationService}
@@ -119,42 +119,42 @@ const PreferencesForm = () => {
       </div>
 
       {/* Map Provider */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Map className="h-5 w-5 text-primary" />
-          <div className="flex flex-col">
-            <span className="font-medium text-lg">{t("Map Provider", "地图服务")}</span>
-            <span className="text-sm text-muted-foreground">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Map className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+          <div className="flex flex-col flex-1 min-w-0">
+            <span className="font-medium text-sm sm:text-lg">{t("Map Provider", "地图服务")}</span>
+            <span className="text-xs sm:text-sm text-muted-foreground">
               {t("Auto-detects based on location", "根据位置自动检测")}
             </span>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full">
           <Button
             variant={provider === "leaflet" ? "default" : "outline"}
-            className="px-4 py-1"
+            className="px-4 py-2 text-sm flex-1"
             onClick={() => setProvider("leaflet")}
           >
             Leaflet
           </Button>
           <Button
             variant={provider === "amap" ? "default" : "outline"}
-            className="px-4 py-1"
+            className="px-4 py-2 text-sm flex-1"
             onClick={() => setProvider("amap")}
           >
             {t("AMap", "高德地图")}
           </Button>
         </div>
+        
+        {/* Map Provider Status */}
+        {provider === "amap" && (
+          <div className="text-xs sm:text-sm text-muted-foreground pl-7 sm:pl-8">
+            {isAMapReady 
+              ? `✓ ${t("AMap loaded successfully", "高德地图加载成功")}`
+              : `⏳ ${t("Loading AMap...", "正在加载高德地图...")}`}
+          </div>
+        )}
       </div>
-
-      {/* Map Provider Status */}
-      {provider === "amap" && (
-        <div className="text-sm text-muted-foreground">
-          {isAMapReady 
-            ? `✓ ${t("AMap loaded successfully", "高德地图加载成功")}`
-            : `⏳ ${t("Loading AMap...", "正在加载高德地图...")}`}
-        </div>
-      )}
     </Card>
   );
 };
