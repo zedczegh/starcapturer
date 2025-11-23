@@ -206,14 +206,12 @@ export class MotionAnimationEngine {
       if (dist < maxDist) {
         const weight = Math.pow(1 - dist / maxDist, 2) * vector.strength;
         
-        // Smooth unidirectional motion (no oscillation)
-        const progress = (frame % 120) / 120; // Loop every 120 frames
-        const smoothProgress = progress < 0.5 
-          ? 2 * progress * progress // Ease in
-          : 1 - Math.pow(-2 * progress + 2, 2) / 2; // Ease out
+        // Create oscillating motion for loop effect
+        const phase = (frame % 60) / 60 * Math.PI * 2;
+        const amplitude = Math.sin(phase);
         
-        totalDx += vector.dx * weight * smoothProgress;
-        totalDy += vector.dy * weight * smoothProgress;
+        totalDx += vector.dx * weight * amplitude;
+        totalDy += vector.dy * weight * amplitude;
         totalWeight += weight;
       }
     }
@@ -235,37 +233,25 @@ export class MotionAnimationEngine {
     if (!this.isAnimating || !this.sourceImageData) return;
 
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
-    const data = imageData.data;
-    const sourceData = this.sourceImageData.data;
-    const width = this.canvas.width;
-    const height = this.canvas.height;
 
-    // Optimized pixel processing
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
+    // Apply displacement to each pixel, always sampling from original image
+    for (let y = 0; y < this.canvas.height; y++) {
+      for (let x = 0; x < this.canvas.width; x++) {
         const displacement = this.calculateDisplacement(x, y, this.currentFrame);
         
         const sourceX = Math.round(x - displacement.dx);
         const sourceY = Math.round(y - displacement.dy);
 
-        const targetIdx = (y * width + x) * 4;
+        // Bounds checking
+        if (sourceX >= 0 && sourceX < this.canvas.width && 
+            sourceY >= 0 && sourceY < this.canvas.height) {
+          const sourceIdx = (sourceY * this.canvas.width + sourceX) * 4;
+          const targetIdx = (y * this.canvas.width + x) * 4;
 
-        // Bounds checking with early copy for in-bounds pixels
-        if (sourceX >= 0 && sourceX < width && sourceY >= 0 && sourceY < height) {
-          const sourceIdx = (sourceY * width + sourceX) * 4;
-          
-          // Direct array access for better performance
-          data[targetIdx] = sourceData[sourceIdx];
-          data[targetIdx + 1] = sourceData[sourceIdx + 1];
-          data[targetIdx + 2] = sourceData[sourceIdx + 2];
-          data[targetIdx + 3] = sourceData[sourceIdx + 3];
-        } else {
-          // Out of bounds - use original pixel
-          const originalIdx = targetIdx;
-          data[targetIdx] = sourceData[originalIdx];
-          data[targetIdx + 1] = sourceData[originalIdx + 1];
-          data[targetIdx + 2] = sourceData[originalIdx + 2];
-          data[targetIdx + 3] = sourceData[originalIdx + 3];
+          imageData.data[targetIdx] = this.sourceImageData.data[sourceIdx];
+          imageData.data[targetIdx + 1] = this.sourceImageData.data[sourceIdx + 1];
+          imageData.data[targetIdx + 2] = this.sourceImageData.data[sourceIdx + 2];
+          imageData.data[targetIdx + 3] = this.sourceImageData.data[sourceIdx + 3];
         }
       }
     }
