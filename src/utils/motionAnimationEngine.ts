@@ -199,9 +199,10 @@ export class MotionAnimationEngine {
         const falloff = 1 - normalizedDist;
         const weight = falloff * falloff * falloff * falloff * vector.strength;
         
-        // Continuous infinite motion without loop reset (true seamless animation)
-        // Displacement keeps accumulating forever, creating perpetual motion
-        const amplitude = (frame * 0.0025); // Smooth continuous growth
+        // Continuous constant-speed motion with wrapping (Motion Leap style)
+        // Use modulo to wrap displacement, creating infinite seamless motion
+        const speed = 0.015; // Much faster constant speed
+        const amplitude = (frame * speed) % 30; // Wrap at 30 pixels for seamless tiling
         
         totalDx += vector.dx * weight * amplitude;
         totalDy += vector.dy * weight * amplitude;
@@ -209,21 +210,12 @@ export class MotionAnimationEngine {
       }
     }
 
-    if (totalWeight > 0) {
-      // Normalize and limit maximum displacement to prevent artifacts
+  if (totalWeight > 0) {
+      // Normalize displacement
       const dx = totalDx / totalWeight;
       const dy = totalDy / totalWeight;
-      const maxDisplacement = 8; // Maximum 8 pixels displacement
-      const magnitude = Math.sqrt(dx * dx + dy * dy);
       
-      if (magnitude > maxDisplacement) {
-        const scale = maxDisplacement / magnitude;
-        return {
-          dx: dx * scale,
-          dy: dy * scale
-        };
-      }
-      
+      // No clamping - let displacement wrap naturally for continuous motion
       return { dx, dy };
     }
 
