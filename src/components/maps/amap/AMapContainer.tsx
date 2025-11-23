@@ -3,6 +3,8 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { createAMapMarkerIcon, createAMapPopupContent, shouldShowLocationMarker } from './AMapMarkerUtils';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import RealTimeSiqsProvider from '@/components/photoPoints/cards/RealTimeSiqsProvider';
+import CreateAstroSpotDialog from '@/components/astro-spots/CreateAstroSpotDialog';
+import { useAuth } from '@/contexts/AuthContext';
 import '../../photoPoints/map/AMapStyles.css';
 
 interface AMapContainerProps {
@@ -43,6 +45,8 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
   const circleRef = useRef<any>(null);
   const [realTimeSiqsMap, setRealTimeSiqsMap] = useState<Map<string, number>>(new Map());
   const [userProfilesMap, setUserProfilesMap] = useState<Map<string, { avatar_url?: string; username?: string }>>(new Map());
+  const [createSpotDialogOpen, setCreateSpotDialogOpen] = useState(false);
+  const [createSpotLocation, setCreateSpotLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
 
   // Setup global callback for popup details
   useEffect(() => {
@@ -53,8 +57,24 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
       }
     };
     
+    // Setup create spot handler
+    (window as any).openAMapCreateSpotDialog = async (lat: number, lng: number) => {
+      try {
+        const { getEnhancedLocationDetails } = await import('@/services/geocoding/enhancedReverseGeocoding');
+        const details = await getEnhancedLocationDetails(lat, lng, 'en');
+        const locationName = details.formattedName || 'My Spot';
+        setCreateSpotLocation({ lat, lng, name: locationName });
+        setCreateSpotDialogOpen(true);
+      } catch (error) {
+        console.error('Error fetching location:', error);
+        setCreateSpotLocation({ lat, lng, name: 'My Spot' });
+        setCreateSpotDialogOpen(true);
+      }
+    };
+    
     return () => {
       delete (window as any).viewAMapSpotDetails;
+      delete (window as any).openAMapCreateSpotDialog;
     };
   }, [locations, onLocationClick]);
 
@@ -248,7 +268,7 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
           </button>
           
           <button 
-            onclick="window.location.href='/create-spot?lat=${userLocation.latitude}&lng=${userLocation.longitude}'" 
+            onclick="window.openAMapCreateSpotDialog(${userLocation.latitude}, ${userLocation.longitude})" 
             style="
               width: 100%;
               padding: 10px 12px;
@@ -500,6 +520,19 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
       })}
       
       <div ref={mapContainer} className="w-full h-full" />
+      
+      {/* Create Spot Dialog */}
+      {createSpotDialogOpen && createSpotLocation && (
+        <CreateAstroSpotDialog
+          latitude={createSpotLocation.lat}
+          longitude={createSpotLocation.lng}
+          defaultName={createSpotLocation.name}
+          onClose={() => {
+            setCreateSpotDialogOpen(false);
+            setCreateSpotLocation(null);
+          }}
+        />
+      )}
     </div>
   );
 };
