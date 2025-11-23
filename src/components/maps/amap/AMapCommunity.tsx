@@ -182,7 +182,9 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
 
     // Setup location details handler
     (window as any).viewUserLocationDetails = () => {
-      window.location.href = `/location/${userPosition[0].toFixed(6)},${userPosition[1].toFixed(6)}`;
+      const url = `/location/${userPosition[0].toFixed(6)},${userPosition[1].toFixed(6)}`;
+      // Use direct navigation without waiting for async operations
+      window.location.href = url;
     };
 
     // Create and setup popup immediately
