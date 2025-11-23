@@ -22,30 +22,41 @@ const AMapKeyConfig: React.FC = () => {
   const checkAMapKey = async () => {
     try {
       setIsLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Wait a bit for auth to be ready
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        setIsLoading(false);
+        return;
+      }
       
       if (!session) {
-        console.log('No session found');
+        console.log('No active session found');
         setIsLoading(false);
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('get-amap-key', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+      const { data, error } = await supabase.functions.invoke('get-amap-key');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
+      }
 
-      setHasKey(data.hasKey);
-      if (data.key && data.hasKey) {
-        // Show first 8 chars and last 4 chars
-        const key = data.key;
-        if (key.length > 12) {
-          setKeyPreview(`${key.substring(0, 8)}...${key.substring(key.length - 4)}`);
-        } else {
-          setKeyPreview('***');
+      if (data) {
+        setHasKey(data.hasKey);
+        if (data.key && data.hasKey) {
+          // Show first 8 chars and last 4 chars
+          const key = data.key;
+          if (key.length > 12) {
+            setKeyPreview(`${key.substring(0, 8)}...${key.substring(key.length - 4)}`);
+          } else {
+            setKeyPreview('***');
+          }
         }
       }
     } catch (error) {
