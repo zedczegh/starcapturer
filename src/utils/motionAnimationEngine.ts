@@ -12,6 +12,10 @@ interface MotionVector {
   strength: number;
 }
 
+interface MotionTrail {
+  points: { x: number; y: number }[];
+}
+
 interface AnchorPoint {
   x: number;
   y: number;
@@ -23,6 +27,7 @@ export class MotionAnimationEngine {
   private ctx: CanvasRenderingContext2D;
   private sourceImage: HTMLImageElement;
   private motionVectors: MotionVector[] = [];
+  private motionTrails: MotionTrail[] = [];
   private anchorPoints: AnchorPoint[] = [];
   private animationFrame: number | null = null;
   private currentFrame: number = 0;
@@ -45,6 +50,13 @@ export class MotionAnimationEngine {
       dy: y2 - y1,
       strength
     });
+  }
+
+  /**
+   * Add a motion trail for display (single arrow at end)
+   */
+  addMotionTrail(points: { x: number; y: number }[]) {
+    this.motionTrails.push({ points });
   }
 
   /**
@@ -76,12 +88,13 @@ export class MotionAnimationEngine {
    */
   clear() {
     this.motionVectors = [];
+    this.motionTrails = [];
     this.anchorPoints = [];
     this.stop();
   }
 
   /**
-   * Draw overlay showing motion vectors and anchor points
+   * Draw overlay showing motion trails and anchor points
    */
   drawOverlay(overlayCtx: CanvasRenderingContext2D) {
     overlayCtx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -98,34 +111,44 @@ export class MotionAnimationEngine {
       overlayCtx.stroke();
     });
 
-    // Draw motion vectors
-    this.motionVectors.forEach(vector => {
-      const x2 = vector.x + vector.dx;
-      const y2 = vector.y + vector.dy;
-      const headLength = 15;
-      const angle = Math.atan2(vector.dy, vector.dx);
+    // Draw motion trails (one arrow per trail at the end)
+    this.motionTrails.forEach(trail => {
+      const points = trail.points;
+      if (points.length < 2) return;
 
-      overlayCtx.strokeStyle = "rgba(59, 130, 246, 0.8)";
-      overlayCtx.fillStyle = "rgba(59, 130, 246, 0.8)";
-      overlayCtx.lineWidth = 3;
+      // Draw smooth trail line
+      overlayCtx.strokeStyle = "#3b82f6";
+      overlayCtx.lineWidth = 4;
       overlayCtx.lineCap = "round";
+      overlayCtx.lineJoin = "round";
+      overlayCtx.shadowColor = "#3b82f6";
+      overlayCtx.shadowBlur = 10;
 
-      // Draw line
       overlayCtx.beginPath();
-      overlayCtx.moveTo(vector.x, vector.y);
-      overlayCtx.lineTo(x2, y2);
+      overlayCtx.moveTo(points[0].x, points[0].y);
+      
+      for (let i = 1; i < points.length; i++) {
+        overlayCtx.lineTo(points[i].x, points[i].y);
+      }
       overlayCtx.stroke();
 
-      // Draw arrowhead
+      // Draw single arrowhead at the end
+      const last = points[points.length - 1];
+      const secondLast = points[points.length - 2];
+      const angle = Math.atan2(last.y - secondLast.y, last.x - secondLast.x);
+      const headLength = 15;
+
+      overlayCtx.shadowBlur = 0;
+      overlayCtx.fillStyle = "#3b82f6";
       overlayCtx.beginPath();
-      overlayCtx.moveTo(x2, y2);
+      overlayCtx.moveTo(last.x, last.y);
       overlayCtx.lineTo(
-        x2 - headLength * Math.cos(angle - Math.PI / 6),
-        y2 - headLength * Math.sin(angle - Math.PI / 6)
+        last.x - headLength * Math.cos(angle - Math.PI / 6),
+        last.y - headLength * Math.sin(angle - Math.PI / 6)
       );
       overlayCtx.lineTo(
-        x2 - headLength * Math.cos(angle + Math.PI / 6),
-        y2 - headLength * Math.sin(angle + Math.PI / 6)
+        last.x - headLength * Math.cos(angle + Math.PI / 6),
+        last.y - headLength * Math.sin(angle + Math.PI / 6)
       );
       overlayCtx.closePath();
       overlayCtx.fill();
