@@ -40,7 +40,7 @@ export const MotionAnimationCanvas = ({
   const [activeTool, setActiveTool] = useState<Tool>("motion");
   const [brushSize, setBrushSize] = useState(30);
   const [motionStrength, setMotionStrength] = useState(50);
-  const [animationSpeed, setAnimationSpeed] = useState(150); // 200% faster by default
+  const [animationSpeed, setAnimationSpeed] = useState(200); // 200% speed by default (relative to base 100)
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [motionArrowStart, setMotionArrowStart] = useState<{x: number, y: number} | null>(null);
@@ -77,6 +77,17 @@ export const MotionAnimationCanvas = ({
     animationEngineRef.current = new MotionAnimationEngine(canvas, imageElement);
 
   }, [imageElement]);
+
+  // When the animation speed changes while playing, restart the engine with the new speed
+  useEffect(() => {
+    const engine = animationEngineRef.current;
+    const overlayCanvas = overlayCanvasRef.current;
+    if (!engine || !overlayCanvas || !isPlaying) return;
+
+    engine.stop();
+    engine.play(animationSpeed / 100);
+    overlayCanvas.style.opacity = "0";
+  }, [animationSpeed, isPlaying]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = overlayCanvasRef.current;
