@@ -12,7 +12,11 @@ interface MotionVector {
   strength: number;
 }
 
-interface AnchorPoint {
+interface MotionTrail {
+  points: { x: number; y: number }[];
+}
+
+interface RangePoint {
   x: number;
   y: number;
   radius: number;
@@ -23,7 +27,8 @@ export class MotionAnimationEngine {
   private ctx: CanvasRenderingContext2D;
   private sourceImage: HTMLImageElement;
   private motionVectors: MotionVector[] = [];
-  private anchorPoints: AnchorPoint[] = [];
+  private motionTrails: MotionTrail[] = [];
+  private rangePoints: RangePoint[] = [];
   private animationFrame: number | null = null;
   private currentFrame: number = 0;
   private isAnimating: boolean = false;
@@ -48,14 +53,21 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Add an anchor point (area that stays still)
+   * Add a motion trail for display (single arrow at end)
    */
-  addAnchorPoint(x: number, y: number, radius: number) {
-    this.anchorPoints.push({ x, y, radius });
+  addMotionTrail(points: { x: number; y: number }[]) {
+    this.motionTrails.push({ points });
   }
 
   /**
-   * Remove motion vectors or anchor points at a location
+   * Add a range point (area that should move)
+   */
+  addRangePoint(x: number, y: number, radius: number) {
+    this.rangePoints.push({ x, y, radius });
+  }
+
+  /**
+   * Remove motion vectors or range points at a location
    */
   removeAtPoint(x: number, y: number, radius: number) {
     // Remove motion vectors
@@ -64,68 +76,79 @@ export class MotionAnimationEngine {
       return dist > radius;
     });
 
-    // Remove anchor points
-    this.anchorPoints = this.anchorPoints.filter(a => {
-      const dist = Math.sqrt((a.x - x) ** 2 + (a.y - y) ** 2);
+    // Remove range points
+    this.rangePoints = this.rangePoints.filter(r => {
+      const dist = Math.sqrt((r.x - x) ** 2 + (r.y - y) ** 2);
       return dist > radius;
     });
   }
 
   /**
-   * Clear all motion vectors and anchor points
+   * Clear all motion vectors and range points
    */
   clear() {
     this.motionVectors = [];
-    this.anchorPoints = [];
+    this.motionTrails = [];
+    this.rangePoints = [];
     this.stop();
   }
 
   /**
-   * Draw overlay showing motion vectors and anchor points
+   * Draw overlay showing motion trails and range points
    */
   drawOverlay(overlayCtx: CanvasRenderingContext2D) {
     overlayCtx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Draw anchor points
-    this.anchorPoints.forEach(anchor => {
-      overlayCtx.fillStyle = "rgba(255, 59, 48, 0.3)";
+    // Draw range points (areas that will move)
+    this.rangePoints.forEach(range => {
+      overlayCtx.fillStyle = "rgba(34, 197, 94, 0.3)"; // Green for motion areas
       overlayCtx.beginPath();
-      overlayCtx.arc(anchor.x, anchor.y, anchor.radius, 0, Math.PI * 2);
+      overlayCtx.arc(range.x, range.y, range.radius, 0, Math.PI * 2);
       overlayCtx.fill();
       
-      overlayCtx.strokeStyle = "rgba(255, 59, 48, 0.6)";
+      overlayCtx.strokeStyle = "rgba(34, 197, 94, 0.6)";
       overlayCtx.lineWidth = 2;
       overlayCtx.stroke();
     });
 
-    // Draw motion vectors
-    this.motionVectors.forEach(vector => {
-      const x2 = vector.x + vector.dx;
-      const y2 = vector.y + vector.dy;
-      const headLength = 15;
-      const angle = Math.atan2(vector.dy, vector.dx);
+    // Draw motion trails (one arrow per trail at the end)
+    this.motionTrails.forEach(trail => {
+      const points = trail.points;
+      if (points.length < 2) return;
 
-      overlayCtx.strokeStyle = "rgba(59, 130, 246, 0.8)";
-      overlayCtx.fillStyle = "rgba(59, 130, 246, 0.8)";
-      overlayCtx.lineWidth = 3;
+      // Draw smooth trail line
+      overlayCtx.strokeStyle = "#3b82f6";
+      overlayCtx.lineWidth = 4;
       overlayCtx.lineCap = "round";
+      overlayCtx.lineJoin = "round";
+      overlayCtx.shadowColor = "#3b82f6";
+      overlayCtx.shadowBlur = 10;
 
-      // Draw line
       overlayCtx.beginPath();
-      overlayCtx.moveTo(vector.x, vector.y);
-      overlayCtx.lineTo(x2, y2);
+      overlayCtx.moveTo(points[0].x, points[0].y);
+      
+      for (let i = 1; i < points.length; i++) {
+        overlayCtx.lineTo(points[i].x, points[i].y);
+      }
       overlayCtx.stroke();
 
-      // Draw arrowhead
+      // Draw single arrowhead at the end
+      const last = points[points.length - 1];
+      const secondLast = points[points.length - 2];
+      const angle = Math.atan2(last.y - secondLast.y, last.x - secondLast.x);
+      const headLength = 15;
+
+      overlayCtx.shadowBlur = 0;
+      overlayCtx.fillStyle = "#3b82f6";
       overlayCtx.beginPath();
-      overlayCtx.moveTo(x2, y2);
+      overlayCtx.moveTo(last.x, last.y);
       overlayCtx.lineTo(
-        x2 - headLength * Math.cos(angle - Math.PI / 6),
-        y2 - headLength * Math.sin(angle - Math.PI / 6)
+        last.x - headLength * Math.cos(angle - Math.PI / 6),
+        last.y - headLength * Math.sin(angle - Math.PI / 6)
       );
       overlayCtx.lineTo(
-        x2 - headLength * Math.cos(angle + Math.PI / 6),
-        y2 - headLength * Math.sin(angle + Math.PI / 6)
+        last.x - headLength * Math.cos(angle + Math.PI / 6),
+        last.y - headLength * Math.sin(angle + Math.PI / 6)
       );
       overlayCtx.closePath();
       overlayCtx.fill();
@@ -133,19 +156,29 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Calculate displacement for a pixel based on motion vectors and anchor points
+   * Calculate displacement for a pixel based on motion vectors and range points
    */
   private calculateDisplacement(x: number, y: number, frame: number): { dx: number; dy: number } {
     let totalDx = 0;
     let totalDy = 0;
     let totalWeight = 0;
 
-    // Check if pixel is in an anchor point
-    for (const anchor of this.anchorPoints) {
-      const dist = Math.sqrt((x - anchor.x) ** 2 + (y - anchor.y) ** 2);
-      if (dist < anchor.radius) {
-        return { dx: 0, dy: 0 }; // No movement in anchored areas
+    // Check if pixel is in a range point - if range points exist, only animate those areas
+    let inRange = this.rangePoints.length === 0; // If no range points, animate everything
+    
+    if (this.rangePoints.length > 0) {
+      for (const range of this.rangePoints) {
+        const dist = Math.sqrt((x - range.x) ** 2 + (y - range.y) ** 2);
+        if (dist < range.radius) {
+          inRange = true;
+          break;
+        }
       }
+    }
+
+    // If not in range, no movement
+    if (!inRange) {
+      return { dx: 0, dy: 0 };
     }
 
     // Calculate displacement from motion vectors
