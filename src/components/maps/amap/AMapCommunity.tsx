@@ -27,6 +27,7 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const markersRef = useRef<Map<string, any>>(new Map());
+  const infoWindowsRef = useRef<Map<string, any>>(new Map());
   const userMarkerRef = useRef<any>(null);
   const { position: userPosition, updatePosition } = useUserGeolocation();
   const [realTimeSiqsMap, setRealTimeSiqsMap] = useState<Map<string, number>>(new Map());
@@ -136,19 +137,24 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
   useEffect(() => {
     if (!mapInstance.current || !locations) return;
 
-    // Clear existing markers
+    // Clear existing markers and info windows
     markersRef.current.forEach((marker) => {
       if (marker && mapInstance.current) {
         mapInstance.current.remove(marker);
       }
     });
     markersRef.current.clear();
+    infoWindowsRef.current.clear();
 
     // Add new markers
     locations.forEach((spot) => {
       const isCertified = Boolean(spot.isDarkSkyReserve || spot.certification);
       const isHovered = hoveredLocationId === spot.id;
-      const markerIcon = createAMapMarkerIcon(spot, isCertified, isHovered, isMobile);
+      
+      // Get current SIQS (real-time or static)
+      const currentSiqs = realTimeSiqsMap.get(spot.id) || getSiqsScore(spot);
+      
+      const markerIcon = createAMapMarkerIcon(spot, isCertified, isHovered, isMobile, currentSiqs);
       
       const marker = new (window as any).AMap.Marker({
         position: [spot.longitude, spot.latitude],
@@ -156,9 +162,6 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
         content: markerIcon.content,
         offset: new (window as any).AMap.Pixel(...markerIcon.offset),
       });
-
-      // Get current SIQS (real-time or static)
-      const currentSiqs = realTimeSiqsMap.get(spot.id) || getSiqsScore(spot);
 
       // Create info window
       const infoWindow = new (window as any).AMap.InfoWindow({
@@ -176,14 +179,12 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
       });
 
       marker.on('click', () => {
-        if (onMarkerClick) {
-          onMarkerClick(spot);
-        }
         infoWindow.open(mapInstance.current, marker.getPosition());
       });
 
       mapInstance.current.add(marker);
       markersRef.current.set(spot.id, marker);
+      infoWindowsRef.current.set(spot.id, infoWindow);
     });
 
     return () => {
@@ -193,8 +194,9 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
         }
       });
       markersRef.current.clear();
+      infoWindowsRef.current.clear();
     };
-  }, [locations, onMarkerClick, hoveredLocationId, isMobile, realTimeSiqsMap]);
+  }, [locations, hoveredLocationId, isMobile, realTimeSiqsMap]);
 
   // Update marker on hover
   useEffect(() => {
@@ -205,11 +207,12 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
       const location = locations.find(loc => loc.id === hoveredLocationId);
       if (location) {
         const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
-        const markerIcon = createAMapMarkerIcon(location, isCertified, true, isMobile);
+        const currentSiqs = realTimeSiqsMap.get(location.id) || getSiqsScore(location);
+        const markerIcon = createAMapMarkerIcon(location, isCertified, true, isMobile, currentSiqs);
         marker.setContent(markerIcon.content);
       }
     }
-  }, [hoveredLocationId, locations, isMobile]);
+  }, [hoveredLocationId, locations, isMobile, realTimeSiqsMap]);
 
   return (
     <div className="relative w-full h-full">
