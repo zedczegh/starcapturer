@@ -9,6 +9,8 @@ interface CommunityUserLocationMarkerProps {
 }
 
 const CommunityUserLocationMarker = ({ position, onLocationUpdate, draggable = true }: CommunityUserLocationMarkerProps) => {
+  console.log("CommunityUserLocationMarker render:", { position, draggable, hasOnLocationUpdate: !!onLocationUpdate });
+  
   return (
     <UserLocationMarker 
       position={position}
