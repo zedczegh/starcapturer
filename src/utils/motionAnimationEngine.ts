@@ -34,35 +34,27 @@ export class MotionAnimationEngine {
   private isAnimating: boolean = false;
   private workCanvas: HTMLCanvasElement;
   private workCtx: CanvasRenderingContext2D;
+  private originalImageData: ImageData | null = null;
 
   constructor(canvas: HTMLCanvasElement, sourceImage: HTMLImageElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.sourceImage = sourceImage;
     
-    // Resize canvas to max 1080p for performance
-    const maxDimension = 1920;
-    let width = sourceImage.width;
-    let height = sourceImage.height;
+    // Use existing canvas size (already scaled by outer component)
+    const width = canvas.width;
+    const height = canvas.height;
     
-    if (width > maxDimension || height > maxDimension) {
-      const scale = Math.min(maxDimension / width, maxDimension / height);
-      width = Math.floor(width * scale);
-      height = Math.floor(height * scale);
-    }
-    
-    canvas.width = width;
-    canvas.height = height;
-    
-    // Create work canvas for efficient processing
-    this.workCanvas = document.createElement('canvas');
+    // Create work canvas matching display canvas
+    this.workCanvas = document.createElement("canvas");
     this.workCanvas.width = width;
     this.workCanvas.height = height;
     this.workCtx = this.workCanvas.getContext("2d")!;
     
-    // Draw original image to both canvases
+    // Draw original image scaled to canvas once and cache pixels
     this.ctx.drawImage(sourceImage, 0, 0, width, height);
     this.workCtx.drawImage(sourceImage, 0, 0, width, height);
+    this.originalImageData = this.workCtx.getImageData(0, 0, width, height);
   }
 
   /**
@@ -257,7 +249,7 @@ export class MotionAnimationEngine {
     }
 
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
-    const sourceData = this.workCtx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+    const sourceData = this.originalImageData!;
 
     // Sample every 2nd pixel for performance (bilinear sampling happens naturally)
     const step = 2;
@@ -315,8 +307,10 @@ export class MotionAnimationEngine {
       this.animationFrame = null;
     }
     
-    // Redraw original image from work canvas
-    this.ctx.drawImage(this.workCanvas, 0, 0);
+    // Redraw original image from cached data
+    if (this.originalImageData) {
+      this.ctx.putImageData(this.originalImageData, 0, 0);
+    }
   }
 
   /**
