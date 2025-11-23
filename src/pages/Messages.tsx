@@ -1,7 +1,7 @@
-
 import React, { memo, useEffect, useState } from "react";
 import NavBar from "@/components/NavBar";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import LoginPrompt from "@/components/messages/LoginPrompt";
 import MessageContainer from "@/components/messages/MessageContainer";
 import { useMessageConversation } from "@/hooks/messaging/useMessageConversation";
@@ -19,6 +19,7 @@ const MessageContent = memo(({ user }: { user: any }) => {
   const { markMessagesAsViewed } = useNotifications();
   const { isAdmin } = useUserRole();
   const location = useLocation();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('messages');
   
   const {
@@ -60,39 +61,39 @@ const MessageContent = memo(({ user }: { user: any }) => {
 
   // Show tabs for all authenticated users
   return (
-    <div className={`min-h-[calc(100vh-80px)] ${isMobile ? 'pt-16' : 'pt-20'}`}>
-      <div className="container mx-auto px-2 md:px-4 py-4 max-w-6xl">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary via-primary-glow to-primary bg-clip-text text-transparent">Messages</h1>
-          <p className="text-muted-foreground">Connect with other astronomers and track your applications</p>
+    <div className={`min-h-[calc(100vh-80px)] ${isMobile ? 'pt-14' : 'pt-20'}`}>
+      <div className="w-full mx-auto px-0 sm:px-4 py-3 sm:py-4 max-w-6xl">
+        <div className="mb-4 sm:mb-6 px-3 sm:px-0">
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-primary via-primary-glow to-primary bg-clip-text text-transparent">Messages</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm">Connect with other astronomers and track your applications</p>
         </div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'} mb-6 bg-cosmic-800/40 backdrop-blur-xl border border-primary/10`}>
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'} mb-3 sm:mb-6 bg-cosmic-800/40 backdrop-blur-xl border-transparent sm:border-primary/10 rounded-none sm:rounded-lg mx-0`}>
             <TabsTrigger 
               value="messages" 
-              className="data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary/20 data-[state=active]:to-primary/10 data-[state=active]:text-primary transition-all"
+              className="data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary/20 data-[state=active]:to-primary/10 data-[state=active]:text-primary transition-all text-xs sm:text-sm py-2"
             >
-              Messages
+              {isMobile ? t("Chat", "聊天") : t("Messages", "消息")}
             </TabsTrigger>
             <TabsTrigger 
               value="applications" 
-              className="data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary/20 data-[state=active]:to-primary/10 data-[state=active]:text-primary transition-all"
+              className="data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary/20 data-[state=active]:to-primary/10 data-[state=active]:text-primary transition-all text-xs sm:text-sm py-2"
             >
-              My Applications
+              {isMobile ? t("Apps", "申请") : t("My Applications", "我的申请")}
             </TabsTrigger>
             {isAdmin && (
               <TabsTrigger 
                 value="notifications" 
-                className="data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary/20 data-[state=active]:to-primary/10 data-[state=active]:text-primary transition-all"
+                className="data-[state=active]:bg-gradient-to-br data-[state=active]:from-primary/20 data-[state=active]:to-primary/10 data-[state=active]:text-primary transition-all text-xs sm:text-sm py-2"
               >
-                Admin Notifications
+                {isMobile ? t("Admin", "管理") : t("Admin Notifications", "管理员通知")}
               </TabsTrigger>
             )}
           </TabsList>
           
           <TabsContent value="messages" className="mt-0">
-            <div className="bg-cosmic-900/40 backdrop-blur-xl rounded-lg border border-primary/10 overflow-hidden shadow-2xl">
+            <div className="bg-cosmic-900/40 backdrop-blur-xl rounded-none sm:rounded-lg border-l-0 border-r-0 sm:border-l sm:border-r border-y sm:border border-primary/10 overflow-hidden shadow-2xl">
               <MessageContainer
                 activeConversation={activeConversation}
                 conversations={conversations}
@@ -113,14 +114,14 @@ const MessageContent = memo(({ user }: { user: any }) => {
           </TabsContent>
           
           <TabsContent value="applications" className="mt-0">
-            <div className="bg-cosmic-900/40 backdrop-blur-xl rounded-lg border border-primary/10 overflow-hidden shadow-2xl p-6">
+            <div className="bg-cosmic-900/40 backdrop-blur-xl rounded-none sm:rounded-lg border-l-0 border-r-0 sm:border-l sm:border-r border-y sm:border border-primary/10 overflow-hidden shadow-2xl p-3 sm:p-6">
               <UserApplications />
             </div>
           </TabsContent>
           
           {isAdmin && (
             <TabsContent value="notifications" className="mt-0">
-              <div className="bg-cosmic-900/40 backdrop-blur-xl rounded-lg border border-primary/10 overflow-hidden shadow-2xl p-6">
+              <div className="bg-cosmic-900/40 backdrop-blur-xl rounded-none sm:rounded-lg border-l-0 border-r-0 sm:border-l sm:border-r border-y sm:border border-primary/10 overflow-hidden shadow-2xl p-3 sm:p-6">
                 <AdminNotifications />
               </div>
             </TabsContent>
