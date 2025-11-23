@@ -3,7 +3,7 @@ import { SharedAstroSpot } from '@/lib/api/astroSpots';
 import { createAMapMarkerIcon, createAMapPopupContent, shouldShowLocationMarker } from './AMapMarkerUtils';
 import { getSiqsScore } from '@/utils/siqsHelpers';
 import RealTimeSiqsProvider from '@/components/photoPoints/cards/RealTimeSiqsProvider';
-import '../photoPoints/map/AMapStyles.css';
+import '../../photoPoints/map/AMapStyles.css';
 
 interface AMapContainerProps {
   center: [number, number];
