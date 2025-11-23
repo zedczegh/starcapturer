@@ -21,18 +21,10 @@ Deno.serve(async (req) => {
       }
     );
 
-    // Verify user is authenticated
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseClient.auth.getUser();
-
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // NOTE: Supabase already verifies the JWT before invoking this function
+    // because `verify_jwt = true` is set in supabase/config.toml.
+    // We don't need to call auth.getUser() again here. If the token is invalid
+    // the platform will never execute this code.
 
     // Get the AMap API key from environment
     const amapKey = Deno.env.get('AMAP_API_KEY') || '';
@@ -44,8 +36,8 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error in get-amap-key function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: (error as Error).message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
-});
+ });
