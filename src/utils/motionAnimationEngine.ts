@@ -320,7 +320,7 @@ export class MotionAnimationEngine {
   /**
    * Export animation as video
    */
-  async export(format: "mp4" | "webm", fps: number = 30, duration: number = 3): Promise<Blob> {
+  async export(format: "mp4" | "webm", fps: number = 30, duration: number = 6): Promise<Blob> {
     // This is a placeholder - actual video encoding would require FFmpeg or similar
     // For now, we'll create a canvas recording
     

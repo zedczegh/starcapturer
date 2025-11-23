@@ -257,12 +257,12 @@ export const MotionAnimationCanvas = ({
 
     try {
       toast.info(t("Generating animation...", "生成动画中..."));
-      const blob = await animationEngineRef.current.export("mp4", 30, 3);
+      const blob = await animationEngineRef.current.export("webm", 30, 6);
       
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `motion-animation-${Date.now()}.mp4`;
+      a.download = `motion-animation-${Date.now()}.webm`;
       a.click();
       URL.revokeObjectURL(url);
       
