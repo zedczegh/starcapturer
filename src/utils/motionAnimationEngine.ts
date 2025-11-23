@@ -305,6 +305,7 @@ export class MotionAnimationEngine {
 
   /**
    * Render continuous one-directional loop by cycling through keyframes
+   * with crossfade at the end for seamless looping
    */
   private renderLoop(timestamp: number) {
     if (!this.isAnimating) return;
@@ -319,14 +320,23 @@ export class MotionAnimationEngine {
     const progress = (timestamp % this.animationDuration) / this.animationDuration;
     const numFrames = this.keyframes.length;
     
-    // Calculate which two frames to blend between
-    const framePosition = progress * numFrames;
-    const frame1Index = Math.floor(framePosition) % numFrames;
-    const frame2Index = (frame1Index + 1) % numFrames;
-    const blendFactor = framePosition - Math.floor(framePosition);
+    // Crossfade zone - last 20% of animation
+    const crossfadeStart = 0.8;
+    
+    if (progress >= crossfadeStart) {
+      // In crossfade zone - blend last frame with first frame
+      const crossfadeProgress = (progress - crossfadeStart) / (1 - crossfadeStart);
+      this.blendTwoFrames(numFrames - 1, 0, crossfadeProgress);
+    } else {
+      // Normal frame blending
+      const adjustedProgress = progress / crossfadeStart; // Remap to 0-1 for the non-crossfade section
+      const framePosition = adjustedProgress * (numFrames - 1);
+      const frame1Index = Math.floor(framePosition);
+      const frame2Index = Math.min(frame1Index + 1, numFrames - 1);
+      const blendFactor = framePosition - frame1Index;
 
-    // Blend between current frame and next frame
-    this.blendTwoFrames(frame1Index, frame2Index, blendFactor);
+      this.blendTwoFrames(frame1Index, frame2Index, blendFactor);
+    }
 
     this.animationFrame = requestAnimationFrame((t) => this.renderLoop(t));
   }
