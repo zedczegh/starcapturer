@@ -93,9 +93,11 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
 
     mapInstance.current.add(marker);
 
+    let circle: any | null = null;
+
     // Add radius circle
     if (showRadiusCircles && searchRadius > 0) {
-      const circle = new (window as any).AMap.Circle({
+      circle = new (window as any).AMap.Circle({
         center: [userLocation.longitude, userLocation.latitude],
         radius: searchRadius * 1000, // Convert km to meters
         strokeColor: '#3b82f6',
@@ -107,8 +109,11 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
     }
 
     return () => {
-      if (marker) {
+      if (marker && mapInstance.current) {
         mapInstance.current.remove(marker);
+      }
+      if (circle && mapInstance.current) {
+        mapInstance.current.remove(circle);
       }
     };
   }, [userLocation, searchRadius, showRadiusCircles]);
