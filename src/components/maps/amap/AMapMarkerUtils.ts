@@ -188,7 +188,7 @@ export const shouldShowLocationMarker = (
 };
 
 /**
- * Creates popup content HTML for AMap InfoWindow
+ * Creates popup content HTML for AMap InfoWindow with all Leaflet features
  */
 export const createAMapPopupContent = (props: {
   location: SharedAstroSpot;
@@ -199,117 +199,162 @@ export const createAMapPopupContent = (props: {
   onViewDetails: (location: SharedAstroSpot) => void;
   userId?: string;
   isMobile?: boolean;
+  userAvatarUrl?: string;
+  distance?: number;
+  locationType?: string;
 }): string => {
-  const {
-    location,
-    siqsScore,
-    siqsLoading,
-    displayName,
-    isCertified,
-    isMobile = false
+  const { 
+    location, 
+    siqsScore, 
+    displayName, 
+    isCertified, 
+    isMobile = false,
+    userAvatarUrl,
+    distance,
+    locationType
   } = props;
   
-  const displayScore = siqsScore ?? Number(location.siqs || 0);
-  const siqsClass = getSiqsClass(displayScore);
+  // Get display score
+  const displayScore = siqsScore || getSiqsScore(location) || 0;
+  const scoreText = displayScore > 0 ? displayScore.toFixed(1) : 'N/A';
   
-  const starIcon = isCertified ? `
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="display: inline-block; margin-right: 4px; color: #9b87f5;">
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-    </svg>
-  ` : '';
+  // Get score color
+  let scoreColor = '#94a3b8';
+  if (displayScore >= 8) scoreColor = '#10b981';
+  else if (displayScore >= 6) scoreColor = '#fbbf24';
+  else if (displayScore >= 4) scoreColor = '#f59e0b';
+  else if (displayScore >= 2) scoreColor = '#f97316';
+  else if (displayScore > 0) scoreColor = '#ef4444';
   
-  const certificationBadge = isCertified && location.certification ? `
-    <div style="margin-top: 4px; font-size: 12px; font-weight: 500; color: #9b87f5; display: flex; align-items: center;">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 4px;">
-        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-      </svg>
-      ${location.certification}
-    </div>
-  ` : '';
+  // Border color based on SIQS
+  const borderColor = displayScore > 0 ? scoreColor : 'rgba(148, 163, 184, 0.5)';
   
-  const siqsBadgeColor = displayScore >= 7.5 ? '#10b981' : displayScore >= 5.5 ? '#f59e0b' : '#ef4444';
-  const siqsBadge = `
-    <div style="
-      display: inline-flex;
-      align-items: center;
-      padding: 4px 8px;
-      border-radius: 12px;
-      background-color: ${siqsBadgeColor}20;
-      border: 1px solid ${siqsBadgeColor};
-      font-size: 12px;
-      font-weight: 600;
-      color: ${siqsBadgeColor};
-    ">
-      ${siqsLoading ? '...' : `SIQS: ${displayScore.toFixed(1)}`}
-    </div>
-  `;
-  
-  const distanceBadge = typeof location.distance === 'number' && isFinite(location.distance) ? `
-    <span style="font-size: 12px; color: #e5e7eb; margin-left: auto;">
-      ${(location.distance).toFixed(1)} km
-    </span>
-  ` : '';
-  
-  // Dark border based on SIQS score
-  let borderColor = '#4ade80'; // green for excellent
-  if (displayScore < 5.5) {
-    borderColor = '#ef4444'; // red for poor
-  } else if (displayScore < 7.5) {
-    borderColor = '#f59e0b'; // orange for good
+  // Certification badge
+  let certBadge = '';
+  if (isCertified && location.certification) {
+    const starIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="#fbbf24" stroke="#fbbf24" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+    </svg>`;
+    
+    certBadge = `<div style="font-size: 12px; color: #fbbf24; margin-bottom: 6px; display: flex; align-items: center; font-weight: 500;">
+      ${starIcon}${location.certification}
+    </div>`;
   }
   
+  // Location type badge (for Atlas Obscura, mountains, etc.)
+  let locationTypeBadge = '';
+  if (locationType) {
+    const typeIcon = locationType === 'Atlas Obscura' 
+      ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" style="display: inline-block; margin-right: 3px;">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+        </svg>`
+      : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" style="display: inline-block; margin-right: 3px;">
+          <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+        </svg>`;
+    
+    locationTypeBadge = `<div style="font-size: 11px; color: ${locationType === 'Atlas Obscura' ? '#d97706' : '#8b5cf6'}; margin-bottom: 4px; display: flex; align-items: center;">
+      ${typeIcon}${locationType}
+    </div>`;
+  }
+  
+  // User avatar
+  let avatarHtml = '';
+  if (userAvatarUrl) {
+    avatarHtml = `<img 
+      src="${userAvatarUrl}" 
+      style="
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 1.5px solid rgba(100, 116, 139, 0.5);
+        margin-left: 8px;
+        object-fit: cover;
+      " 
+      onerror="this.style.display='none'"
+    />`;
+  }
+  
+  // Distance display
+  let distanceHtml = '';
+  if (distance !== undefined && isFinite(distance)) {
+    const distanceText = distance < 1 
+      ? `${Math.round(distance * 1000)}m` 
+      : `${distance.toFixed(1)}km`;
+    distanceHtml = `<span style="font-size: 11px; color: #cbd5e1; margin-left: auto;">
+      ${distanceText}
+    </span>`;
+  }
+  
+  // Coordinates display
+  const coordsHtml = `<div style="font-size: 11px; color: #94a3b8; margin-bottom: 8px;">
+    ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}
+  </div>`;
+  
   return `
-    <div style="
-      padding: 12px;
-      min-width: 200px;
-      max-width: 280px;
-      font-family: system-ui, -apple-system, sans-serif;
-      background: linear-gradient(to bottom, rgba(24, 24, 27, 0.98), rgba(9, 9, 11, 0.98));
-      border-left: 3px solid ${borderColor};
+    <div class="amap-popup-wrapper" style="
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.95) 100%);
+      border-left: 4px solid ${borderColor};
       border-radius: 8px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-    " class="amap-popup-content ${siqsClass}">
-      <div style="font-weight: 600; font-size: 14px; margin-bottom: 8px; color: #ffffff; display: flex; align-items: center;">
-        ${starIcon}
-        <span>${displayName}</span>
+      padding: 12px;
+      min-width: ${isMobile ? '200px' : '220px'};
+      max-width: 280px;
+      color: white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    ">
+      ${certBadge}
+      ${locationTypeBadge}
+      
+      <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px; color: #f1f5f9;">
+        ${displayName}
       </div>
       
-      ${certificationBadge}
+      ${coordsHtml}
       
-      <div style="margin-top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-        ${siqsBadge}
-        ${distanceBadge}
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <div style="display: flex; align-items: center;">
+          ${isCertified ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="#fbbf24" stroke="none" style="margin-right: 4px;">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>` : ''}
+          <div style="
+            color: ${scoreColor};
+            font-weight: 600;
+            font-size: 16px;
+          ">
+            ${scoreText}
+          </div>
+          ${avatarHtml}
+        </div>
+        ${distanceHtml}
       </div>
       
-      <div style="margin-top: 12px; text-align: center;">
-        <button 
-          onclick="window.viewAMapSpotDetails('${location.id}')"
-          style="
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            background-color: rgba(155, 135, 245, 0.2);
-            color: #9b87f5;
-            padding: ${isMobile ? '12px' : '8px'} 12px;
-            border-radius: 6px;
-            border: 1px solid rgba(155, 135, 245, 0.3);
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 500;
-            transition: all 0.2s;
-          "
-          onmouseover="this.style.backgroundColor='rgba(155, 135, 245, 0.3)'; this.style.borderColor='rgba(155, 135, 245, 0.5)'"
-          onmouseout="this.style.backgroundColor='rgba(155, 135, 245, 0.2)'; this.style.borderColor='rgba(155, 135, 245, 0.3)'"
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-            <polyline points="15 3 21 3 21 9"></polyline>
-            <line x1="10" y1="14" x2="21" y2="3"></line>
-          </svg>
-          View Details
-        </button>
-      </div>
+      <button 
+        onclick="viewAMapSpotDetails('${location.id}')" 
+        style="
+          width: 100%;
+          padding: ${isMobile ? '12px' : '8px'} 12px;
+          background: rgba(59, 130, 246, 0.2);
+          color: #dbeafe;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 13px;
+          font-weight: 500;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        "
+        onmouseover="this.style.background='rgba(59, 130, 246, 0.3)'"
+        onmouseout="this.style.background='rgba(59, 130, 246, 0.2)'"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <line x1="10" y1="14" x2="21" y2="3"></line>
+        </svg>
+        View ${isMobile ? 'Profile' : 'Details'}
+      </button>
     </div>
   `;
 };

@@ -42,6 +42,7 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
   const userMarkerRef = useRef<any>(null);
   const circleRef = useRef<any>(null);
   const [realTimeSiqsMap, setRealTimeSiqsMap] = useState<Map<string, number>>(new Map());
+  const [userProfilesMap, setUserProfilesMap] = useState<Map<string, { avatar_url?: string; username?: string }>>(new Map());
 
   // Setup global callback for popup details
   useEffect(() => {
@@ -104,7 +105,34 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
       newMap.set(locationId, siqs);
       return newMap;
     });
-  }, []);
+    
+    // Update the InfoWindow content when SIQS changes
+    const infoWindow = infoWindowsRef.current.get(locationId);
+    const location = locations.find(loc => loc.id === locationId);
+    if (infoWindow && location) {
+      const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
+      const userProfile = userProfilesMap.get(location.user_id || '');
+      
+      // Determine location type
+      let locationType = '';
+      if (location.certification === 'Atlas Obscura') locationType = 'Atlas Obscura';
+      else if (location.certification?.toLowerCase().includes('mountain')) locationType = 'Mountain';
+      
+      infoWindow.setContent(createAMapPopupContent({
+        location,
+        siqsScore: siqs,
+        siqsLoading: false,
+        displayName: location.name,
+        isCertified,
+        onViewDetails: () => {},
+        userId: location.user_id,
+        isMobile,
+        userAvatarUrl: userProfile?.avatar_url,
+        distance: location.distance,
+        locationType,
+      }));
+    }
+  }, [locations, userProfilesMap, isMobile]);
 
   // Add user location marker
   useEffect(() => {
@@ -162,6 +190,39 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
     };
   }, [userLocation, searchRadius, showRadiusCircles]);
 
+  // Fetch user profiles for avatars
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      const userIds = [...new Set(locations.map(loc => loc.user_id).filter(Boolean))];
+      const newProfiles = new Map(userProfilesMap);
+      
+      for (const userId of userIds) {
+        if (!userId || newProfiles.has(userId)) continue;
+        
+        try {
+          const { supabase } = await import('@/integrations/supabase/client');
+          const { data } = await supabase
+            .from('profiles')
+            .select('avatar_url, username')
+            .eq('id', userId)
+            .single();
+          
+          if (data) {
+            newProfiles.set(userId, data);
+          }
+        } catch (error) {
+          console.error('Error fetching profile:', error);
+        }
+      }
+      
+      setUserProfilesMap(newProfiles);
+    };
+    
+    if (locations.length > 0) {
+      fetchProfiles();
+    }
+  }, [locations]);
+
   // Add location markers with real-time SIQS
   useEffect(() => {
     if (!mapInstance.current || !locations) return;
@@ -198,6 +259,14 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
         offset: new (window as any).AMap.Pixel(...markerIcon.offset),
       });
 
+      // Get user profile for avatar
+      const userProfile = userProfilesMap.get(location.user_id || '');
+      
+      // Determine location type
+      let locationType = '';
+      if (location.certification === 'Atlas Obscura') locationType = 'Atlas Obscura';
+      else if (location.certification?.toLowerCase().includes('mountain')) locationType = 'Mountain';
+
       // Create info window with current SIQS
       const infoWindow = new (window as any).AMap.InfoWindow({
         content: createAMapPopupContent({
@@ -209,6 +278,9 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
           onViewDetails: () => {},
           userId: location.user_id,
           isMobile,
+          userAvatarUrl: userProfile?.avatar_url,
+          distance: location.distance,
+          locationType,
         }),
         offset: new (window as any).AMap.Pixel(0, -markerIcon.size[1] / 2),
       });
@@ -231,7 +303,7 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
       markersRef.current.clear();
       infoWindowsRef.current.clear();
     };
-  }, [locations, activeView, hoveredLocationId, isMobile, realTimeSiqsMap]);
+  }, [locations, activeView, hoveredLocationId, isMobile, realTimeSiqsMap, userProfilesMap]);
 
   // Update marker appearance when hovered
   useEffect(() => {
