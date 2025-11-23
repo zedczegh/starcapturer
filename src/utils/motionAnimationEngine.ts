@@ -248,7 +248,7 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Calculate displacement for a pixel with controlled, small motion
+   * Calculate displacement for a pixel with controlled motion
    */
   private calculateDisplacement(x: number, y: number, intensity: number): { dx: number; dy: number } {
     let totalDx = 0;
@@ -282,8 +282,8 @@ export class MotionAnimationEngine {
         const falloff = Math.exp(-normalizedDist * 3);
         const weight = falloff * vector.strength;
         
-        // Small, controlled displacement (max 6 pixels)
-        const maxDisplacement = 6;
+        // Increased displacement for more visible motion (max 20 pixels instead of 6)
+        const maxDisplacement = 20;
         const normalizedDx = vector.dx / Math.max(Math.abs(vector.dx), Math.abs(vector.dy), 1);
         const normalizedDy = vector.dy / Math.max(Math.abs(vector.dx), Math.abs(vector.dy), 1);
         
@@ -305,7 +305,6 @@ export class MotionAnimationEngine {
 
   /**
    * Render continuous one-directional loop by cycling through keyframes
-   * with crossfade at the end for seamless looping
    */
   private renderLoop(timestamp: number) {
     if (!this.isAnimating) return;
@@ -316,27 +315,18 @@ export class MotionAnimationEngine {
       return;
     }
 
-    // Linear progress through all keyframes
+    // Linear progress through all keyframes with seamless wraparound
     const progress = (timestamp % this.animationDuration) / this.animationDuration;
     const numFrames = this.keyframes.length;
     
-    // Crossfade zone - last 20% of animation
-    const crossfadeStart = 0.8;
-    
-    if (progress >= crossfadeStart) {
-      // In crossfade zone - blend last frame with first frame
-      const crossfadeProgress = (progress - crossfadeStart) / (1 - crossfadeStart);
-      this.blendTwoFrames(numFrames - 1, 0, crossfadeProgress);
-    } else {
-      // Normal frame blending
-      const adjustedProgress = progress / crossfadeStart; // Remap to 0-1 for the non-crossfade section
-      const framePosition = adjustedProgress * (numFrames - 1);
-      const frame1Index = Math.floor(framePosition);
-      const frame2Index = Math.min(frame1Index + 1, numFrames - 1);
-      const blendFactor = framePosition - frame1Index;
+    // Calculate which two frames to blend between
+    const framePosition = progress * numFrames;
+    const frame1Index = Math.floor(framePosition) % numFrames;
+    const frame2Index = (frame1Index + 1) % numFrames;
+    const blendFactor = framePosition - Math.floor(framePosition);
 
-      this.blendTwoFrames(frame1Index, frame2Index, blendFactor);
-    }
+    // Blend between current frame and next frame
+    this.blendTwoFrames(frame1Index, frame2Index, blendFactor);
 
     this.animationFrame = requestAnimationFrame((t) => this.renderLoop(t));
   }
