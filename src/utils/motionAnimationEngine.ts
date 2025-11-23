@@ -12,11 +12,7 @@ interface MotionVector {
   strength: number;
 }
 
-interface MotionTrail {
-  points: { x: number; y: number }[];
-}
-
-interface RangePoint {
+interface AnchorPoint {
   x: number;
   y: number;
   radius: number;
@@ -26,28 +22,16 @@ export class MotionAnimationEngine {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private sourceImage: HTMLImageElement;
-  private sourceImageData: ImageData | null = null;
   private motionVectors: MotionVector[] = [];
-  private motionTrails: MotionTrail[] = [];
-  private rangePoints: RangePoint[] = [];
+  private anchorPoints: AnchorPoint[] = [];
   private animationFrame: number | null = null;
   private currentFrame: number = 0;
   private isAnimating: boolean = false;
-  private feathering: number = 20;
 
-  constructor(canvas: HTMLCanvasElement, sourceImage: HTMLImageElement, feathering: number = 20) {
+  constructor(canvas: HTMLCanvasElement, sourceImage: HTMLImageElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.sourceImage = sourceImage;
-    this.feathering = feathering;
-    
-    // Store the original image data for clean sampling
-    this.ctx.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
-    this.sourceImageData = this.ctx.getImageData(0, 0, canvas.width, canvas.height);
-  }
-
-  setFeathering(feathering: number) {
-    this.feathering = feathering;
   }
 
   /**
@@ -64,21 +48,14 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Add a motion trail for display (single arrow at end)
+   * Add an anchor point (area that stays still)
    */
-  addMotionTrail(points: { x: number; y: number }[]) {
-    this.motionTrails.push({ points });
+  addAnchorPoint(x: number, y: number, radius: number) {
+    this.anchorPoints.push({ x, y, radius });
   }
 
   /**
-   * Add a range point (area that should move)
-   */
-  addRangePoint(x: number, y: number, radius: number) {
-    this.rangePoints.push({ x, y, radius });
-  }
-
-  /**
-   * Remove motion vectors or range points at a location
+   * Remove motion vectors or anchor points at a location
    */
   removeAtPoint(x: number, y: number, radius: number) {
     // Remove motion vectors
@@ -87,79 +64,68 @@ export class MotionAnimationEngine {
       return dist > radius;
     });
 
-    // Remove range points
-    this.rangePoints = this.rangePoints.filter(r => {
-      const dist = Math.sqrt((r.x - x) ** 2 + (r.y - y) ** 2);
+    // Remove anchor points
+    this.anchorPoints = this.anchorPoints.filter(a => {
+      const dist = Math.sqrt((a.x - x) ** 2 + (a.y - y) ** 2);
       return dist > radius;
     });
   }
 
   /**
-   * Clear all motion vectors and range points
+   * Clear all motion vectors and anchor points
    */
   clear() {
     this.motionVectors = [];
-    this.motionTrails = [];
-    this.rangePoints = [];
+    this.anchorPoints = [];
     this.stop();
   }
 
   /**
-   * Draw overlay showing motion trails and range points
+   * Draw overlay showing motion vectors and anchor points
    */
   drawOverlay(overlayCtx: CanvasRenderingContext2D) {
     overlayCtx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Draw range points (areas that will move)
-    this.rangePoints.forEach(range => {
-      overlayCtx.fillStyle = "rgba(34, 197, 94, 0.3)"; // Green for motion areas
+    // Draw anchor points
+    this.anchorPoints.forEach(anchor => {
+      overlayCtx.fillStyle = "rgba(255, 59, 48, 0.3)";
       overlayCtx.beginPath();
-      overlayCtx.arc(range.x, range.y, range.radius, 0, Math.PI * 2);
+      overlayCtx.arc(anchor.x, anchor.y, anchor.radius, 0, Math.PI * 2);
       overlayCtx.fill();
       
-      overlayCtx.strokeStyle = "rgba(34, 197, 94, 0.6)";
+      overlayCtx.strokeStyle = "rgba(255, 59, 48, 0.6)";
       overlayCtx.lineWidth = 2;
       overlayCtx.stroke();
     });
 
-    // Draw motion trails (one arrow per trail at the end)
-    this.motionTrails.forEach(trail => {
-      const points = trail.points;
-      if (points.length < 2) return;
+    // Draw motion vectors
+    this.motionVectors.forEach(vector => {
+      const x2 = vector.x + vector.dx;
+      const y2 = vector.y + vector.dy;
+      const headLength = 15;
+      const angle = Math.atan2(vector.dy, vector.dx);
 
-      // Draw smooth trail line
-      overlayCtx.strokeStyle = "#3b82f6";
-      overlayCtx.lineWidth = 4;
+      overlayCtx.strokeStyle = "rgba(59, 130, 246, 0.8)";
+      overlayCtx.fillStyle = "rgba(59, 130, 246, 0.8)";
+      overlayCtx.lineWidth = 3;
       overlayCtx.lineCap = "round";
-      overlayCtx.lineJoin = "round";
-      overlayCtx.shadowColor = "#3b82f6";
-      overlayCtx.shadowBlur = 10;
 
+      // Draw line
       overlayCtx.beginPath();
-      overlayCtx.moveTo(points[0].x, points[0].y);
-      
-      for (let i = 1; i < points.length; i++) {
-        overlayCtx.lineTo(points[i].x, points[i].y);
-      }
+      overlayCtx.moveTo(vector.x, vector.y);
+      overlayCtx.lineTo(x2, y2);
       overlayCtx.stroke();
 
-      // Draw single arrowhead at the end
-      const last = points[points.length - 1];
-      const secondLast = points[points.length - 2];
-      const angle = Math.atan2(last.y - secondLast.y, last.x - secondLast.x);
-      const headLength = 15;
-
-      overlayCtx.shadowBlur = 0;
-      overlayCtx.fillStyle = "#3b82f6";
+      // Draw arrowhead
       overlayCtx.beginPath();
-      overlayCtx.moveTo(last.x, last.y);
+      overlayCtx.moveTo(x2, y2);
       overlayCtx.lineTo(
-        last.x - headLength * Math.cos(angle - Math.PI / 6),
-        last.y - headLength * Math.sin(angle - Math.PI / 6)
+        x2 - headLength * Math.cos(angle - Math.PI / 6),
+        y2 - headLength * Math.sin(angle - Math.PI / 6)
       );
       overlayCtx.lineTo(
-        last.x - headLength * Math.cos(angle + Math.PI / 6),
-        last.y - headLength * Math.sin(angle + Math.PI / 6)
+        x2 - headLength * Math.cos(angle + Math.PI / 6),
+        y2 - headLength * Math.sin(angle + Math.PI / 6)
       );
       overlayCtx.closePath();
       overlayCtx.fill();
@@ -167,35 +133,19 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Calculate displacement for a pixel based on motion vectors and range points
+   * Calculate displacement for a pixel based on motion vectors and anchor points
    */
   private calculateDisplacement(x: number, y: number, frame: number): { dx: number; dy: number } {
     let totalDx = 0;
     let totalDy = 0;
     let totalWeight = 0;
 
-    // Calculate range influence with feathering
-    let rangeInfluence = this.rangePoints.length === 0 ? 1 : 0; // If no range points, animate everything
-    
-    if (this.rangePoints.length > 0) {
-      for (const range of this.rangePoints) {
-        const dist = Math.sqrt((x - range.x) ** 2 + (y - range.y) ** 2);
-        
-        if (dist < range.radius) {
-          // Inside the range - full influence
-          rangeInfluence = 1;
-          break;
-        } else if (dist < range.radius + this.feathering) {
-          // In the feathering zone - gradient falloff
-          const falloff = 1 - (dist - range.radius) / this.feathering;
-          rangeInfluence = Math.max(rangeInfluence, falloff);
-        }
+    // Check if pixel is in an anchor point
+    for (const anchor of this.anchorPoints) {
+      const dist = Math.sqrt((x - anchor.x) ** 2 + (y - anchor.y) ** 2);
+      if (dist < anchor.radius) {
+        return { dx: 0, dy: 0 }; // No movement in anchored areas
       }
-    }
-
-    // If no range influence, no movement
-    if (rangeInfluence === 0) {
-      return { dx: 0, dy: 0 };
     }
 
     // Calculate displacement from motion vectors
@@ -218,8 +168,8 @@ export class MotionAnimationEngine {
 
     if (totalWeight > 0) {
       return {
-        dx: (totalDx / totalWeight) * rangeInfluence,
-        dy: (totalDy / totalWeight) * rangeInfluence
+        dx: totalDx / totalWeight,
+        dy: totalDy / totalWeight
       };
     }
 
@@ -230,11 +180,12 @@ export class MotionAnimationEngine {
    * Render a single frame of the animation
    */
   private renderFrame(speed: number) {
-    if (!this.isAnimating || !this.sourceImageData) return;
+    if (!this.isAnimating) return;
 
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
+    const sourceData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
 
-    // Apply displacement to each pixel, always sampling from original image
+    // Apply displacement to each pixel
     for (let y = 0; y < this.canvas.height; y++) {
       for (let x = 0; x < this.canvas.width; x++) {
         const displacement = this.calculateDisplacement(x, y, this.currentFrame);
@@ -248,10 +199,10 @@ export class MotionAnimationEngine {
           const sourceIdx = (sourceY * this.canvas.width + sourceX) * 4;
           const targetIdx = (y * this.canvas.width + x) * 4;
 
-          imageData.data[targetIdx] = this.sourceImageData.data[sourceIdx];
-          imageData.data[targetIdx + 1] = this.sourceImageData.data[sourceIdx + 1];
-          imageData.data[targetIdx + 2] = this.sourceImageData.data[sourceIdx + 2];
-          imageData.data[targetIdx + 3] = this.sourceImageData.data[sourceIdx + 3];
+          imageData.data[targetIdx] = sourceData.data[sourceIdx];
+          imageData.data[targetIdx + 1] = sourceData.data[sourceIdx + 1];
+          imageData.data[targetIdx + 2] = sourceData.data[sourceIdx + 2];
+          imageData.data[targetIdx + 3] = sourceData.data[sourceIdx + 3];
         }
       }
     }

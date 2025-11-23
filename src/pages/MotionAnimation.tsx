@@ -60,8 +60,8 @@ export default function MotionAnimation() {
                 <TabsTrigger value="motion" className="text-xs sm:text-sm">
                   {t("Motion", "运动")}
                 </TabsTrigger>
-                <TabsTrigger value="range" className="text-xs sm:text-sm">
-                  {t("Range", "范围")}
+                <TabsTrigger value="anchor" className="text-xs sm:text-sm">
+                  {t("Anchor", "锚点")}
                 </TabsTrigger>
                 <TabsTrigger value="settings" className="text-xs sm:text-sm">
                   {t("Settings", "设置")}
@@ -80,12 +80,12 @@ export default function MotionAnimation() {
                 </p>
               </TabsContent>
               
-              <TabsContent value="range" className="space-y-2 mt-4">
+              <TabsContent value="anchor" className="space-y-2 mt-4">
                 <p className="text-sm text-cosmic-300">
-                  • {t("Paint areas that should move with animation", "绘制应随动画移动的区域")}
+                  • {t("Paint areas that should remain still", "绘制应保持静止的区域")}
                 </p>
                 <p className="text-sm text-cosmic-300">
-                  • {t("Only selected areas will be animated", "只有选定的区域会被动画化")}
+                  • {t("Anchor points freeze parts of the image", "锚点冻结图像的部分")}
                 </p>
                 <p className="text-sm text-cosmic-300">
                   • {t("Use larger brush for bigger areas", "使用更大的画笔绘制更大的区域")}

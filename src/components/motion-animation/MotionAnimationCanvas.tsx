@@ -5,12 +5,13 @@ import { Slider } from "@/components/ui/slider";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { 
   ArrowRight, 
-  RectangleEllipsis,
+  Anchor, 
   Eraser, 
   Play, 
   Pause, 
   Download, 
   RotateCcw,
+  Hand,
   Undo2,
   Redo2
 } from "lucide-react";
@@ -25,7 +26,7 @@ interface MotionAnimationCanvasProps {
   onReset: () => void;
 }
 
-type Tool = "motion" | "range" | "erase";
+type Tool = "motion" | "anchor" | "erase" | "pan";
 
 export const MotionAnimationCanvas = ({ 
   imageDataUrl, 
@@ -41,13 +42,12 @@ export const MotionAnimationCanvas = ({
   const [brushSize, setBrushSize] = useState(30);
   const [motionStrength, setMotionStrength] = useState(50);
   const [animationSpeed, setAnimationSpeed] = useState(50);
-  const [feathering, setFeathering] = useState(20);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [motionArrowStart, setMotionArrowStart] = useState<{x: number, y: number} | null>(null);
   const [motionTrailPoints, setMotionTrailPoints] = useState<{x: number, y: number}[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  const historyRef = useRef<Array<{ type: 'motion' | 'range' | 'erase', data: any }>>([]);
+  const historyRef = useRef<Array<{ type: 'motion' | 'anchor' | 'erase', data: any }>>([]);
 
   // Initialize canvas and animation engine
   useEffect(() => {
@@ -75,16 +75,9 @@ export const MotionAnimationCanvas = ({
     ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
 
     // Initialize animation engine
-    animationEngineRef.current = new MotionAnimationEngine(canvas, imageElement, feathering);
+    animationEngineRef.current = new MotionAnimationEngine(canvas, imageElement);
 
   }, [imageElement]);
-
-  // Update feathering when it changes
-  useEffect(() => {
-    if (animationEngineRef.current) {
-      animationEngineRef.current.setFeathering(feathering);
-    }
-  }, [feathering]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = overlayCanvasRef.current;
@@ -98,7 +91,7 @@ export const MotionAnimationCanvas = ({
       setIsDrawing(true);
       setMotionArrowStart({ x, y });
       setMotionTrailPoints([{ x, y }]);
-    } else if (activeTool === "range" || activeTool === "erase") {
+    } else if (activeTool === "anchor" || activeTool === "erase") {
       setIsDrawing(true);
       drawBrush(x, y);
     }
@@ -119,12 +112,12 @@ export const MotionAnimationCanvas = ({
       // Draw temporary trail
       redrawOverlay();
       drawMotionTrail([...motionTrailPoints, { x, y }]);
-    } else if ((activeTool === "range" || activeTool === "erase") && isDrawing) {
+    } else if ((activeTool === "anchor" || activeTool === "erase") && isDrawing) {
       drawBrush(x, y);
     }
   };
 
-  const addToHistory = (type: 'motion' | 'range' | 'erase', data: any) => {
+  const addToHistory = (type: 'motion' | 'anchor' | 'erase', data: any) => {
     // Remove any redo history when adding new action
     historyRef.current = historyRef.current.slice(0, historyIndex + 1);
     historyRef.current.push({ type, data });
@@ -136,11 +129,11 @@ export const MotionAnimationCanvas = ({
     if (!canvas || !animationEngineRef.current) return;
 
     if (activeTool === "motion" && motionArrowStart && motionTrailPoints.length > 1) {
-      // Store entire motion trail as one action in history
+      // Store motion trail in history
       const trailData = [...motionTrailPoints];
       addToHistory('motion', { points: trailData, strength: motionStrength / 100 });
 
-      // Add motion vectors along the trail (for animation calculation)
+      // Add motion vectors along the trail
       for (let i = 0; i < motionTrailPoints.length - 1; i++) {
         const start = motionTrailPoints[i];
         const end = motionTrailPoints[i + 1];
@@ -153,9 +146,6 @@ export const MotionAnimationCanvas = ({
           motionStrength / 100
         );
       }
-
-      // Store the trail as a single path for display (not individual vectors)
-      animationEngineRef.current.addMotionTrail(trailData);
       
       setMotionArrowStart(null);
       setMotionTrailPoints([]);
@@ -213,9 +203,9 @@ export const MotionAnimationCanvas = ({
   const drawBrush = (x: number, y: number) => {
     if (!animationEngineRef.current) return;
 
-    if (activeTool === "range") {
-      animationEngineRef.current.addRangePoint(x, y, brushSize);
-      addToHistory('range', { x, y, radius: brushSize });
+    if (activeTool === "anchor") {
+      animationEngineRef.current.addAnchorPoint(x, y, brushSize);
+      addToHistory('anchor', { x, y, radius: brushSize });
     } else if (activeTool === "erase") {
       animationEngineRef.current.removeAtPoint(x, y, brushSize);
       addToHistory('erase', { x, y, radius: brushSize });
@@ -304,7 +294,6 @@ export const MotionAnimationCanvas = ({
       
       if (action.type === 'motion') {
         const { points, strength } = action.data;
-        // Add motion vectors for animation
         for (let j = 0; j < points.length - 1; j++) {
           const start = points[j];
           const end = points[j + 1];
@@ -316,11 +305,9 @@ export const MotionAnimationCanvas = ({
             strength
           );
         }
-        // Add trail for display
-        animationEngineRef.current.addMotionTrail(points);
-      } else if (action.type === 'range') {
+      } else if (action.type === 'anchor') {
         const { x, y, radius } = action.data;
-        animationEngineRef.current.addRangePoint(x, y, radius);
+        animationEngineRef.current.addAnchorPoint(x, y, radius);
       } else if (action.type === 'erase') {
         const { x, y, radius } = action.data;
         animationEngineRef.current.removeAtPoint(x, y, radius);
@@ -358,12 +345,12 @@ export const MotionAnimationCanvas = ({
               {t("Motion", "运动")}
             </Button>
             <Button
-              variant={activeTool === "range" ? "default" : "outline"}
+              variant={activeTool === "anchor" ? "default" : "outline"}
               size="sm"
-              onClick={() => setActiveTool("range")}
+              onClick={() => setActiveTool("anchor")}
             >
-              <RectangleEllipsis className="w-4 h-4 mr-2" />
-              {t("Range Select", "范围选择")}
+              <Anchor className="w-4 h-4 mr-2" />
+              {t("Anchor", "锚点")}
             </Button>
             <Button
               variant={activeTool === "erase" ? "default" : "outline"}
@@ -372,6 +359,14 @@ export const MotionAnimationCanvas = ({
             >
               <Eraser className="w-4 h-4 mr-2" />
               {t("Erase", "擦除")}
+            </Button>
+            <Button
+              variant={activeTool === "pan" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveTool("pan")}
+            >
+              <Hand className="w-4 h-4 mr-2" />
+              {t("Pan", "平移")}
             </Button>
           </div>
 
@@ -465,7 +460,7 @@ export const MotionAnimationCanvas = ({
           </TabsList>
 
           <TabsContent value="tool" className="space-y-6 mt-4">
-            {(activeTool === "range" || activeTool === "erase") && (
+            {(activeTool === "anchor" || activeTool === "erase") && (
               <div>
                 <Label>{t("Brush Size", "画笔大小")}: {brushSize}px</Label>
                 <Slider
@@ -488,20 +483,6 @@ export const MotionAnimationCanvas = ({
                   min={1}
                   max={100}
                   step={1}
-                  className="mt-2"
-                />
-              </div>
-            )}
-
-            {activeTool === "range" && (
-              <div>
-                <Label>{t("Edge Softness", "边缘柔和度")}: {feathering}px</Label>
-                <Slider
-                  value={[feathering]}
-                  onValueChange={([value]) => setFeathering(value)}
-                  min={0}
-                  max={50}
-                  step={5}
                   className="mt-2"
                 />
               </div>
