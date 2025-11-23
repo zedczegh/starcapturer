@@ -107,6 +107,7 @@ export class MotionAnimationEngine {
     this.motionTrails = [];
     this.rangePoints = [];
     this.keyframes = [];
+    this.currentTime = 0;
     this.stop();
   }
 

@@ -432,6 +432,13 @@ export const MotionAnimationCanvas = ({
     historyRef.current = [];
     setHistoryIndex(-1);
     
+    // Reset all drawing state
+    setIsDrawing(false);
+    setMotionArrowStart(null);
+    setMotionTrailPoints([]);
+    setRangeStrokePoints([]);
+    setLastBrushPoint(null);
+    
     // Clear and redraw original image on main canvas
     const ctx = canvas.getContext("2d");
     if (ctx && imageElement) {
@@ -444,6 +451,10 @@ export const MotionAnimationCanvas = ({
     if (overlayCtx) {
       overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
     }
+    
+    // Remove any dataset flags
+    delete canvas.dataset.drawing;
+    delete overlayCanvas.dataset.drawing;
     
     // Show overlay
     overlayCanvas.style.opacity = "1";
