@@ -1,5 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { SharedAstroSpot } from '@/lib/api/astroSpots';
+import { createAMapMarkerIcon, createAMapPopupContent, shouldShowLocationMarker } from './AMapMarkerUtils';
+import { getSiqsScore } from '@/utils/siqsHelpers';
+import RealTimeSiqsProvider from '@/components/photoPoints/cards/RealTimeSiqsProvider';
 
 interface AMapContainerProps {
   center: [number, number];
@@ -22,20 +25,40 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
   userLocation,
   locations,
   searchRadius,
+  activeView,
   zoom = 10,
   onMapClick,
   onLocationClick,
   onMapReady,
   showRadiusCircles,
+  isMobile = false,
+  hoveredLocationId,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
+  const markersRef = useRef<Map<string, any>>(new Map());
+  const userMarkerRef = useRef<any>(null);
+  const circleRef = useRef<any>(null);
+  const [realTimeSiqsMap, setRealTimeSiqsMap] = useState<Map<string, number>>(new Map());
 
+  // Setup global callback for popup details
+  useEffect(() => {
+    (window as any).viewAMapSpotDetails = (spotId: string) => {
+      const location = locations.find(loc => loc.id === spotId);
+      if (location && onLocationClick) {
+        onLocationClick(location);
+      }
+    };
+    
+    return () => {
+      delete (window as any).viewAMapSpotDetails;
+    };
+  }, [locations, onLocationClick]);
+
+  // Initialize map
   useEffect(() => {
     if (!mapContainer.current || mapInstance.current) return;
 
-    // Initialize AMap
     const map = new (window as any).AMap.Map(mapContainer.current, {
       center: [center[1], center[0]], // AMap uses [lng, lat]
       zoom: zoom,
@@ -44,11 +67,9 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
 
     mapInstance.current = map;
 
-    // Add map controls
     map.addControl(new (window as any).AMap.Scale());
     map.addControl(new (window as any).AMap.ToolBar());
 
-    // Handle map clicks
     if (onMapClick) {
       map.on('click', (e: any) => {
         onMapClick(e.lnglat.lat, e.lnglat.lng);
@@ -67,16 +88,35 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
     };
   }, []);
 
-  // Update map center when prop changes
+  // Update map center
   useEffect(() => {
     if (mapInstance.current) {
       mapInstance.current.setCenter([center[1], center[0]]);
     }
   }, [center]);
 
+  // Update real-time SIQS for a location
+  const handleSiqsUpdate = useCallback((locationId: string, siqs: number) => {
+    setRealTimeSiqsMap(prev => {
+      const newMap = new Map(prev);
+      newMap.set(locationId, siqs);
+      return newMap;
+    });
+  }, []);
+
   // Add user location marker
   useEffect(() => {
     if (!mapInstance.current || !userLocation) return;
+
+    if (userMarkerRef.current && mapInstance.current) {
+      mapInstance.current.remove(userMarkerRef.current);
+      userMarkerRef.current = null;
+    }
+
+    if (circleRef.current && mapInstance.current) {
+      mapInstance.current.remove(circleRef.current);
+      circleRef.current = null;
+    }
 
     const marker = new (window as any).AMap.Marker({
       position: [userLocation.longitude, userLocation.latitude],
@@ -92,33 +132,35 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
     });
 
     mapInstance.current.add(marker);
-
-    let circle: any | null = null;
+    userMarkerRef.current = marker;
 
     // Add radius circle
     if (showRadiusCircles && searchRadius > 0) {
-      circle = new (window as any).AMap.Circle({
+      const circle = new (window as any).AMap.Circle({
         center: [userLocation.longitude, userLocation.latitude],
-        radius: searchRadius * 1000, // Convert km to meters
+        radius: searchRadius * 1000,
         strokeColor: '#3b82f6',
         strokeWeight: 2,
         fillColor: '#3b82f6',
         fillOpacity: 0.1,
       });
       mapInstance.current.add(circle);
+      circleRef.current = circle;
     }
 
     return () => {
-      if (marker && mapInstance.current) {
-        mapInstance.current.remove(marker);
+      if (userMarkerRef.current && mapInstance.current) {
+        mapInstance.current.remove(userMarkerRef.current);
+        userMarkerRef.current = null;
       }
-      if (circle && mapInstance.current) {
-        mapInstance.current.remove(circle);
+      if (circleRef.current && mapInstance.current) {
+        mapInstance.current.remove(circleRef.current);
+        circleRef.current = null;
       }
     };
   }, [userLocation, searchRadius, showRadiusCircles]);
 
-  // Add location markers
+  // Add location markers with real-time SIQS
   useEffect(() => {
     if (!mapInstance.current || !locations) return;
 
@@ -128,30 +170,43 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
         mapInstance.current.remove(marker);
       }
     });
-    markersRef.current = [];
+    markersRef.current.clear();
 
     // Add new markers
     locations.forEach((location) => {
+      const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
+      
+      // Check if marker should be shown based on active view
+      if (!shouldShowLocationMarker(location, isCertified, activeView)) {
+        return;
+      }
+
+      const isHovered = hoveredLocationId === location.id;
+      const markerIcon = createAMapMarkerIcon(location, isCertified, isHovered, isMobile);
+      
       const marker = new (window as any).AMap.Marker({
         position: [location.longitude, location.latitude],
         title: location.name,
+        content: markerIcon.content,
+        offset: new (window as any).AMap.Pixel(...markerIcon.offset),
       });
 
-      // Add click handler
-      if (onLocationClick) {
-        marker.on('click', () => {
-          onLocationClick(location);
-        });
-      }
+      // Get current SIQS (real-time or static)
+      const currentSiqs = realTimeSiqsMap.get(location.id) || getSiqsScore(location);
 
-      // Add info window
+      // Create info window with current SIQS
       const infoWindow = new (window as any).AMap.InfoWindow({
-        content: `
-          <div style="padding: 8px;">
-            <h3 style="margin: 0 0 4px; font-weight: bold;">${location.name}</h3>
-            ${location.siqs ? `<p style="margin: 0;">SIQS: ${location.siqs}</p>` : ''}
-          </div>
-        `,
+        content: createAMapPopupContent({
+          location,
+          siqsScore: currentSiqs,
+          siqsLoading: false,
+          displayName: location.name,
+          isCertified,
+          onViewDetails: () => {},
+          userId: location.user_id,
+          isMobile,
+        }),
+        offset: new (window as any).AMap.Pixel(0, -markerIcon.size[1] / 2),
       });
 
       marker.on('click', () => {
@@ -159,7 +214,7 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
       });
 
       mapInstance.current.add(marker);
-      markersRef.current.push(marker);
+      markersRef.current.set(location.id, marker);
     });
 
     return () => {
@@ -168,11 +223,63 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
           mapInstance.current.remove(marker);
         }
       });
-      markersRef.current = [];
+      markersRef.current.clear();
     };
-  }, [locations, onLocationClick]);
+  }, [locations, onLocationClick, activeView, hoveredLocationId, isMobile, realTimeSiqsMap]);
 
-  return <div ref={mapContainer} className="w-full h-full" />;
+  // Update marker appearance when hovered
+  useEffect(() => {
+    if (!hoveredLocationId) return;
+    
+    const marker = markersRef.current.get(hoveredLocationId);
+    if (marker) {
+      const location = locations.find(loc => loc.id === hoveredLocationId);
+      if (location) {
+        const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
+        const markerIcon = createAMapMarkerIcon(location, isCertified, true, isMobile);
+        marker.setContent(markerIcon.content);
+      }
+    }
+  }, [hoveredLocationId, locations, isMobile]);
+
+  return (
+    <div className="relative w-full h-full">
+      {/* Real-time SIQS providers for each location */}
+      {userLocation && (
+        <RealTimeSiqsProvider
+          isVisible={true}
+          latitude={userLocation.latitude}
+          longitude={userLocation.longitude}
+          bortleScale={4}
+          onSiqsCalculated={() => {}}
+        />
+      )}
+      
+      {locations.map((location) => {
+        const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
+        const shouldShow = shouldShowLocationMarker(location, isCertified, activeView);
+        
+        if (!shouldShow) return null;
+        
+        return (
+          <RealTimeSiqsProvider
+            key={location.id}
+            isVisible={true}
+            latitude={location.latitude}
+            longitude={location.longitude}
+            bortleScale={location.bortleScale || 4}
+            onSiqsCalculated={(siqs) => {
+              if (siqs !== null) {
+                handleSiqsUpdate(location.id, siqs);
+              }
+            }}
+          />
+        );
+      })}
+      
+      <div ref={mapContainer} className="w-full h-full" />
+    </div>
+  );
 };
 
 export default AMapContainer;
