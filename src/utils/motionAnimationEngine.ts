@@ -168,7 +168,7 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Generate 4 keyframes for continuous one-directional loop
+   * Generate 12 keyframes for continuous one-directional loop
    * Each frame progressively displaces in motion direction
    */
   private generateKeyframes() {
@@ -179,15 +179,18 @@ export class MotionAnimationEngine {
 
     console.log('Generating keyframes for continuous loop...');
     
-    // Generate 4 progressive displacement frames
-    this.keyframes = [
-      { imageData: this.cloneImageData(this.originalImageData) },           // 0%
-      { imageData: this.createDisplacedFrame(0.33) },                       // 33%
-      { imageData: this.createDisplacedFrame(0.66) },                       // 66%
-      { imageData: this.createDisplacedFrame(1.0) }                         // 100%
-    ];
+    // Generate 12 progressive displacement frames for ultra-smooth animation
+    this.keyframes = [];
+    for (let i = 0; i < 12; i++) {
+      const intensity = i / 11; // 0 to 1 across 12 frames
+      this.keyframes.push({
+        imageData: i === 0 
+          ? this.cloneImageData(this.originalImageData) 
+          : this.createDisplacedFrame(intensity)
+      });
+    }
 
-    console.log('Generated 4 keyframes for continuous one-directional loop');
+    console.log('Generated 12 keyframes for continuous one-directional loop');
   }
 
   /**
