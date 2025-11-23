@@ -121,8 +121,8 @@ const LeafletMapDisplay: React.FC<MapDisplayProps> = ({
           icon={markerIcon}
         >
           <Popup>
-            <div className="p-2 min-w-[200px]">
-              <div className="font-medium text-sm mb-2 flex items-center">
+            <div className="p-3 min-w-[200px] bg-gradient-to-br from-cosmic-900/98 to-cosmic-800/95 rounded-lg shadow-xl border border-primary/20">
+              <div className="font-medium text-sm mb-2 flex items-center text-foreground">
                 <MapPin className="h-4 w-4 mr-1 text-primary" />
                 {locationName}
               </div>
@@ -146,7 +146,7 @@ const LeafletMapDisplay: React.FC<MapDisplayProps> = ({
                   onClick={handleOpenDialog}
                   className="text-xs flex items-center justify-center w-full bg-gradient-to-br from-primary/80 to-accent/80 text-white py-2 px-2 rounded-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] shadow-md shadow-primary/30 border border-primary/20"
                 >
-                  {t("Create My Spot", "创建我的地点")}
+                  {t("创建我的观星点", "Create My Spot")} / {t("Create My Spot", "创建我的观星点")}
                 </button>
               )}
             </div>
@@ -204,10 +204,37 @@ const AMapDisplay: React.FC<MapDisplayProps> = ({
     setTimeout(() => setForceUpdate(false), 100);
   };
 
-  // Fetch detailed location name
+  // Fetch detailed location name using AMap when available
   useEffect(() => {
     const fetchLocationName = async () => {
       try {
+        // Try AMap Geocoder first if available
+        if (typeof window !== 'undefined' && (window as any).AMap) {
+          const amapResult = await new Promise<string | null>((resolve) => {
+            (window as any).AMap.plugin('AMap.Geocoder', function() {
+              const geocoder = new (window as any).AMap.Geocoder({ 
+                city: '全国', 
+                radius: 1000,
+                extensions: 'all'
+              });
+              
+              geocoder.getAddress([position[1], position[0]], (status: string, result: any) => {
+                if (status === 'complete' && result.regeocode) {
+                  resolve(result.regeocode.formattedAddress);
+                } else {
+                  resolve(null);
+                }
+              });
+            });
+          });
+          
+          if (amapResult) {
+            setDetailedLocationName(amapResult);
+            return;
+          }
+        }
+        
+        // Fall back to enhanced location details
         const details = await getEnhancedLocationDetails(position[0], position[1], language === 'zh' ? 'zh' : 'en');
         setDetailedLocationName(details.formattedName || locationName);
       } catch (error) {
@@ -231,14 +258,19 @@ const AMapDisplay: React.FC<MapDisplayProps> = ({
         : '<span class="text-sm text-muted-foreground">--</span>';
 
     return `
-      <div class="p-2 min-w-[200px]" style="font-family: system-ui, -apple-system, sans-serif;">
-        <div class="font-medium text-sm mb-2 flex items-center" style="color: hsl(var(--primary));">
+      <div class="p-3 min-w-[200px]" style="
+        font-family: system-ui, -apple-system, sans-serif; 
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.95) 100%);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      ">
+        <div class="font-medium text-sm mb-2 flex items-center" style="color: #f1f5f9;">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
           ${detailedLocationName}
         </div>
         
         <div class="mb-2">
-          <div class="text-xs" style="color: hsl(var(--muted-foreground));">
+          <div class="text-xs" style="color: #94a3b8;">
             ${position[0].toFixed(4)}, ${position[1].toFixed(4)}
           </div>
         </div>
@@ -251,9 +283,14 @@ const AMapDisplay: React.FC<MapDisplayProps> = ({
           <button
             onclick="window.openAMapCreateSpotDialog(${position[0]}, ${position[1]}, '${detailedLocationName.replace(/'/g, "\\'")}')"
             class="text-xs flex items-center justify-center w-full py-2 px-2 rounded-lg transition-all duration-300 shadow-md border"
-            style="background: linear-gradient(to bottom right, hsl(var(--primary) / 0.8), hsl(var(--accent) / 0.8)); color: white; box-shadow: 0 4px 6px -1px hsl(var(--primary) / 0.3); border-color: hsl(var(--primary) / 0.2);"
+            style="
+              background: linear-gradient(135deg, rgba(155, 135, 245, 0.3), rgba(147, 51, 234, 0.3)); 
+              color: #ddd6fe; 
+              box-shadow: 0 4px 6px -1px rgba(155, 135, 245, 0.3); 
+              border-color: rgba(155, 135, 245, 0.4);
+            "
           >
-            ${t("Create My Spot", "创建我的地点")}
+            ${t("创建我的观星点", "Create My Spot")} / ${t("Create My Spot", "创建我的观星点")}
           </button>
         ` : ''}
       </div>
