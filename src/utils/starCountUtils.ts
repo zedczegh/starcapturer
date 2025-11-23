@@ -5,8 +5,9 @@
  */
 
 /**
- * Count stars in image data with enhanced detection algorithm
- * Uses advanced noise filtering and hot pixel rejection
+ * Count stars in image data with enhanced astrophysically-informed detection
+ * Uses region growing, diffraction spike detection, and color temperature analysis
+ * Inspired by advanced algorithms from stereoscope processor
  * @param imageData Raw image data from camera
  * @returns Number of stars detected
  */
@@ -35,96 +36,185 @@ export function countStarsInImage(imageData: ImageData): number {
   const mad = deviations[Math.floor(deviations.length / 2)];
   
   // Adaptive threshold: median + 5 * MAD (5-sigma detection threshold)
-  // This is standard in astronomical photometry
-  const detectionThreshold = median + (5 * mad * 1.4826); // 1.4826 converts MAD to standard deviation
-  const minContrastRatio = 1.5; // Star must be 1.5x brighter than local background
+  const detectionThreshold = median + (5 * mad * 1.4826);
+  const minStarSize = 2;
+  const maxStarSize = 800; // Include large stars with diffraction spikes
   
   console.log(`Background: median=${median.toFixed(2)}, MAD=${mad.toFixed(2)}, threshold=${detectionThreshold.toFixed(2)}`);
   
-  let starCount = 0;
-  const detectedStars = new Set<string>();
-  const hotPixels = new Set<string>(); // Track potential hot pixels
+  interface DetectedStar {
+    x: number;
+    y: number;
+    brightness: number;
+    size: number;
+    colorTemp: number;
+    maxLuminance: number;
+    avgBrightness: number;
+    isRealStar: boolean; // Validated using multiple criteria
+  }
   
-  // First pass: detect candidate stars with strict criteria
-  for (let y = 5; y < height - 5; y++) {
-    for (let x = 5; x < width - 5; x++) {
-      const i = (y * width + x) * 4;
-      const centerLum = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+  const detectedStars: DetectedStar[] = [];
+  const visited = new Uint8Array(width * height);
+  let hotPixelsFiltered = 0;
+  
+  // Region-growing star detection with diffraction spike handling
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const idx = y * width + x;
+      if (visited[idx]) continue;
       
-      if (centerLum < detectionThreshold) continue;
+      const pixelIdx = idx * 4;
+      const luminance = 0.299 * data[pixelIdx] + 0.587 * data[pixelIdx + 1] + 0.114 * data[pixelIdx + 2];
       
-      // Check if it's a local maximum (peak detection)
-      let isLocalMax = true;
-      let localBackground = 0;
-      let localCount = 0;
-      let neighborMaxLum = 0;
-      
-      // Check 3x3 neighborhood for local maximum
-      for (let dy = -1; dy <= 1; dy++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          if (dx === 0 && dy === 0) continue;
+      if (luminance > detectionThreshold) {
+        // Grow star region using region-growing algorithm
+        const starPixels: {x: number, y: number, lum: number, r: number, g: number, b: number}[] = [];
+        const queue: {x: number, y: number}[] = [{x, y}];
+        visited[idx] = 1;
+        
+        let minX = x, maxX = x, minY = y, maxY = y;
+        let totalLum = 0, maxLum = 0;
+        let totalR = 0, totalG = 0, totalB = 0;
+        let totalX = 0, totalY = 0;
+        
+        while (queue.length > 0 && starPixels.length < maxStarSize) {
+          const curr = queue.shift()!;
+          const currIdx = curr.y * width + curr.x;
+          const currPixelIdx = currIdx * 4;
+          const currLum = 0.299 * data[currPixelIdx] + 0.587 * data[currPixelIdx + 1] + 0.114 * data[currPixelIdx + 2];
           
-          const ni = ((y + dy) * width + (x + dx)) * 4;
-          const nLum = data[ni] * 0.299 + data[ni + 1] * 0.587 + data[ni + 2] * 0.114;
+          const r = data[currPixelIdx];
+          const g = data[currPixelIdx + 1];
+          const b = data[currPixelIdx + 2];
           
-          if (nLum > centerLum) {
-            isLocalMax = false;
-            break;
-          }
-          neighborMaxLum = Math.max(neighborMaxLum, nLum);
-        }
-        if (!isLocalMax) break;
-      }
-      
-      if (!isLocalMax) continue;
-      
-      // Calculate local background (5x5 annulus, excluding center 3x3)
-      for (let dy = -2; dy <= 2; dy++) {
-        for (let dx = -2; dx <= 2; dx++) {
-          if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1) continue; // Skip center
+          starPixels.push({x: curr.x, y: curr.y, lum: currLum, r, g, b});
+          totalLum += currLum;
+          if (currLum > maxLum) maxLum = currLum;
           
-          const ni = ((y + dy) * width + (x + dx)) * 4;
-          const nLum = data[ni] * 0.299 + data[ni + 1] * 0.587 + data[ni + 2] * 0.114;
-          localBackground += nLum;
-          localCount++;
-        }
-      }
-      
-      const avgLocalBackground = localBackground / localCount;
-      const contrastRatio = centerLum / Math.max(avgLocalBackground, 1);
-      
-      // Enhanced star validation criteria
-      const meetsContrast = contrastRatio >= minContrastRatio;
-      const signalToNoise = (centerLum - avgLocalBackground) / (mad * 1.4826);
-      const isSignificant = signalToNoise > 3; // 3-sigma detection
-      
-      // Check for hot pixel (single isolated bright pixel)
-      const gradientCheck = centerLum - neighborMaxLum;
-      const isLikelyHotPixel = gradientCheck > 100 && contrastRatio > 5;
-      
-      if (meetsContrast && isSignificant && !isLikelyHotPixel) {
-        const key = `${Math.floor(x / 3)}-${Math.floor(y / 3)}`;
-        if (!detectedStars.has(key)) {
-          detectedStars.add(key);
-          starCount++;
+          totalR += r;
+          totalG += g;
+          totalB += b;
           
-          // Mark region as containing a star (prevents double counting)
-          for (let dy = -2; dy <= 2; dy++) {
-            for (let dx = -2; dx <= 2; dx++) {
-              const sk = `${Math.floor((x + dx) / 3)}-${Math.floor((y + dy) / 3)}`;
-              detectedStars.add(sk);
+          // Weighted centroid calculation
+          const weight = currLum * currLum;
+          totalX += curr.x * weight;
+          totalY += curr.y * weight;
+          
+          minX = Math.min(minX, curr.x);
+          maxX = Math.max(maxX, curr.x);
+          minY = Math.min(minY, curr.y);
+          maxY = Math.max(maxY, curr.y);
+          
+          // Check 8-connected neighbors with aggressive threshold for diffraction spikes
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              if (dx === 0 && dy === 0) continue;
+              
+              const nx = curr.x + dx;
+              const ny = curr.y + dy;
+              
+              if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                const nIdx = ny * width + nx;
+                if (!visited[nIdx]) {
+                  const nPixelIdx = nIdx * 4;
+                  const nLum = 0.299 * data[nPixelIdx] + 0.587 * data[nPixelIdx + 1] + 0.114 * data[nPixelIdx + 2];
+                  
+                  // Aggressive threshold (15% of base) to capture diffraction spikes and halos
+                  if (nLum > detectionThreshold * 0.15) {
+                    visited[nIdx] = 1;
+                    queue.push({x: nx, y: ny});
+                  }
+                }
+              }
             }
           }
         }
-      } else if (isLikelyHotPixel) {
-        hotPixels.add(`${x}-${y}`);
+        
+        // Validate star size and properties
+        if (starPixels.length >= minStarSize && starPixels.length <= maxStarSize) {
+          const starWidth = maxX - minX + 1;
+          const starHeight = maxY - minY + 1;
+          const actualSize = Math.max(starWidth, starHeight);
+          
+          const avgR = totalR / starPixels.length;
+          const avgG = totalG / starPixels.length;
+          const avgB = totalB / starPixels.length;
+          const avgBrightness = totalLum / starPixels.length;
+          
+          // Calculate color temperature (blue-red index)
+          const colorMax = Math.max(avgR, avgG, avgB, 1);
+          const normalizedR = avgR / colorMax;
+          const normalizedB = avgB / colorMax;
+          const colorTemp = (normalizedB - normalizedR + 1) / 2; // 0 = red, 1 = blue
+          
+          // Calculate local background for contrast validation
+          let localBackground = 0;
+          let localCount = 0;
+          const checkRadius = 3;
+          
+          for (let dy = -checkRadius; dy <= checkRadius; dy++) {
+            for (let dx = -checkRadius; dx <= checkRadius; dx++) {
+              const checkX = x + dx;
+              const checkY = y + dy;
+              
+              if (checkX >= 0 && checkX < width && checkY >= 0 && checkY < height) {
+                // Skip star region itself
+                if (checkX >= minX && checkX <= maxX && checkY >= minY && checkY <= maxY) continue;
+                
+                const checkIdx = (checkY * width + checkX) * 4;
+                const checkLum = data[checkIdx] * 0.299 + data[checkIdx + 1] * 0.587 + data[checkIdx + 2] * 0.114;
+                localBackground += checkLum;
+                localCount++;
+              }
+            }
+          }
+          
+          const avgLocalBackground = localCount > 0 ? localBackground / localCount : median;
+          const contrastRatio = maxLum / Math.max(avgLocalBackground, 1);
+          const signalToNoise = (avgBrightness - avgLocalBackground) / (mad * 1.4826);
+          
+          // Multi-criteria star validation (based on astrophysical properties)
+          const meetsContrast = contrastRatio >= 1.5;
+          const significantSignal = signalToNoise > 3; // 3-sigma detection
+          const reasonableSize = actualSize >= 1 && actualSize <= 100; // Not a hot pixel or artifact
+          const notTooElongated = Math.max(starWidth / Math.max(starHeight, 1), starHeight / Math.max(starWidth, 1)) < 4;
+          
+          // Enhanced hot pixel detection
+          const neighborMaxLum = Math.max(
+            ...starPixels
+              .filter(p => p.x !== x || p.y !== y)
+              .map(p => p.lum)
+              .slice(0, 8)
+          );
+          const gradientCheck = maxLum - neighborMaxLum;
+          const isLikelyHotPixel = actualSize === 1 && gradientCheck > 100 && contrastRatio > 5;
+          
+          const isRealStar = meetsContrast && significantSignal && reasonableSize && notTooElongated && !isLikelyHotPixel;
+          
+          if (isRealStar) {
+            const weightSum = starPixels.reduce((sum, p) => sum + p.lum * p.lum, 0);
+            detectedStars.push({
+              x: Math.round(totalX / weightSum),
+              y: Math.round(totalY / weightSum),
+              brightness: maxLum / 255,
+              size: actualSize,
+              colorTemp,
+              maxLuminance: maxLum,
+              avgBrightness: avgBrightness,
+              isRealStar: true
+            });
+          } else if (isLikelyHotPixel) {
+            hotPixelsFiltered++;
+          }
+        }
       }
     }
   }
   
-  console.log(`Detected ${starCount} stars, filtered ${hotPixels.size} hot pixels`);
+  console.log(`Detected ${detectedStars.length} stars using astrophysical analysis, filtered ${hotPixelsFiltered} hot pixels`);
+  console.log(`Color temperature range: ${Math.min(...detectedStars.map(s => s.colorTemp)).toFixed(2)} to ${Math.max(...detectedStars.map(s => s.colorTemp)).toFixed(2)}`);
   
-  return starCount;
+  return detectedStars.length;
 }
 
 /**
