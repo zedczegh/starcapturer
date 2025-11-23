@@ -34,11 +34,11 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
   
   return (
     <Card className="bg-cosmic-900/50 border-cosmic-800 hover:bg-cosmic-800/50 transition-all duration-300">
-      <div className="p-4 md:p-5">
-        <div className="flex items-center justify-between mb-4">
+      <div className="p-3 sm:p-4 md:p-5">
+        <div className="flex items-center justify-between mb-2 sm:mb-4">
           <div className="flex items-center gap-2">
-            <div className="bg-cosmic-800/50 p-2 rounded-full">
-              <Cloud className="w-5 h-5 text-blue-400" />
+            <div className="bg-cosmic-800/50 p-1.5 sm:p-2 rounded-full">
+              <Cloud className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
             </div>
             <h3 className="text-sm font-medium">
               {t('Sky Conditions', '天空状况')}
@@ -47,27 +47,27 @@ const SecondaryConditions: React.FC<SecondaryConditionsProps> = ({
         </div>
 
         <TooltipProvider>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
             {/* Cloud Cover */}
-            <div className="bg-cosmic-800/30 rounded-lg p-3">
+            <div className="bg-cosmic-800/30 rounded-lg p-2 sm:p-3">
               <CloudCoverItem cloudCover={cloudCover} />
             </div>
             
             {/* Nighttime Cloud Data */}
             {nighttimeCloudData && (
-              <div className="bg-cosmic-800/30 rounded-lg p-3">
+              <div className="bg-cosmic-800/30 rounded-lg p-2 sm:p-3">
                 <NighttimeCloudItem nighttimeCloudData={nighttimeCloudData} />
               </div>
             )}
             
             {/* Bortle Scale */}
-            <div className="bg-cosmic-800/30 rounded-lg p-3">
+            <div className="bg-cosmic-800/30 rounded-lg p-2 sm:p-3">
               <BortleScaleItem bortleScale={bortleScale} />
             </div>
             
             {/* Air Quality */}
             {aqi !== undefined && (
-              <div className="bg-cosmic-800/30 rounded-lg p-3">
+              <div className="bg-cosmic-800/30 rounded-lg p-2 sm:p-3">
                 <AirQualityItem aqi={aqi} />
               </div>
             )}
