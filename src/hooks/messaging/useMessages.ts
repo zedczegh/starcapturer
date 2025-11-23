@@ -114,6 +114,7 @@ export const useMessages = () => {
         (query) => query
           .select('*')
           .or(`and(sender_id.eq.${user.id},receiver_id.eq.${conversationPartnerId}),and(sender_id.eq.${conversationPartnerId},receiver_id.eq.${user.id})`)
+          .is('deleted_at', null)
           .order('created_at', { ascending: true }),
         { skipCache: true } // Always get fresh messages
       );

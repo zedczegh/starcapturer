@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatRelative } from 'date-fns';
 import { zhCN, enUS } from 'date-fns/locale';
@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import LocationShareCard from '../LocationShareCard';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
+import { useMessageReactions, ReactionType } from '@/hooks/messaging/useMessageReactions';
+import { toast } from 'sonner';
 
 interface MessageItemProps {
   message: any;
@@ -32,6 +34,8 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const [postImageUrl, setPostImageUrl] = useState<string | null>(null);
   const [detectedPostLink, setDetectedPostLink] = useState<any>(null);
   const [showReactions, setShowReactions] = useState(false);
+  const [reactions, setReactions] = useState<any[]>([]);
+  const { addReaction, removeReaction, getMessageReactions } = useMessageReactions();
   
   const locale = language === 'zh' ? zhCN : enUS;
   const messageDate = new Date(message.created_at);
@@ -147,9 +151,47 @@ const MessageItem: React.FC<MessageItemProps> = ({
     }
   };
 
-  const handleReaction = (reactionType: string) => {
-    console.log(`Reaction ${reactionType} for message ${message.id}`);
-    // TODO: Implement reaction storage
+  // Load reactions for this message
+  useEffect(() => {
+    const loadReactions = async () => {
+      const messageReactions = await getMessageReactions(message.id);
+      setReactions(messageReactions);
+    };
+    
+    loadReactions();
+    
+    // Subscribe to reaction changes
+    const channel = supabase
+      .channel(`message-reactions-${message.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'message_reactions',
+          filter: `message_id=eq.${message.id}`
+        },
+        () => {
+          loadReactions();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [message.id]);
+
+  const handleReaction = async (reactionType: ReactionType) => {
+    if (reactionType === 'reply') {
+      toast.info('Reply functionality coming soon!');
+      return;
+    }
+    await addReaction(message.id, reactionType);
+  };
+
+  const getReactionCount = (type: ReactionType) => {
+    return reactions.filter(r => r.reaction_type === type).length;
   };
 
   const hasContent = message.text || message.image_url || message.location || isPostInteraction || isSharedPost || detectedPostLink;
@@ -184,35 +226,50 @@ const MessageItem: React.FC<MessageItemProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 p-0 rounded-full hover:bg-blue-500/20 transition-colors"
+              className="h-7 w-7 p-0 rounded-full hover:bg-blue-500/20 transition-colors relative"
               onClick={(e) => {
                 e.stopPropagation();
                 handleReaction('like');
               }}
             >
               <ThumbsUp className="h-3.5 w-3.5 text-blue-400" />
+              {getReactionCount('like') > 0 && (
+                <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[9px] rounded-full h-3.5 w-3.5 flex items-center justify-center font-semibold">
+                  {getReactionCount('like')}
+                </span>
+              )}
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 p-0 rounded-full hover:bg-red-500/20 transition-colors"
+              className="h-7 w-7 p-0 rounded-full hover:bg-red-500/20 transition-colors relative"
               onClick={(e) => {
                 e.stopPropagation();
                 handleReaction('heart');
               }}
             >
               <Heart className="h-3.5 w-3.5 text-red-400" />
+              {getReactionCount('heart') > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] rounded-full h-3.5 w-3.5 flex items-center justify-center font-semibold">
+                  {getReactionCount('heart')}
+                </span>
+              )}
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 p-0 rounded-full hover:bg-yellow-500/20 transition-colors"
+              className="h-7 w-7 p-0 rounded-full hover:bg-yellow-500/20 transition-colors relative"
               onClick={(e) => {
                 e.stopPropagation();
                 handleReaction('smile');
               }}
             >
               <Smile className="h-3.5 w-3.5 text-yellow-400" />
+              {getReactionCount('smile') > 0 && (
+                <span className="absolute -top-1 -right-1 bg-yellow-500 text-white text-[9px] rounded-full h-3.5 w-3.5 flex items-center justify-center font-semibold">
+                  {getReactionCount('smile')}
+                </span>
+              )}
             </Button>
           </div>
         )}

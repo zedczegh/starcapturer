@@ -135,10 +135,10 @@ export const useMessageActions = (
           return false;
         }
 
-        // Delete the message
+        // Soft delete the message by setting deleted_at
         const { error: deleteError } = await supabase
           .from('user_messages')
-          .delete()
+          .update({ deleted_at: new Date().toISOString() })
           .eq('id', messageId);
 
         if (deleteError) throw deleteError;

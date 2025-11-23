@@ -374,6 +374,38 @@ export type Database = {
         }
         Relationships: []
       }
+      message_reactions: {
+        Row: {
+          created_at: string
+          id: string
+          message_id: string
+          reaction_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_id: string
+          reaction_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_id?: string
+          reaction_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "user_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       personal_uploads: {
         Row: {
           category: string | null
@@ -838,10 +870,12 @@ export type Database = {
       user_messages: {
         Row: {
           created_at: string
+          deleted_at: string | null
           id: string
           image_url: string | null
           message: string
           metadata: Json | null
+          parent_message_id: string | null
           read: boolean
           receiver_id: string
           sender_id: string
@@ -849,10 +883,12 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
           image_url?: string | null
           message: string
           metadata?: Json | null
+          parent_message_id?: string | null
           read?: boolean
           receiver_id: string
           sender_id: string
@@ -860,16 +896,26 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
           image_url?: string | null
           message?: string
           metadata?: Json | null
+          parent_message_id?: string | null
           read?: boolean
           receiver_id?: string
           sender_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_messages_parent_message_id_fkey"
+            columns: ["parent_message_id"]
+            isOneToOne: false
+            referencedRelation: "user_messages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_payment_methods: {
         Row: {
