@@ -43,6 +43,7 @@ export const MotionAnimationCanvas = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [motionArrowStart, setMotionArrowStart] = useState<{x: number, y: number} | null>(null);
+  const [motionTrailPoints, setMotionTrailPoints] = useState<{x: number, y: number}[]>([]);
 
   // Initialize canvas and animation engine
   useEffect(() => {
@@ -83,7 +84,9 @@ export const MotionAnimationCanvas = ({
     const y = e.clientY - rect.top;
 
     if (activeTool === "motion") {
+      setIsDrawing(true);
       setMotionArrowStart({ x, y });
+      setMotionTrailPoints([{ x, y }]);
     } else if (activeTool === "anchor" || activeTool === "erase") {
       setIsDrawing(true);
       drawBrush(x, y);
@@ -98,10 +101,13 @@ export const MotionAnimationCanvas = ({
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    if (activeTool === "motion" && motionArrowStart) {
-      // Draw temporary arrow
+    if (activeTool === "motion" && isDrawing && motionArrowStart) {
+      // Add point to trail
+      setMotionTrailPoints(prev => [...prev, { x, y }]);
+      
+      // Draw temporary trail
       redrawOverlay();
-      drawArrow(motionArrowStart.x, motionArrowStart.y, x, y);
+      drawMotionTrail([...motionTrailPoints, { x, y }]);
     } else if ((activeTool === "anchor" || activeTool === "erase") && isDrawing) {
       drawBrush(x, y);
     }
@@ -111,58 +117,72 @@ export const MotionAnimationCanvas = ({
     const canvas = overlayCanvasRef.current;
     if (!canvas || !animationEngineRef.current) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    if (activeTool === "motion" && motionArrowStart) {
-      // Add motion vector
-      animationEngineRef.current.addMotionVector(
-        motionArrowStart.x,
-        motionArrowStart.y,
-        x,
-        y,
-        motionStrength / 100
-      );
+    if (activeTool === "motion" && motionArrowStart && motionTrailPoints.length > 1) {
+      // Add motion vectors along the trail
+      for (let i = 0; i < motionTrailPoints.length - 1; i++) {
+        const start = motionTrailPoints[i];
+        const end = motionTrailPoints[i + 1];
+        
+        animationEngineRef.current.addMotionVector(
+          start.x,
+          start.y,
+          end.x,
+          end.y,
+          motionStrength / 100
+        );
+      }
+      
       setMotionArrowStart(null);
+      setMotionTrailPoints([]);
       redrawOverlay();
     }
 
     setIsDrawing(false);
   };
 
-  const drawArrow = (x1: number, y1: number, x2: number, y2: number) => {
+  const drawMotionTrail = (points: {x: number, y: number}[]) => {
     const canvas = overlayCanvasRef.current;
     const ctx = canvas?.getContext("2d");
-    if (!ctx) return;
+    if (!ctx || points.length < 2) return;
 
-    const headLength = 15;
-    const angle = Math.atan2(y2 - y1, x2 - x1);
-
+    // Draw smooth trail line
     ctx.strokeStyle = "#3b82f6";
-    ctx.fillStyle = "#3b82f6";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
     ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.shadowColor = "#3b82f6";
+    ctx.shadowBlur = 10;
 
-    // Draw line
     ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
+    ctx.moveTo(points[0].x, points[0].y);
+    
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x, points[i].y);
+    }
     ctx.stroke();
 
-    // Draw arrowhead
-    ctx.beginPath();
-    ctx.moveTo(x2, y2);
-    ctx.lineTo(
-      x2 - headLength * Math.cos(angle - Math.PI / 6),
-      y2 - headLength * Math.sin(angle - Math.PI / 6)
-    );
-    ctx.lineTo(
-      x2 - headLength * Math.cos(angle + Math.PI / 6),
-      y2 - headLength * Math.sin(angle + Math.PI / 6)
-    );
-    ctx.closePath();
-    ctx.fill();
+    // Draw arrowhead at the end
+    if (points.length >= 2) {
+      const last = points[points.length - 1];
+      const secondLast = points[points.length - 2];
+      const angle = Math.atan2(last.y - secondLast.y, last.x - secondLast.x);
+      const headLength = 15;
+
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#3b82f6";
+      ctx.beginPath();
+      ctx.moveTo(last.x, last.y);
+      ctx.lineTo(
+        last.x - headLength * Math.cos(angle - Math.PI / 6),
+        last.y - headLength * Math.sin(angle - Math.PI / 6)
+      );
+      ctx.lineTo(
+        last.x - headLength * Math.cos(angle + Math.PI / 6),
+        last.y - headLength * Math.sin(angle + Math.PI / 6)
+      );
+      ctx.closePath();
+      ctx.fill();
+    }
   };
 
   const drawBrush = (x: number, y: number) => {
@@ -187,12 +207,17 @@ export const MotionAnimationCanvas = ({
   };
 
   const handlePlayPause = () => {
-    if (!animationEngineRef.current) return;
+    const overlayCanvas = overlayCanvasRef.current;
+    if (!animationEngineRef.current || !overlayCanvas) return;
 
     if (isPlaying) {
       animationEngineRef.current.stop();
+      // Show overlay when paused
+      overlayCanvas.style.opacity = "1";
     } else {
       animationEngineRef.current.play(animationSpeed / 100);
+      // Hide overlay when playing
+      overlayCanvas.style.opacity = "0";
     }
     setIsPlaying(!isPlaying);
   };
@@ -219,8 +244,12 @@ export const MotionAnimationCanvas = ({
   };
 
   const handleClear = () => {
-    if (!animationEngineRef.current) return;
+    const overlayCanvas = overlayCanvasRef.current;
+    if (!animationEngineRef.current || !overlayCanvas) return;
+    
     animationEngineRef.current.clear();
+    overlayCanvas.style.opacity = "1"; // Show overlay after clearing
+    setIsPlaying(false);
     redrawOverlay();
     toast.success(t("Canvas cleared", "画布已清空"));
   };
@@ -312,13 +341,14 @@ export const MotionAnimationCanvas = ({
           />
           <canvas
             ref={overlayCanvasRef}
-            className="absolute inset-0 w-full h-full cursor-crosshair"
+            className="absolute inset-0 w-full h-full cursor-crosshair transition-opacity duration-300"
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={() => {
               setIsDrawing(false);
               setMotionArrowStart(null);
+              setMotionTrailPoints([]);
             }}
           />
         </div>
