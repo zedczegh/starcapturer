@@ -3,14 +3,14 @@ import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Send, Image, X, Smile, Plus, MapPin } from "lucide-react";
 import { toast } from "sonner";
-import EmojiPicker from './EmojiPicker';
+import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import EmojiRenderer from './EmojiRenderer';
-import { siqsEmojis } from './SiqsEmojiData';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useLocationSharing } from '@/hooks/location/useLocationSharing';
 import { UploadProgress } from '@/components/ui/upload-progress';
 import { LinkPreview } from './LinkPreview';
 import { supabase } from '@/integrations/supabase/client';
+import { Textarea } from "@/components/ui/textarea";
 
 interface LinkPreviewData {
   postId: string;
@@ -186,29 +186,8 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
     setShowOptions(false);
   };
 
-  const toggleEmojiPicker = () => {
-    setShowEmojiPicker(!showEmojiPicker);
-    setShowOptions(false);
-  };
-
-  const handleEmojiSelect = (emojiTag: string) => {
-    if (textareaRef.current) {
-      const start = textareaRef.current.selectionStart;
-      const end = textareaRef.current.selectionEnd;
-      const newMessage = message.substring(0, start) + emojiTag + message.substring(end);
-      setMessage(newMessage);
-      
-      // Focus back on textarea and place cursor after the inserted emoji
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.focus();
-          const newCursorPos = start + emojiTag.length;
-          textareaRef.current.selectionStart = newCursorPos;
-          textareaRef.current.selectionEnd = newCursorPos;
-        }
-      }, 10);
-    }
-    
+  const handleEmojiSelect = (emojiData: EmojiClickData) => {
+    setMessage(prev => prev + emojiData.emoji);
     setShowEmojiPicker(false);
   };
 
@@ -224,14 +203,6 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
       toast.success(t("Location shared successfully", "位置已成功共享"));
     }
   };
-
-  // Auto-resize textarea as user types
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
-    }
-  }, [message]);
 
   return (
     <div className="border-t border-cosmic-700/40 p-4 bg-gradient-to-t from-slate-900/95 via-slate-800/85 to-slate-700/70 space-y-3 sticky bottom-0 backdrop-blur-xl z-20 shadow-[0_-8px_24px_-12px_rgba(6,182,212,0.15)]">
@@ -280,7 +251,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
             </Button>
           </PopoverTrigger>
           <PopoverContent 
-            className="p-2 bg-cosmic-900/95 border-cosmic-700 backdrop-blur-lg w-auto"
+            className="p-2 bg-cosmic-900/95 border-cosmic-700 backdrop-blur-lg w-auto z-50"
             side="top"
             align="start"
             sideOffset={10}
@@ -303,20 +274,6 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
               <Button
                 className="flex flex-col items-center gap-1 w-16 h-16 p-1 rounded-lg hover:bg-cosmic-800/50"
                 variant="ghost"
-                onClick={toggleEmojiPicker}
-                disabled={sending}
-              >
-                <div className="h-8 w-8 rounded-full bg-cosmic-800/50 flex items-center justify-center">
-                  <Smile className="h-5 w-5 text-primary" />
-                </div>
-                <span className="text-xs text-cosmic-300">
-                  {t("Emoji", "表情")}
-                </span>
-              </Button>
-              
-              <Button
-                className="flex flex-col items-center gap-1 w-16 h-16 p-1 rounded-lg hover:bg-cosmic-800/50"
-                variant="ghost"
                 onClick={handleShareLocation}
                 disabled={sending || gettingLocation}
               >
@@ -331,70 +288,48 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSend, sending }) => {
           </PopoverContent>
         </Popover>
         
-        <div className="relative flex-grow bg-cosmic-800/40 hover:bg-cosmic-800/50 rounded-2xl border border-cosmic-700/40 hover:border-cosmic-600/50 transition-all duration-300 focus-within:border-primary/40 focus-within:bg-cosmic-800/50 shadow-lg">
-          <div className="flex items-center">
-            <textarea
-              ref={textareaRef}
-              className="w-full bg-transparent rounded-2xl py-3 px-4 pr-12 text-cosmic-100 placeholder:text-cosmic-400 min-h-[45px] max-h-[120px] resize-none focus:outline-none transition-colors duration-200"
-              placeholder={t("Type your message...", "输入您的消息...")}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              rows={1}
-              disabled={sending}
-            />
-            <div className="absolute right-2 flex items-center space-x-1 py-2 z-10">
-              <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
-                <PopoverTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="p-0 h-8 w-8 rounded-full text-cosmic-400 hover:text-primary hover:bg-cosmic-800/30"
-                    aria-label={t("Insert emoji", "插入表情")}
-                  >
-                    <Smile className="h-5 w-5" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" alignOffset={-40} className="p-2 bg-cosmic-900/95 border-cosmic-700 backdrop-blur-lg w-72">
-                  <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto">
-                    {siqsEmojis.map((emoji) => (
-                      <Button
-                        key={emoji.id}
-                        variant="ghost"
-                        className="flex flex-col items-center justify-center p-2 hover:bg-cosmic-800/50 cursor-pointer rounded-lg transition-all hover:scale-110 h-auto"
-                        onClick={() => handleEmojiSelect(`[${emoji.id}]`)}
-                      >
-                        <div className="p-1 transform hover:scale-110 transition-transform">
-                          {emoji.icon}
-                        </div>
-                        <span className="text-xs text-cosmic-300 mt-1 text-center">
-                          {emoji.name}
-                        </span>
-                      </Button>
-                    ))}
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-            <input 
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              accept="image/*"
-              onChange={handleFileChange}
-              disabled={sending}
-            />
+        <div className="relative flex-grow">
+          <Textarea
+            ref={textareaRef}
+            className="min-h-[45px] max-h-[120px] bg-muted/50 border-border resize-none pr-20 pb-2"
+            placeholder={t("Type your message...", "输入您的消息...")}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={sending}
+          />
+          <div className="absolute bottom-2 right-2 flex gap-1">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            >
+              <Smile className="h-4 w-4" />
+            </Button>
+            <Button
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleSend}
+              disabled={sending || (!message.trim() && !imageFile)}
+            >
+              <Send className={`h-4 w-4 ${sending ? 'animate-pulse' : ''}`} />
+            </Button>
           </div>
+          {showEmojiPicker && (
+            <div className="absolute z-50 bottom-full mb-2 right-0">
+              <EmojiPicker onEmojiClick={handleEmojiSelect} />
+            </div>
+          )}
+          <input 
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept="image/*"
+            onChange={handleFileChange}
+            disabled={sending}
+          />
         </div>
-        <Button
-          className="flex-shrink-0 rounded-full h-10 w-10 p-0 transition-all duration-300 hover:scale-105 active:scale-95 shadow-lg disabled:opacity-50 disabled:hover:scale-100"
-          onClick={handleSend}
-          disabled={sending || (!message.trim() && !imageFile)}
-          variant={message.trim() || imageFile ? "default" : "ghost"}
-        >
-          <Send className={`h-5 w-5 transition-transform duration-200 ${sending ? 'animate-pulse' : ''}`} />
-          <span className="sr-only">{t("Send", "发送")}</span>
-        </Button>
       </div>
     </div>
   );
