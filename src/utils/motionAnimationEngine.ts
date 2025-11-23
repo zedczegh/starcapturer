@@ -194,15 +194,20 @@ export class MotionAnimationEngine {
       const maxDist = 150; // Influence radius
       
       if (dist < maxDist) {
-        // Smoother falloff using cubic easing for natural-looking motion
-        const normalizedDist = dist / maxDist;
-        const weight = (1 - normalizedDist) * (1 - normalizedDist) * (1 - normalizedDist) * vector.strength;
+      const normalizedDist = dist / maxDist;
+        // Ultra-smooth falloff using quartic easing for seamless blending
+        const falloff = 1 - normalizedDist;
+        const weight = falloff * falloff * falloff * falloff * vector.strength;
         
-        // Create seamless looping motion using sine wave (like Motion Leap/Pixaloop)
-        // Sine wave naturally returns to 0, creating perfect loops without visible restart
+        // Create ultra-smooth seamless looping using eased sine wave (like Motion Leap/Pixaloop)
+        // Combining sine with cubic easing for buttery smooth transitions
         const phase = (frame % 240) / 240; // Longer cycle for smoother motion
-        const sineWave = Math.sin(phase * Math.PI * 2); // Complete sine cycle: 0 -> 1 -> 0 -> -1 -> 0
-        const amplitude = sineWave * 0.6; // 60% displacement with smooth easing
+        const sineWave = Math.sin(phase * Math.PI * 2); // Complete sine cycle
+        // Apply cubic ease in-out for even smoother acceleration/deceleration
+        const eased = sineWave < 0 
+          ? -Math.pow(Math.abs(sineWave), 0.7) // Smooth negative motion
+          : Math.pow(sineWave, 0.7); // Smooth positive motion
+        const amplitude = eased * 0.6; // 60% displacement with ultra-smooth easing
         
         totalDx += vector.dx * weight * amplitude;
         totalDy += vector.dy * weight * amplitude;
