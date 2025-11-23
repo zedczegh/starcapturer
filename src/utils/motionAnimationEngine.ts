@@ -199,15 +199,10 @@ export class MotionAnimationEngine {
         const falloff = 1 - normalizedDist;
         const weight = falloff * falloff * falloff * falloff * vector.strength;
         
-        // One-direction seamless motion using eased ramp (no back-and-forth)
-        const loopFrames = 240; // Longer cycle for smoother motion
-        const phase = (frame % loopFrames) / loopFrames; // 0 → 1, then reset
-        // Cubic ease-in-out for smooth acceleration without reversing direction
-        const eased = phase < 0.5
-          ? 4 * phase * phase * phase
-          : 1 - Math.pow(-2 * phase + 2, 3) / 2;
-        const amplitude = eased * 0.6; // 60% displacement with smooth easing
-
+        // Continuous infinite motion without loop reset (true seamless animation)
+        // Displacement keeps accumulating forever, creating perpetual motion
+        const amplitude = (frame * 0.0025); // Smooth continuous growth
+        
         totalDx += vector.dx * weight * amplitude;
         totalDy += vector.dy * weight * amplitude;
         totalWeight += weight;
