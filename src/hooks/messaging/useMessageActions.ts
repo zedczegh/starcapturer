@@ -27,14 +27,20 @@ export const useMessageActions = (
   const { toast } = useToast();
 
   const sendMessage = useCallback(
-    async (receiverId: string, messageText: string, imageFile?: File | null, locationData?: any) => {
-      if (!user || !receiverId) {
+    async (
+      partnerId: string,
+      text: string,
+      imageFile?: File | null,
+      locationData?: any,
+      replyToMessageId?: string
+    ) => {
+      if (!user || !partnerId) {
         console.error('Missing user or receiver ID');
         return;
       }
 
       // Prevent self-messaging
-      if (user.id === receiverId) {
+      if (user.id === partnerId) {
         toast.error(
           t("Cannot send message to yourself", "不能给自己发消息"),
           t("Please select another user", "请选择其他用户")
@@ -44,7 +50,7 @@ export const useMessageActions = (
 
       setSending(true);
       try {
-        let finalMessage = messageText;
+        let finalMessage = text;
         let imageUrl = null;
 
         // Process location data if provided
@@ -81,9 +87,10 @@ export const useMessageActions = (
         // Insert the message
         const { error } = await supabase.from('user_messages').insert({
           sender_id: user.id,
-          receiver_id: receiverId,
+          receiver_id: partnerId,
           message: finalMessage,
           image_url: imageUrl,
+          parent_message_id: replyToMessageId || null,
         });
 
         if (error) {
@@ -91,7 +98,7 @@ export const useMessageActions = (
         }
 
         // Clear related caches
-        clearMessageCaches(receiverId, user.id);
+        clearMessageCaches(partnerId, user.id);
         
         // Success!
         console.log('Message sent successfully');

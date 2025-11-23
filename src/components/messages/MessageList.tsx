@@ -14,6 +14,7 @@ interface MessageListProps {
   activeConversation: ConversationPartner;
   onBack: () => void;
   onUnsendMessage: (id: string) => Promise<boolean>;
+  onReplyToMessage: (message: any) => void;
 }
 
 // Memoize the MessageItem to prevent unnecessary re-renders
@@ -24,7 +25,8 @@ const MessageList: React.FC<MessageListProps> = memo(({
   currentUserId,
   activeConversation,
   onBack,
-  onUnsendMessage
+  onUnsendMessage,
+  onReplyToMessage
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
@@ -68,6 +70,7 @@ const MessageList: React.FC<MessageListProps> = memo(({
                   message={message}
                   isSender={message.sender_id === currentUserId}
                   onUnsend={onUnsendMessage}
+                  onReply={onReplyToMessage}
                 />
               ))}
               <div ref={messagesEndRef} />

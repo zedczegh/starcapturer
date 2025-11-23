@@ -14,11 +14,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { useMessageReactions, ReactionType } from '@/hooks/messaging/useMessageReactions';
 import { toast } from 'sonner';
+import { ParentMessagePreview } from './ParentMessagePreview';
 
 interface MessageItemProps {
   message: any;
   isSender: boolean;
   onUnsend: (id: string) => void;
+  onReply?: (message: any) => void;
   isProcessingAction?: boolean;
 }
 
@@ -26,6 +28,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
   message,
   isSender,
   onUnsend,
+  onReply,
   isProcessingAction = false
 }) => {
   const { language } = useLanguage();
@@ -36,6 +39,7 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const [showReactions, setShowReactions] = useState(false);
   const [reactions, setReactions] = useState<any[]>([]);
   const { addReaction, removeReaction, getMessageReactions } = useMessageReactions();
+  const [parentMessage, setParentMessage] = useState<any>(null);
   
   const locale = language === 'zh' ? zhCN : enUS;
   const messageDate = new Date(message.created_at);
@@ -151,6 +155,32 @@ const MessageItem: React.FC<MessageItemProps> = ({
     }
   };
 
+  // Load parent message if this is a reply
+  useEffect(() => {
+    const loadParentMessage = async () => {
+      if (message.parent_message_id) {
+        try {
+          const { data, error } = await supabase
+            .from('user_messages')
+            .select('message, image_url')
+            .eq('id', message.parent_message_id)
+            .maybeSingle();
+          
+          if (data && !error) {
+            setParentMessage({
+              text: data.message,
+              image_url: data.image_url
+            });
+          }
+        } catch (error) {
+          console.error('Error loading parent message:', error);
+        }
+      }
+    };
+    
+    loadParentMessage();
+  }, [message.parent_message_id]);
+
   // Load reactions for this message
   useEffect(() => {
     const loadReactions = async () => {
@@ -184,7 +214,14 @@ const MessageItem: React.FC<MessageItemProps> = ({
 
   const handleReaction = async (reactionType: ReactionType) => {
     if (reactionType === 'reply') {
-      toast.info('Reply functionality coming soon!');
+      if (onReply) {
+        onReply({
+          id: message.id,
+          text: message.text,
+          image_url: message.image_url,
+          sender_id: message.sender_id
+        });
+      }
       return;
     }
     await addReaction(message.id, reactionType);
@@ -292,6 +329,14 @@ const MessageItem: React.FC<MessageItemProps> = ({
               <MoreVertical className="h-4 w-4" />
               <span className="sr-only">Message options</span>
             </Button>
+          )}
+          
+          {/* Show parent message preview if this is a reply */}
+          {parentMessage && (
+            <ParentMessagePreview 
+              parentText={parentMessage.text}
+              parentImageUrl={parentMessage.image_url}
+            />
           )}
           
           {message.text && !isSharedPost && !isPostInteraction && !detectedPostLink && (
@@ -413,6 +458,30 @@ const MessageItem: React.FC<MessageItemProps> = ({
             </div>
           )}
         </div>
+        
+        {/* Reaction bubbles - Instagram/Messenger style */}
+        {(getReactionCount('like') > 0 || getReactionCount('heart') > 0 || getReactionCount('smile') > 0) && (
+          <div className={`flex gap-1 mt-1 ${isSender ? 'justify-end' : 'justify-start'}`}>
+            {getReactionCount('like') > 0 && (
+              <div className="flex items-center gap-0.5 bg-blue-500/90 text-white rounded-full px-1.5 py-0.5 text-xs font-semibold shadow-sm">
+                <ThumbsUp className="h-2.5 w-2.5" />
+                <span>{getReactionCount('like')}</span>
+              </div>
+            )}
+            {getReactionCount('heart') > 0 && (
+              <div className="flex items-center gap-0.5 bg-red-500/90 text-white rounded-full px-1.5 py-0.5 text-xs font-semibold shadow-sm">
+                <Heart className="h-2.5 w-2.5 fill-current" />
+                <span>{getReactionCount('heart')}</span>
+              </div>
+            )}
+            {getReactionCount('smile') > 0 && (
+              <div className="flex items-center gap-0.5 bg-yellow-500/90 text-white rounded-full px-1.5 py-0.5 text-xs font-semibold shadow-sm">
+                <Smile className="h-2.5 w-2.5" />
+                <span>{getReactionCount('smile')}</span>
+              </div>
+            )}
+          </div>
+        )}
         
         <div
           className={`flex items-center text-xs text-gray-500 mt-1 ${
