@@ -5,6 +5,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { MapProviderProvider } from './contexts/MapProviderContext';
 import { useBookingNotifications } from './hooks/useBookingNotifications';
 import { Loader2 } from 'lucide-react';
 
@@ -178,11 +179,13 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <LanguageProvider>
-            <Router>
-              <AuthProvider>
-                <AppContent />
-              </AuthProvider>
-            </Router>
+            <MapProviderProvider>
+              <Router>
+                <AuthProvider>
+                  <AppContent />
+                </AuthProvider>
+              </Router>
+            </MapProviderProvider>
           </LanguageProvider>
         </ThemeProvider>
       </QueryClientProvider>
