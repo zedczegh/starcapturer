@@ -297,10 +297,21 @@ export class MotionAnimationEngine {
     let totalDy = 0;
     let totalWeight = 0;
 
-    // Check if in range
-    let inRange = this.rangePoints.length === 0;
+    // Check if in range using stroke paths (continuous brush strokes)
+    let inRange = this.rangeStrokes.length === 0 && this.rangePoints.length === 0;
     
-    if (this.rangePoints.length > 0) {
+    // First check strokes (continuous brush areas)
+    if (this.rangeStrokes.length > 0) {
+      for (const stroke of this.rangeStrokes) {
+        if (this.isPointInStroke(x, y, stroke)) {
+          inRange = true;
+          break;
+        }
+      }
+    }
+    
+    // Fallback to individual points if no strokes
+    if (!inRange && this.rangePoints.length > 0) {
       for (const range of this.rangePoints) {
         const dist = Math.sqrt((x - range.x) ** 2 + (y - range.y) ** 2);
         if (dist < range.radius) {
@@ -428,6 +439,56 @@ export class MotionAnimationEngine {
     }
 
     this.ctx.putImageData(blendedImageData, 0, 0);
+  }
+
+  /**
+   * Check if a point is within a stroke path (within radius distance)
+   */
+  private isPointInStroke(x: number, y: number, stroke: RangeStroke): boolean {
+    const { points, radius } = stroke;
+    
+    // Single point - check as circle
+    if (points.length === 1) {
+      const dist = Math.sqrt((x - points[0].x) ** 2 + (y - points[0].y) ** 2);
+      return dist < radius;
+    }
+    
+    // Multiple points - check distance to line segments
+    for (let i = 0; i < points.length - 1; i++) {
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const dist = this.distanceToLineSegment(x, y, p1.x, p1.y, p2.x, p2.y);
+      if (dist < radius) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  /**
+   * Calculate distance from a point to a line segment
+   */
+  private distanceToLineSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const lengthSquared = dx * dx + dy * dy;
+    
+    if (lengthSquared === 0) {
+      // Line segment is a point
+      return Math.sqrt((px - x1) ** 2 + (py - y1) ** 2);
+    }
+    
+    // Calculate projection parameter
+    let t = ((px - x1) * dx + (py - y1) * dy) / lengthSquared;
+    t = Math.max(0, Math.min(1, t)); // Clamp to [0, 1]
+    
+    // Find closest point on line segment
+    const closestX = x1 + t * dx;
+    const closestY = y1 + t * dy;
+    
+    // Return distance to closest point
+    return Math.sqrt((px - closestX) ** 2 + (py - closestY) ** 2);
   }
 
   /**
