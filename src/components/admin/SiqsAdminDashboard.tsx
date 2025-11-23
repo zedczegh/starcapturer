@@ -16,6 +16,7 @@ import { useSiqsAdminData } from '@/hooks/admin/useSiqsAdminData';
 import { useCountyGroupedSiqs } from '@/hooks/admin/useCountyGroupedSiqs';
 import CountyGroupCard from './CountyGroupCard';
 import MapProviderToggle from './MapProviderToggle';
+import AMapKeyConfig from './AMapKeyConfig';
 import { motion } from 'framer-motion';
 
 const SiqsAdminDashboard: React.FC = () => {
@@ -66,7 +67,10 @@ const SiqsAdminDashboard: React.FC = () => {
       className="space-y-6"
     >
       {/* Map Provider Settings (Admin Only) */}
-      <MapProviderToggle />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <MapProviderToggle />
+        <AMapKeyConfig />
+      </div>
       
       {/* Header */}
       <Card className="bg-gradient-to-r from-purple-900/30 to-blue-900/30 border-purple-700/30">
