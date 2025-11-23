@@ -88,15 +88,12 @@ export const MotionAnimationCanvas = ({
     }
   }, [displacementAmount]);
 
-  // When the animation speed changes while playing, restart the engine with the new speed
+  // When the animation speed changes while playing, update it dynamically
   useEffect(() => {
     const engine = animationEngineRef.current;
-    const overlayCanvas = overlayCanvasRef.current;
-    if (!engine || !overlayCanvas || !isPlaying) return;
+    if (!engine || !isPlaying) return;
 
-    engine.stop();
-    engine.play(animationSpeed / 100);
-    overlayCanvas.style.opacity = "0";
+    engine.updateSpeed(animationSpeed / 100);
   }, [animationSpeed, isPlaying]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {

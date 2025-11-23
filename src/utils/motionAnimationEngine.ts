@@ -369,9 +369,9 @@ export class MotionAnimationEngine {
     const easedProgress = easeInOutCubic(progress);
     
     // Continuous rolling fade - smooth sine wave for seamless infinite loop
-    // Alpha oscillates smoothly between 0.3 and 1.0
+    // Alpha oscillates very subtly between 0.85 and 1.0 to prevent original image from showing
     const fadePhase = progress * Math.PI * 2; // Full sine wave cycle
-    const alpha = 0.65 + 0.35 * Math.sin(fadePhase); // Oscillates 0.3 to 1.0
+    const alpha = 0.925 + 0.075 * Math.sin(fadePhase); // Oscillates 0.85 to 1.0
     
     // Calculate which frames to blend
     const framePosition = easedProgress * numFrames;
@@ -440,14 +440,19 @@ export class MotionAnimationEngine {
   }
 
   play(speed: number = 1) {
-    if (this.isAnimating) return;
-    
     // Adjust duration based on speed (higher speed = shorter duration)
     this.animationDuration = 3000 / speed;
+    
+    if (this.isAnimating) return;
     
     this.isAnimating = true;
     this.currentTime = performance.now();
     this.animationFrame = requestAnimationFrame((t) => this.renderLoop(t));
+  }
+  
+  // Update speed during playback
+  updateSpeed(speed: number) {
+    this.animationDuration = 3000 / speed;
   }
 
   stop() {
