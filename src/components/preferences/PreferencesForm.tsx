@@ -4,8 +4,9 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Globe, Trash, MapPin } from "lucide-react";
+import { Globe, Trash, MapPin, Map } from "lucide-react";
 import { toast } from "sonner";
+import { useMapProvider } from "@/contexts/MapProviderContext";
 
 const PREF_KEY = "user_preferences";
 
@@ -32,6 +33,7 @@ function loadPrefs(): Preferences {
 const PreferencesForm = () => {
   const [prefs, setPrefs] = useState<Preferences>(defaultPrefs);
   const { language, setLanguage, t } = useLanguage();
+  const { provider, setProvider, isAMapReady } = useMapProvider();
 
   useEffect(() => {
     setPrefs(loadPrefs());
@@ -115,6 +117,44 @@ const PreferencesForm = () => {
           onCheckedChange={checked => handleChange("allowLocationService", checked)}
         />
       </div>
+
+      {/* Map Provider */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Map className="h-5 w-5 text-primary" />
+          <div className="flex flex-col">
+            <span className="font-medium text-lg">{t("Map Provider", "地图服务")}</span>
+            <span className="text-sm text-muted-foreground">
+              {t("Auto-detects based on location", "根据位置自动检测")}
+            </span>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant={provider === "leaflet" ? "default" : "outline"}
+            className="px-4 py-1"
+            onClick={() => setProvider("leaflet")}
+          >
+            Leaflet
+          </Button>
+          <Button
+            variant={provider === "amap" ? "default" : "outline"}
+            className="px-4 py-1"
+            onClick={() => setProvider("amap")}
+          >
+            {t("AMap", "高德地图")}
+          </Button>
+        </div>
+      </div>
+
+      {/* Map Provider Status */}
+      {provider === "amap" && (
+        <div className="text-sm text-muted-foreground">
+          {isAMapReady 
+            ? `✓ ${t("AMap loaded successfully", "高德地图加载成功")}`
+            : `⏳ ${t("Loading AMap...", "正在加载高德地图...")}`}
+        </div>
+      )}
     </Card>
   );
 };
