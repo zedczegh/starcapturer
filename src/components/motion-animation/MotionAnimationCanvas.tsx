@@ -45,6 +45,8 @@ export const MotionAnimationCanvas = ({
   const [isDrawing, setIsDrawing] = useState(false);
   const [motionArrowStart, setMotionArrowStart] = useState<{x: number, y: number} | null>(null);
   const [motionTrailPoints, setMotionTrailPoints] = useState<{x: number, y: number}[]>([]);
+  const [rangeStrokePoints, setRangeStrokePoints] = useState<{x: number, y: number}[]>([]);
+  const [lastBrushPoint, setLastBrushPoint] = useState<{x: number, y: number} | null>(null);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const historyRef = useRef<Array<{ type: 'motion' | 'range' | 'erase', data: any }>>([]);
 
@@ -103,7 +105,10 @@ export const MotionAnimationCanvas = ({
       setMotionTrailPoints([{ x, y }]);
     } else if (activeTool === "range" || activeTool === "erase") {
       setIsDrawing(true);
-      drawBrush(x, y);
+      setRangeStrokePoints([{ x, y }]);
+      setLastBrushPoint({ x, y });
+      // Draw first point
+      drawBrushAtPoint(x, y);
     }
   };
 
@@ -123,7 +128,19 @@ export const MotionAnimationCanvas = ({
       redrawOverlay();
       drawMotionTrail([...motionTrailPoints, { x, y }]);
     } else if ((activeTool === "range" || activeTool === "erase") && isDrawing) {
-      drawBrush(x, y);
+      // Only draw if moved enough distance from last point (throttle)
+      if (lastBrushPoint) {
+        const dist = Math.sqrt(
+          Math.pow(x - lastBrushPoint.x, 2) + Math.pow(y - lastBrushPoint.y, 2)
+        );
+        
+        // Only add point if moved at least 1/3 of brush size
+        if (dist >= brushSize / 3) {
+          setRangeStrokePoints(prev => [...prev, { x, y }]);
+          setLastBrushPoint({ x, y });
+          drawBrushAtPoint(x, y);
+        }
+      }
     }
   };
 
@@ -163,6 +180,21 @@ export const MotionAnimationCanvas = ({
       setMotionArrowStart(null);
       setMotionTrailPoints([]);
       redrawOverlay();
+    } else if ((activeTool === "range" || activeTool === "erase") && rangeStrokePoints.length > 0) {
+      // Store the entire stroke as one history action
+      const strokeData = {
+        points: [...rangeStrokePoints],
+        radius: brushSize
+      };
+      
+      if (activeTool === "range") {
+        addToHistory('range', strokeData);
+      } else {
+        addToHistory('erase', strokeData);
+      }
+      
+      setRangeStrokePoints([]);
+      setLastBrushPoint(null);
     }
 
     setIsDrawing(false);
@@ -213,15 +245,13 @@ export const MotionAnimationCanvas = ({
     }
   };
 
-  const drawBrush = (x: number, y: number) => {
+  const drawBrushAtPoint = (x: number, y: number) => {
     if (!animationEngineRef.current) return;
 
     if (activeTool === "range") {
       animationEngineRef.current.addRangePoint(x, y, brushSize);
-      addToHistory('range', { x, y, radius: brushSize });
     } else if (activeTool === "erase") {
       animationEngineRef.current.removeAtPoint(x, y, brushSize);
-      addToHistory('erase', { x, y, radius: brushSize });
     }
 
     redrawOverlay();
@@ -322,11 +352,31 @@ export const MotionAnimationCanvas = ({
         // Add trail for display
         animationEngineRef.current.addMotionTrail(points);
       } else if (action.type === 'range') {
-        const { x, y, radius } = action.data;
-        animationEngineRef.current.addRangePoint(x, y, radius);
+        // Handle both old single-point format and new stroke format
+        if (action.data.points) {
+          // New stroke format - add all points in the stroke
+          const { points, radius } = action.data;
+          for (const point of points) {
+            animationEngineRef.current.addRangePoint(point.x, point.y, radius);
+          }
+        } else {
+          // Old single-point format
+          const { x, y, radius } = action.data;
+          animationEngineRef.current.addRangePoint(x, y, radius);
+        }
       } else if (action.type === 'erase') {
-        const { x, y, radius } = action.data;
-        animationEngineRef.current.removeAtPoint(x, y, radius);
+        // Handle both old single-point format and new stroke format
+        if (action.data.points) {
+          // New stroke format - erase all points in the stroke
+          const { points, radius } = action.data;
+          for (const point of points) {
+            animationEngineRef.current.removeAtPoint(point.x, point.y, radius);
+          }
+        } else {
+          // Old single-point format
+          const { x, y, radius } = action.data;
+          animationEngineRef.current.removeAtPoint(x, y, radius);
+        }
       }
     }
 
@@ -478,6 +528,8 @@ export const MotionAnimationCanvas = ({
               setIsDrawing(false);
               setMotionArrowStart(null);
               setMotionTrailPoints([]);
+              setRangeStrokePoints([]);
+              setLastBrushPoint(null);
             }}
           />
         </div>
