@@ -32,6 +32,7 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
   const userMarkerRef = useRef<any>(null);
   const { position: userPosition, updatePosition } = useUserGeolocation();
   const [realTimeSiqsMap, setRealTimeSiqsMap] = useState<Map<string, number>>(new Map());
+  const [userProfilesMap, setUserProfilesMap] = useState<Map<string, { avatar_url?: string; username?: string }>>(new Map());
 
   // Setup global callback for popup details
   useEffect(() => {
@@ -54,7 +55,28 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
       newMap.set(locationId, siqs);
       return newMap;
     });
-  }, []);
+    
+    // Update the InfoWindow content when SIQS changes
+    const infoWindow = infoWindowsRef.current.get(locationId);
+    const location = locations.find(loc => loc.id === locationId);
+    if (infoWindow && location) {
+      const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
+      const userProfile = userProfilesMap.get(location.user_id || '');
+      
+      infoWindow.setContent(createAMapPopupContent({
+        location,
+        siqsScore: siqs,
+        siqsLoading: false,
+        displayName: location.name,
+        isCertified,
+        onViewDetails: () => {},
+        userId: location.user_id,
+        isMobile,
+        userAvatarUrl: userProfile?.avatar_url,
+        distance: location.distance,
+      }));
+    }
+  }, [locations, userProfilesMap, isMobile]);
 
   // Initialize map
   useEffect(() => {
@@ -134,6 +156,39 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
     };
   }, [userPosition, onLocationUpdate]);
 
+  // Fetch user profiles for avatars
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      const userIds = [...new Set(locations.map(loc => loc.user_id).filter(Boolean))];
+      const newProfiles = new Map(userProfilesMap);
+      
+      for (const userId of userIds) {
+        if (!userId || newProfiles.has(userId)) continue;
+        
+        try {
+          const { supabase } = await import('@/integrations/supabase/client');
+          const { data } = await supabase
+            .from('profiles')
+            .select('avatar_url, username')
+            .eq('id', userId)
+            .single();
+          
+          if (data) {
+            newProfiles.set(userId, data);
+          }
+        } catch (error) {
+          console.error('Error fetching profile:', error);
+        }
+      }
+      
+      setUserProfilesMap(newProfiles);
+    };
+    
+    if (locations.length > 0) {
+      fetchProfiles();
+    }
+  }, [locations]);
+
   // Add location markers with real-time SIQS
   useEffect(() => {
     if (!mapInstance.current || !locations) return;
@@ -164,6 +219,9 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
         offset: new (window as any).AMap.Pixel(...markerIcon.offset),
       });
 
+      // Get user profile for avatar
+      const userProfile = userProfilesMap.get(spot.user_id || '');
+
       // Create info window
       const infoWindow = new (window as any).AMap.InfoWindow({
         content: createAMapPopupContent({
@@ -175,6 +233,8 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
           onViewDetails: () => {},
           userId: spot.user_id,
           isMobile,
+          userAvatarUrl: userProfile?.avatar_url,
+          distance: spot.distance,
         }),
         offset: new (window as any).AMap.Pixel(0, -markerIcon.size[1] / 2),
       });
@@ -197,7 +257,7 @@ const AMapCommunity: React.FC<AMapCommunityProps> = ({
       markersRef.current.clear();
       infoWindowsRef.current.clear();
     };
-  }, [locations, hoveredLocationId, isMobile, realTimeSiqsMap]);
+  }, [locations, hoveredLocationId, isMobile, realTimeSiqsMap, userProfilesMap]);
 
   // Update marker on hover
   useEffect(() => {
