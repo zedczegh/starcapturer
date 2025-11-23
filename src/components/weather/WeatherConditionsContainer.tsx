@@ -102,14 +102,14 @@ const WeatherConditionsContainer: React.FC<WeatherConditionsContainerProps> = ({
             {t("Current Conditions", "当前状况")}
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-4 sm:p-6 bg-gradient-to-b from-cosmic-800/30 to-cosmic-900/30">
+        <CardContent className="p-3 sm:p-6 bg-gradient-to-b from-cosmic-800/30 to-cosmic-900/30">
           {isLoading ? (
             <div className="min-h-[200px] flex items-center justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-cosmic-400" />
               <span className="ml-2 text-cosmic-300">{t("Loading weather data...", "加载天气数据中...")}</span>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-6">
+            <div className="grid grid-cols-1 gap-3 sm:gap-6">
               <motion.div variants={itemVariants}>
                 <PrimaryConditions
                   temperature={stableWeatherData.temperature}
@@ -119,7 +119,7 @@ const WeatherConditionsContainer: React.FC<WeatherConditionsContainerProps> = ({
                 />
               </motion.div>
               
-              <motion.div variants={itemVariants} className="mt-2">
+              <motion.div variants={itemVariants}>
                 <SecondaryConditions
                   cloudCover={stableWeatherData.cloudCover}
                   moonPhase={translatedData.moonPhase}

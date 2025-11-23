@@ -58,12 +58,12 @@ const PrimaryConditions = memo<PrimaryConditionsProps>(({
   };
 
   return (
-    <Card className="p-4 bg-cosmic-900/50 border-cosmic-800">
-      <div className="space-y-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center space-x-3">
-            <div className="bg-cosmic-800/50 p-2 rounded-full">
-              <ThermometerSun className="w-5 h-5 text-yellow-400" />
+    <Card className="p-3 sm:p-4 bg-cosmic-900/50 border-cosmic-800">
+      <div className="space-y-2 sm:space-y-3">
+        <div className="flex items-center justify-between mb-1 sm:mb-2">
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="bg-cosmic-800/50 p-1.5 sm:p-2 rounded-full">
+              <ThermometerSun className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
             </div>
             <div>
               <h3 className="text-sm font-medium">
@@ -75,7 +75,7 @@ const PrimaryConditions = memo<PrimaryConditionsProps>(({
 
         <TooltipProvider>
           {/* Temperature */}
-          <div className="space-y-1 border-b border-cosmic-700/30 pb-2">
+          <div className="space-y-1 border-b border-cosmic-700/30 pb-1.5 sm:pb-2">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
                 <ThermometerSun className="w-4 h-4 text-yellow-400" />
@@ -98,7 +98,7 @@ const PrimaryConditions = memo<PrimaryConditionsProps>(({
           </div>
           
           {/* Humidity */}
-          <div className="space-y-1 border-b border-cosmic-700/30 pb-2 pt-2">
+          <div className="space-y-1 border-b border-cosmic-700/30 pb-1.5 pt-1.5 sm:pb-2 sm:pt-2">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
                 <Droplets className="w-4 h-4 text-blue-400" />
@@ -121,7 +121,7 @@ const PrimaryConditions = memo<PrimaryConditionsProps>(({
           </div>
           
           {/* Wind Speed */}
-          <div className="space-y-1 border-b border-cosmic-700/30 pb-2 pt-2">
+          <div className="space-y-1 border-b border-cosmic-700/30 pb-1.5 pt-1.5 sm:pb-2 sm:pt-2">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
                 <Wind className="w-4 h-4 text-blue-300" />
@@ -144,7 +144,7 @@ const PrimaryConditions = memo<PrimaryConditionsProps>(({
           </div>
           
           {/* Seeing Conditions */}
-          <div className="space-y-1 pt-2">
+          <div className="space-y-1 pt-1.5 sm:pt-2">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
                 <Eye className="w-4 h-4 text-purple-400" />
