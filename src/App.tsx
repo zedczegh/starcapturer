@@ -177,17 +177,17 @@ function App() {
   return (
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <LanguageProvider>
-            <MapProviderProvider>
+        <MapProviderProvider>
+          <ThemeProvider>
+            <LanguageProvider>
               <Router>
                 <AuthProvider>
                   <AppContent />
                 </AuthProvider>
               </Router>
-            </MapProviderProvider>
-          </LanguageProvider>
-        </ThemeProvider>
+            </LanguageProvider>
+          </ThemeProvider>
+        </MapProviderProvider>
       </QueryClientProvider>
     </HelmetProvider>
   );
