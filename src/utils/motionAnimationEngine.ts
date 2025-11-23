@@ -32,7 +32,8 @@ export class MotionAnimationEngine {
   private animationFrame: number | null = null;
   private currentFrame: number = 0;
   private isAnimating: boolean = false;
-  private originalImageData: ImageData | null = null;
+  private workCanvas: HTMLCanvasElement;
+  private workCtx: CanvasRenderingContext2D;
 
   constructor(canvas: HTMLCanvasElement, sourceImage: HTMLImageElement) {
     this.canvas = canvas;
@@ -53,9 +54,15 @@ export class MotionAnimationEngine {
     canvas.width = width;
     canvas.height = height;
     
-    // Draw and store original image data
+    // Create work canvas for efficient processing
+    this.workCanvas = document.createElement('canvas');
+    this.workCanvas.width = width;
+    this.workCanvas.height = height;
+    this.workCtx = this.workCanvas.getContext("2d")!;
+    
+    // Draw original image to both canvases
     this.ctx.drawImage(sourceImage, 0, 0, width, height);
-    this.originalImageData = this.ctx.getImageData(0, 0, width, height);
+    this.workCtx.drawImage(sourceImage, 0, 0, width, height);
   }
 
   /**
@@ -237,46 +244,88 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Render a single frame of the animation
+   * Render a single frame of the animation using canvas transforms (much faster)
    */
   private renderFrame(speed: number) {
-    if (!this.isAnimating || !this.originalImageData) return;
+    if (!this.isAnimating) return;
 
-    const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
+    // Clear main canvas
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Calculate animation phase
+    const phase = (this.currentFrame % 60) / 60 * Math.PI * 2;
+    const amplitude = Math.sin(phase);
 
-    // Apply displacement to each pixel from ORIGINAL image (prevents accumulation)
-    for (let y = 0; y < this.canvas.height; y++) {
-      for (let x = 0; x < this.canvas.width; x++) {
-        const displacement = this.calculateDisplacement(x, y, this.currentFrame);
+    // If no motion vectors, just draw the work canvas
+    if (this.motionVectors.length === 0) {
+      this.ctx.drawImage(this.workCanvas, 0, 0);
+      this.currentFrame += speed;
+      this.animationFrame = requestAnimationFrame(() => this.renderFrame(speed));
+      return;
+    }
+
+    // Draw the base image
+    this.ctx.drawImage(this.workCanvas, 0, 0);
+
+    // Apply displacement effect in chunks for affected areas
+    const chunkSize = 32; // Process in 32x32 chunks for better performance
+    
+    for (let cy = 0; cy < this.canvas.height; cy += chunkSize) {
+      for (let cx = 0; cx < this.canvas.width; cx += chunkSize) {
+        const centerX = cx + chunkSize / 2;
+        const centerY = cy + chunkSize / 2;
         
-        // Sample from original image with displacement
-        const sourceX = Math.round(x - displacement.dx);
-        const sourceY = Math.round(y - displacement.dy);
-
-        // Bounds checking with wrapping for seamless loop
-        let finalSourceX = sourceX;
-        let finalSourceY = sourceY;
+        // Check if this chunk is affected by any motion vector or range point
+        let isAffected = false;
+        let rangeWeight = this.rangePoints.length === 0 ? 1 : 0;
         
-        if (sourceX < 0 || sourceX >= this.canvas.width) {
-          finalSourceX = ((sourceX % this.canvas.width) + this.canvas.width) % this.canvas.width;
+        // Check range points
+        if (this.rangePoints.length > 0) {
+          for (const range of this.rangePoints) {
+            const dist = Math.sqrt((centerX - range.x) ** 2 + (centerY - range.y) ** 2);
+            if (dist < range.radius + chunkSize) {
+              rangeWeight = 1;
+              break;
+            }
+          }
         }
-        if (sourceY < 0 || sourceY >= this.canvas.height) {
-          finalSourceY = ((sourceY % this.canvas.height) + this.canvas.height) % this.canvas.height;
+        
+        if (rangeWeight === 0) continue; // Skip chunks outside range
+        
+        // Check motion vectors
+        for (const vector of this.motionVectors) {
+          const dist = Math.sqrt((centerX - vector.x) ** 2 + (centerY - vector.y) ** 2);
+          if (dist < 250) { // 200 + chunkSize buffer
+            isAffected = true;
+            break;
+          }
         }
-
-        const sourceIdx = (finalSourceY * this.canvas.width + finalSourceX) * 4;
-        const targetIdx = (y * this.canvas.width + x) * 4;
-
-        imageData.data[targetIdx] = this.originalImageData.data[sourceIdx];
-        imageData.data[targetIdx + 1] = this.originalImageData.data[sourceIdx + 1];
-        imageData.data[targetIdx + 2] = this.originalImageData.data[sourceIdx + 2];
-        imageData.data[targetIdx + 3] = this.originalImageData.data[sourceIdx + 3];
+        
+        if (!isAffected) continue;
+        
+        // Calculate average displacement for this chunk
+        const displacement = this.calculateDisplacement(centerX, centerY, this.currentFrame);
+        
+        if (Math.abs(displacement.dx) < 0.5 && Math.abs(displacement.dy) < 0.5) continue;
+        
+        // Apply displacement to this chunk
+        const actualWidth = Math.min(chunkSize, this.canvas.width - cx);
+        const actualHeight = Math.min(chunkSize, this.canvas.height - cy);
+        
+        try {
+          const chunkData = this.workCtx.getImageData(cx, cy, actualWidth, actualHeight);
+          this.ctx.putImageData(
+            chunkData,
+            cx + displacement.dx,
+            cy + displacement.dy
+          );
+        } catch (e) {
+          // Skip chunks that go out of bounds
+        }
       }
     }
 
-    this.ctx.putImageData(imageData, 0, 0);
     this.currentFrame += speed;
-
     this.animationFrame = requestAnimationFrame(() => this.renderFrame(speed));
   }
 
@@ -300,10 +349,8 @@ export class MotionAnimationEngine {
       this.animationFrame = null;
     }
     
-    // Redraw original image from stored data
-    if (this.originalImageData) {
-      this.ctx.putImageData(this.originalImageData, 0, 0);
-    }
+    // Redraw original image from work canvas
+    this.ctx.drawImage(this.workCanvas, 0, 0);
   }
 
   /**
