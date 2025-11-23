@@ -49,11 +49,11 @@ export const getCertificationColor = (location: SharedAstroSpot): string => {
 /**
  * Get marker color based on SIQS score with fallback to certification color
  */
-export const getLocationColor = (location: SharedAstroSpot): string => {
-  const siqsScore = getSiqsScore(location);
+export const getLocationColor = (location: SharedAstroSpot, overrideSiqs?: number | null): string => {
+  const siqsScore = overrideSiqs !== undefined ? overrideSiqs : getSiqsScore(location);
   const isMountain = location.certification?.toLowerCase().includes('natural mountain');
   
-  if (siqsScore > 0 || isMountain) {
+  if (siqsScore && siqsScore > 0 || isMountain) {
     return getProgressColor(siqsScore || 0);
   }
   
@@ -71,9 +71,10 @@ export const createAMapMarkerIcon = (
   location: SharedAstroSpot,
   isCertified: boolean,
   isHovered: boolean,
-  isMobile: boolean
+  isMobile: boolean,
+  overrideSiqs?: number | null
 ): any => {
-  const color = getLocationColor(location);
+  const color = getLocationColor(location, overrideSiqs);
   const isUNESCO = location.isUNESCO || location.certification?.toLowerCase().includes('unesco');
   const isObscura = location.certification?.toLowerCase().includes('atlas obscura');
   const isMountain = location.certification?.toLowerCase().includes('natural mountain');

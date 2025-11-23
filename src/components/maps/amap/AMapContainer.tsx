@@ -37,6 +37,7 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const markersRef = useRef<Map<string, any>>(new Map());
+  const infoWindowsRef = useRef<Map<string, any>>(new Map());
   const userMarkerRef = useRef<any>(null);
   const circleRef = useRef<any>(null);
   const [realTimeSiqsMap, setRealTimeSiqsMap] = useState<Map<string, number>>(new Map());
@@ -164,13 +165,14 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
   useEffect(() => {
     if (!mapInstance.current || !locations) return;
 
-    // Clear existing markers
+    // Clear existing markers and info windows
     markersRef.current.forEach((marker) => {
       if (marker && mapInstance.current) {
         mapInstance.current.remove(marker);
       }
     });
     markersRef.current.clear();
+    infoWindowsRef.current.clear();
 
     // Add new markers
     locations.forEach((location) => {
@@ -182,7 +184,11 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
       }
 
       const isHovered = hoveredLocationId === location.id;
-      const markerIcon = createAMapMarkerIcon(location, isCertified, isHovered, isMobile);
+      
+      // Get current SIQS (real-time or static)
+      const currentSiqs = realTimeSiqsMap.get(location.id) || getSiqsScore(location);
+      
+      const markerIcon = createAMapMarkerIcon(location, isCertified, isHovered, isMobile, currentSiqs);
       
       const marker = new (window as any).AMap.Marker({
         position: [location.longitude, location.latitude],
@@ -190,9 +196,6 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
         content: markerIcon.content,
         offset: new (window as any).AMap.Pixel(...markerIcon.offset),
       });
-
-      // Get current SIQS (real-time or static)
-      const currentSiqs = realTimeSiqsMap.get(location.id) || getSiqsScore(location);
 
       // Create info window with current SIQS
       const infoWindow = new (window as any).AMap.InfoWindow({
@@ -215,6 +218,7 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
 
       mapInstance.current.add(marker);
       markersRef.current.set(location.id, marker);
+      infoWindowsRef.current.set(location.id, infoWindow);
     });
 
     return () => {
@@ -224,8 +228,9 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
         }
       });
       markersRef.current.clear();
+      infoWindowsRef.current.clear();
     };
-  }, [locations, onLocationClick, activeView, hoveredLocationId, isMobile, realTimeSiqsMap]);
+  }, [locations, activeView, hoveredLocationId, isMobile, realTimeSiqsMap]);
 
   // Update marker appearance when hovered
   useEffect(() => {
@@ -236,11 +241,12 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
       const location = locations.find(loc => loc.id === hoveredLocationId);
       if (location) {
         const isCertified = Boolean(location.isDarkSkyReserve || location.certification);
-        const markerIcon = createAMapMarkerIcon(location, isCertified, true, isMobile);
+        const currentSiqs = realTimeSiqsMap.get(location.id) || getSiqsScore(location);
+        const markerIcon = createAMapMarkerIcon(location, isCertified, true, isMobile, currentSiqs);
         marker.setContent(markerIcon.content);
       }
     }
-  }, [hoveredLocationId, locations, isMobile]);
+  }, [hoveredLocationId, locations, isMobile, realTimeSiqsMap]);
 
   return (
     <div className="relative w-full h-full">
