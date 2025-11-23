@@ -22,6 +22,11 @@ interface RangePoint {
   radius: number;
 }
 
+interface RangeStroke {
+  points: { x: number; y: number }[];
+  radius: number;
+}
+
 interface Keyframe {
   imageData: ImageData;
 }
@@ -34,6 +39,7 @@ export class MotionAnimationEngine {
   private motionVectors: MotionVector[] = [];
   private motionTrails: MotionTrail[] = [];
   private rangePoints: RangePoint[] = [];
+  private rangeStrokes: RangeStroke[] = []; // Store complete strokes for visualization
   private animationFrame: number | null = null;
   private isAnimating: boolean = false;
   
@@ -80,6 +86,11 @@ export class MotionAnimationEngine {
     }
   }
 
+  // Add a complete range stroke for visualization
+  addRangeStroke(points: { x: number; y: number }[], radius: number) {
+    this.rangeStrokes.push({ points, radius });
+  }
+
   removeAtPoint(x: number, y: number, radius: number, skipKeyframeGen: boolean = false) {
     this.motionVectors = this.motionVectors.filter(v => {
       const dist = Math.sqrt((v.x - x) ** 2 + (v.y - y) ** 2);
@@ -106,6 +117,7 @@ export class MotionAnimationEngine {
     this.motionVectors = [];
     this.motionTrails = [];
     this.rangePoints = [];
+    this.rangeStrokes = [];
     this.keyframes = [];
     this.currentTime = 0;
     this.stop();
@@ -114,16 +126,36 @@ export class MotionAnimationEngine {
   drawOverlay(overlayCtx: CanvasRenderingContext2D) {
     overlayCtx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Draw range points
-    this.rangePoints.forEach(range => {
-      overlayCtx.fillStyle = "rgba(34, 197, 94, 0.3)";
+    // Draw range strokes as continuous filled paths
+    this.rangeStrokes.forEach(stroke => {
       overlayCtx.beginPath();
-      overlayCtx.arc(range.x, range.y, range.radius, 0, Math.PI * 2);
-      overlayCtx.fill();
       
-      overlayCtx.strokeStyle = "rgba(34, 197, 94, 0.6)";
-      overlayCtx.lineWidth = 2;
-      overlayCtx.stroke();
+      if (stroke.points.length === 1) {
+        // Single point - draw as circle
+        overlayCtx.arc(stroke.points[0].x, stroke.points[0].y, stroke.radius, 0, Math.PI * 2);
+        overlayCtx.fillStyle = "rgba(34, 197, 94, 0.3)";
+        overlayCtx.fill();
+        overlayCtx.strokeStyle = "rgba(34, 197, 94, 0.6)";
+        overlayCtx.lineWidth = 2;
+        overlayCtx.stroke();
+      } else {
+        // Multiple points - create smooth stroke
+        overlayCtx.moveTo(stroke.points[0].x, stroke.points[0].y);
+        
+        for (let i = 1; i < stroke.points.length; i++) {
+          const xc = (stroke.points[i].x + stroke.points[i - 1].x) / 2;
+          const yc = (stroke.points[i].y + stroke.points[i - 1].y) / 2;
+          overlayCtx.quadraticCurveTo(stroke.points[i - 1].x, stroke.points[i - 1].y, xc, yc);
+        }
+        
+        overlayCtx.lineTo(stroke.points[stroke.points.length - 1].x, stroke.points[stroke.points.length - 1].y);
+        
+        overlayCtx.lineWidth = stroke.radius * 2;
+        overlayCtx.lineCap = "round";
+        overlayCtx.lineJoin = "round";
+        overlayCtx.strokeStyle = "rgba(34, 197, 94, 0.6)";
+        overlayCtx.stroke();
+      }
     });
 
     // Draw motion trails
