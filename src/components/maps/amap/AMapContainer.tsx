@@ -65,13 +65,12 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
     const map = new (window as any).AMap.Map(mapContainer.current, {
       center: [center[1], center[0]], // AMap uses [lng, lat]
       zoom: zoom,
-      mapStyle: 'amap://styles/dark',
+      mapStyle: 'amap://styles/whitesmoke',
+      showLabel: true,
+      showIndoorMap: false,
     });
 
     mapInstance.current = map;
-
-    map.addControl(new (window as any).AMap.Scale());
-    map.addControl(new (window as any).AMap.ToolBar());
 
     if (onMapClick) {
       map.on('click', (e: any) => {

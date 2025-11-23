@@ -45,6 +45,28 @@
   border-left-color: #ef4444 !important;
 }
 
+/* Hide AMap logo, copyright, and controls */
+.amap-logo,
+.amap-copyright {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+.amap-scalecontrol,
+.amap-toolbar {
+  display: none !important;
+}
+
+/* Hide all AMap attributions */
+div[class*="amap-logo"],
+div[class*="amap-copyright"],
+a[href*="amap.com"] {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
 /* Mobile specific adjustments */
 @media (max-width: 768px) {
   .amap-popup-content {
