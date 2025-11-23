@@ -195,6 +195,7 @@ export class MotionAnimationEngine {
 
   /**
    * Create a single displaced frame with controlled displacement
+   * Uses wraparound/tiling for seamless looping
    */
   private createDisplacedFrame(intensity: number): ImageData {
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
@@ -204,22 +205,22 @@ export class MotionAnimationEngine {
       for (let x = 0; x < this.canvas.width; x++) {
         const displacement = this.calculateDisplacement(x, y, intensity);
         
-        // Backward warping
-        const sourceX = x - displacement.dx;
-        const sourceY = y - displacement.dy;
+        // Backward warping with wraparound for seamless loop
+        let sourceX = x - displacement.dx;
+        let sourceY = y - displacement.dy;
 
-        // Clamp to bounds
-        const clampedX = Math.max(0, Math.min(this.canvas.width - 1, sourceX));
-        const clampedY = Math.max(0, Math.min(this.canvas.height - 1, sourceY));
+        // Wrap around instead of clamping for seamless loop
+        sourceX = ((sourceX % this.canvas.width) + this.canvas.width) % this.canvas.width;
+        sourceY = ((sourceY % this.canvas.height) + this.canvas.height) % this.canvas.height;
 
-        // Bilinear interpolation
-        const x1 = Math.floor(clampedX);
-        const y1 = Math.floor(clampedY);
-        const x2 = Math.min(x1 + 1, this.canvas.width - 1);
-        const y2 = Math.min(y1 + 1, this.canvas.height - 1);
+        // Bilinear interpolation with wraparound
+        const x1 = Math.floor(sourceX);
+        const y1 = Math.floor(sourceY);
+        const x2 = (x1 + 1) % this.canvas.width;
+        const y2 = (y1 + 1) % this.canvas.height;
         
-        const fx = clampedX - x1;
-        const fy = clampedY - y1;
+        const fx = sourceX - x1;
+        const fy = sourceY - y1;
 
         const targetIdx = (y * this.canvas.width + x) * 4;
 
