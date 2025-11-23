@@ -245,10 +245,18 @@ export const createAMapPopupContent = (props: {
   `;
   
   const distanceBadge = typeof location.distance === 'number' && isFinite(location.distance) ? `
-    <span style="font-size: 12px; color: #d1d5db; margin-left: auto;">
+    <span style="font-size: 12px; color: #e5e7eb; margin-left: auto;">
       ${(location.distance).toFixed(1)} km
     </span>
   ` : '';
+  
+  // Dark border based on SIQS score
+  let borderColor = '#4ade80'; // green for excellent
+  if (displayScore < 5.5) {
+    borderColor = '#ef4444'; // red for poor
+  } else if (displayScore < 7.5) {
+    borderColor = '#f59e0b'; // orange for good
+  }
   
   return `
     <div style="
@@ -256,8 +264,12 @@ export const createAMapPopupContent = (props: {
       min-width: 200px;
       max-width: 280px;
       font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(to bottom, rgba(24, 24, 27, 0.98), rgba(9, 9, 11, 0.98));
+      border-left: 3px solid ${borderColor};
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
     " class="amap-popup-content ${siqsClass}">
-      <div style="font-weight: 600; font-size: 14px; margin-bottom: 8px; color: #f3f4f6; display: flex; align-items: center;">
+      <div style="font-weight: 600; font-size: 14px; margin-bottom: 8px; color: #ffffff; display: flex; align-items: center;">
         ${starIcon}
         <span>${displayName}</span>
       </div>
@@ -281,14 +293,14 @@ export const createAMapPopupContent = (props: {
             color: #9b87f5;
             padding: ${isMobile ? '12px' : '8px'} 12px;
             border-radius: 6px;
-            border: none;
+            border: 1px solid rgba(155, 135, 245, 0.3);
             cursor: pointer;
             font-size: 12px;
             font-weight: 500;
-            transition: background-color 0.2s;
+            transition: all 0.2s;
           "
-          onmouseover="this.style.backgroundColor='rgba(155, 135, 245, 0.3)'"
-          onmouseout="this.style.backgroundColor='rgba(155, 135, 245, 0.2)'"
+          onmouseover="this.style.backgroundColor='rgba(155, 135, 245, 0.3)'; this.style.borderColor='rgba(155, 135, 245, 0.5)'"
+          onmouseout="this.style.backgroundColor='rgba(155, 135, 245, 0.2)'; this.style.borderColor='rgba(155, 135, 245, 0.3)'"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;">
             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>

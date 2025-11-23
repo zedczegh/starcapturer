@@ -1,0 +1,53 @@
+/* AMap InfoWindow styling to match Leaflet popups */
+.amap-info-content-wrapper {
+  background-color: transparent !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.amap-info-sharp {
+  background-color: rgba(20, 24, 39, 0.98) !important;
+  border: none !important;
+}
+
+.amap-info-content {
+  background-color: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+}
+
+/* Override AMap's default white background */
+.amap-info {
+  background-color: transparent !important;
+}
+
+.amap-info-outer {
+  background-color: transparent !important;
+}
+
+/* Custom popup content styling */
+.amap-popup-content {
+  position: relative;
+}
+
+/* SIQS quality border colors */
+.amap-popup-content.siqs-excellent {
+  border-left-color: #4ade80 !important;
+}
+
+.amap-popup-content.siqs-good {
+  border-left-color: #f59e0b !important;
+}
+
+.amap-popup-content.siqs-poor {
+  border-left-color: #ef4444 !important;
+}
+
+/* Mobile specific adjustments */
+@media (max-width: 768px) {
+  .amap-popup-content {
+    font-size: 0.9em;
+  }
+}
