@@ -31,20 +31,47 @@ export const MapProviderProvider: React.FC<{ children: ReactNode }> = ({ childre
   // Pre-load AMap script if selected
   useEffect(() => {
     if (provider === 'amap') {
-      import('@amap/amap-jsapi-loader').then((AMapLoader) => {
-        AMapLoader.default.load({
-          key: '', // Will be configured by admin
-          version: '2.0',
-          plugins: ['AMap.Marker', 'AMap.InfoWindow', 'AMap.Scale', 'AMap.ToolBar']
-        }).then(() => {
+      // Fetch AMap key from edge function
+      const loadAMap = async () => {
+        try {
+          const { supabase } = await import('@/integrations/supabase/client');
+          const { data: { session } } = await supabase.auth.getSession();
+          
+          if (!session) {
+            console.error('No session found, cannot load AMap');
+            setProvider('leaflet');
+            return;
+          }
+
+          const { data, error } = await supabase.functions.invoke('get-amap-key', {
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          });
+
+          if (error || !data.hasKey) {
+            console.error('Failed to get AMap key:', error);
+            setProvider('leaflet');
+            return;
+          }
+
+          const AMapLoader = await import('@amap/amap-jsapi-loader');
+          await AMapLoader.default.load({
+            key: data.key,
+            version: '2.0',
+            plugins: ['AMap.Marker', 'AMap.InfoWindow', 'AMap.Scale', 'AMap.ToolBar']
+          });
+          
           setIsAMapReady(true);
           console.log('AMap loaded successfully');
-        }).catch((error) => {
+        } catch (error) {
           console.error('Failed to load AMap:', error);
           // Fallback to Leaflet if AMap fails
           setProvider('leaflet');
-        });
-      });
+        }
+      };
+
+      loadAMap();
     } else {
       setIsAMapReady(false);
     }
