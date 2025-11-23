@@ -198,9 +198,8 @@ const WalletSection = () => {
   if (loading) {
     return (
       <Card className="glassmorphism p-6 rounded-2xl border-cosmic-700/20">
-        <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-cosmic-700/30 rounded w-1/3"></div>
-          <div className="h-20 bg-cosmic-700/30 rounded"></div>
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       </Card>
     );

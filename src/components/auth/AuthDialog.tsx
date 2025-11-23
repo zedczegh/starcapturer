@@ -32,7 +32,7 @@ const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
               <div className="absolute inset-0 h-14 w-14 text-primary animate-pulse opacity-40" />
             </div>
             <span className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground via-primary/90 to-foreground bg-clip-text text-transparent">
-              Astro<span className="text-primary">SIQS</span>
+              Meteo<span className="text-primary">tinary</span>
             </span>
           </motion.div>
           <motion.div 

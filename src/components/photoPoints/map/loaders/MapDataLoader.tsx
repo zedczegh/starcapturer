@@ -80,28 +80,19 @@ const MapDataLoader: React.FC<MapDataLoaderProps> = ({
     <AnimatePresence>
       {showLoader && (
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.3 }}
-          className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-background/80 backdrop-blur-sm 
-                     px-4 py-2 rounded-full shadow-md border border-border flex items-center gap-2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-background/90 backdrop-blur-sm 
+                     px-4 py-2 rounded-full shadow-md flex items-center space-x-2 border border-border/50"
         >
           {loading && (
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            >
-              <Loader2 className="h-4 w-4 text-primary" />
-            </motion.div>
+            <Loader2 className="h-4 w-4 text-primary animate-spin" />
           )}
-          <motion.span 
-            className="text-sm font-medium"
-            animate={{ opacity: loading ? [0.8, 1, 0.8] : 1 }}
-            transition={{ duration: 1.5, repeat: loading ? Infinity : 0 }}
-          >
+          <span className="text-sm font-medium">
             {getLoadingMessage()}
-          </motion.span>
+          </span>
         </motion.div>
       )}
     </AnimatePresence>
