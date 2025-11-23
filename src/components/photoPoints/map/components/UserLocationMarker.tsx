@@ -38,6 +38,8 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const markerRef = useRef<any>(null);
   
+  const displaySiqs = realTimeSiqs !== null ? realTimeSiqs : (currentSiqs ?? null);
+  
   const userMarkerIcon = createCustomMarker('#e11d48', 'circle', isMobile ? 1.2 : 1.0);
 
   const handleSiqsCalculated = useCallback((siqs: number | null, loading: boolean) => {
@@ -187,14 +189,16 @@ const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({
             <div className="text-xs mt-1">
               {position[0].toFixed(5)}, {position[1].toFixed(5)}
             </div>
-            <div className="text-xs mt-1.5 flex items-center">
-              <span className="mr-1">SIQS:</span>
-              <SiqsScoreBadge 
-                score={realTimeSiqs} 
-                compact={true} 
-                loading={siqsLoading || realTimeSiqs === null}
-              />
-            </div>
+            {displaySiqs !== null && (
+              <div className="text-xs mt-1.5 flex items-center">
+                <span className="mr-1">SIQS:</span>
+                <SiqsScoreBadge 
+                  score={displaySiqs} 
+                  compact={true} 
+                  loading={siqsLoading && realTimeSiqs === null}
+                />
+              </div>
+            )}
             <div className="mt-2 flex flex-col gap-2">
               <button 
                 onClick={handleViewDetails}
