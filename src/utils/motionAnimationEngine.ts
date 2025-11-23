@@ -337,7 +337,7 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Render loop with smooth easing for natural motion
+   * Render loop with fade in/out for smooth displacement animation
    */
   private renderLoop(timestamp: number) {
     if (!this.isAnimating) return;
@@ -352,7 +352,6 @@ export class MotionAnimationEngine {
     const numFrames = this.keyframes.length;
     
     // Use ease-in-out for smooth acceleration and deceleration
-    // This creates natural-looking motion without harsh stops
     const easeInOutCubic = (t: number): number => {
       return t < 0.5
         ? 4 * t * t * t
@@ -361,14 +360,28 @@ export class MotionAnimationEngine {
     
     const easedProgress = easeInOutCubic(progress);
     
-    // Calculate which frames to blend with seamless wraparound
+    // Calculate fade alpha based on progress
+    // Fade in: 0-15% of animation
+    // Full opacity: 15-70% of animation  
+    // Fade out: 70-100% of animation
+    let alpha = 1.0;
+    
+    if (progress < 0.15) {
+      // Fade in from original image
+      alpha = progress / 0.15;
+    } else if (progress > 0.7) {
+      // Fade out back to original image
+      alpha = 1 - ((progress - 0.7) / 0.3);
+    }
+    
+    // Calculate which frames to blend
     const framePosition = easedProgress * numFrames;
     const frame1Index = Math.floor(framePosition) % numFrames;
     const frame2Index = (frame1Index + 1) % numFrames;
     const blendFactor = framePosition - Math.floor(framePosition);
 
-    // Blend frames normally without alpha (no darkening)
-    this.blendTwoFrames(frame1Index, frame2Index, blendFactor);
+    // Blend frames with alpha for fade effect
+    this.blendTwoFramesWithFade(frame1Index, frame2Index, blendFactor, alpha);
 
     this.animationFrame = requestAnimationFrame((t) => this.renderLoop(t));
   }
@@ -386,6 +399,33 @@ export class MotionAnimationEngine {
       blendedImageData.data[i] = Math.round(
         frame1.data[i] * (1 - t) + frame2.data[i] * t
       );
+    }
+
+    this.ctx.putImageData(blendedImageData, 0, 0);
+  }
+
+  /**
+   * Blend between two keyframes with fade to/from original image
+   */
+  private blendTwoFramesWithFade(index1: number, index2: number, t: number, alpha: number) {
+    const frame1 = this.keyframes[index1].imageData;
+    const frame2 = this.keyframes[index2].imageData;
+    const originalFrame = this.originalImageData;
+    
+    const blendedImageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
+
+    for (let i = 0; i < frame1.data.length; i += 4) {
+      // First blend between the two keyframes
+      const r = frame1.data[i] * (1 - t) + frame2.data[i] * t;
+      const g = frame1.data[i + 1] * (1 - t) + frame2.data[i + 1] * t;
+      const b = frame1.data[i + 2] * (1 - t) + frame2.data[i + 2] * t;
+      const a = frame1.data[i + 3] * (1 - t) + frame2.data[i + 3] * t;
+      
+      // Then blend with original image based on alpha
+      blendedImageData.data[i] = Math.round(r * alpha + originalFrame.data[i] * (1 - alpha));
+      blendedImageData.data[i + 1] = Math.round(g * alpha + originalFrame.data[i + 1] * (1 - alpha));
+      blendedImageData.data[i + 2] = Math.round(b * alpha + originalFrame.data[i + 2] * (1 - alpha));
+      blendedImageData.data[i + 3] = Math.round(a * alpha + originalFrame.data[i + 3] * (1 - alpha));
     }
 
     this.ctx.putImageData(blendedImageData, 0, 0);
