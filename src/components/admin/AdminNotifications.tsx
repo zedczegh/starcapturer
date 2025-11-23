@@ -188,44 +188,44 @@ const AdminNotifications: React.FC = () => {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Bell className="h-5 w-5" />
-          {t('Admin Panel', '管理员面板')}
+      <CardHeader className="px-3 sm:px-6 py-3 sm:py-6">
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
+          {t("Admin Panel", "管理员面板")}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-3 sm:px-6 py-3 sm:py-6">
         <Tabs defaultValue="applications" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="applications" className="flex items-center gap-2">
-              {t('Verification Applications', '验证申请')}
+          <TabsList className="grid w-full grid-cols-2 h-auto">
+            <TabsTrigger value="applications" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 sm:py-2.5">
+              <span className="truncate">{t("Verification", "验证")}</span>
               {pendingApplicationsCount > 0 && (
-                <Badge variant="destructive" className="ml-1">
+                <Badge variant="destructive" className="ml-0.5 sm:ml-1 text-xs px-1 sm:px-1.5">
                   {pendingApplicationsCount}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="notifications" className="flex items-center gap-2">
-              {t('Notifications', '通知')}
+            <TabsTrigger value="notifications" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 sm:py-2.5">
+              <span className="truncate">{t("Notifications", "通知")}</span>
               {unreadCount > 0 && (
-                <Badge variant="destructive" className="ml-1">
+                <Badge variant="destructive" className="ml-0.5 sm:ml-1 text-xs px-1 sm:px-1.5">
                   {unreadCount}
                 </Badge>
               )}
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="applications" className="mt-6">
+          <TabsContent value="applications" className="mt-4 sm:mt-6">
             {applicationsLoading ? (
-              <div className="text-center py-4">
-                {t('Loading applications...', '加载申请中...')}
+              <div className="text-center py-4 text-xs sm:text-sm">
+                {t("Loading applications...", "加载申请中...")}
               </div>
             ) : applications.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                {t('No verification applications yet', '暂无验证申请')}
+              <div className="text-center py-6 sm:py-8 text-muted-foreground text-xs sm:text-sm">
+                {t("No verification applications yet", "暂无验证申请")}
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {applications.map((application) => (
                   <VerificationApplicationCard
                     key={application.id}
@@ -237,66 +237,66 @@ const AdminNotifications: React.FC = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="notifications" className="mt-6">
-            <div className="flex items-center justify-between mb-4">
+          <TabsContent value="notifications" className="mt-4 sm:mt-6">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
               {unreadCount > 0 && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={markAllAsRead}
-                  className="flex items-center gap-1"
+                  className="flex items-center gap-1 text-xs h-8"
                 >
-                  <CheckCircle className="h-4 w-4" />
-                  {t('Mark All Read', '全部已读')}
+                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+                  {t("Mark All Read", "全部已读")}
                 </Button>
               )}
             </div>
             
             {notifications.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                {t('No notifications yet', '暂无通知')}
+              <div className="text-center py-6 sm:py-8 text-muted-foreground text-xs sm:text-sm">
+                {t("No notifications yet", "暂无通知")}
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`p-4 rounded-lg border transition-colors cursor-pointer hover:bg-muted/50 ${
+                    className={`p-3 sm:p-4 rounded-lg border transition-colors cursor-pointer hover:bg-muted/50 ${
                       notification.is_read
-                        ? 'border-border bg-background'
-                        : 'border-primary/20 bg-primary/5'
+                        ? "border-border bg-background"
+                        : "border-primary/20 bg-primary/5"
                     }`}
                     onClick={() => handleNotificationClick(notification)}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <h4 className={`font-medium ${
-                            notification.is_read ? 'text-muted-foreground' : 'text-foreground'
+                          <h4 className={`font-medium text-xs sm:text-sm truncate ${
+                            notification.is_read ? "text-muted-foreground" : "text-foreground"
                           }`}>
                             {notification.title}
                           </h4>
                           {!notification.is_read && (
-                            <div className="w-2 h-2 bg-primary rounded-full" />
+                            <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground mb-2">
+                        <p className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-2">
                           {notification.message}
                         </p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                           <span>
                             {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                           </span>
-                          {notification.notification_type === 'verification_application' && (
-                            <Badge variant="secondary" className="text-xs">
-                              {t('Verification', '验证申请')}
+                          {notification.notification_type === "verification_application" && (
+                            <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                              {t("Verification", "验证申请")}
                             </Badge>
                           )}
                         </div>
                       </div>
                       {notification.link_url && (
-                        <div className="flex items-center gap-1 text-primary">
-                          <ExternalLink className="h-4 w-4" />
+                        <div className="flex items-center gap-1 text-primary flex-shrink-0">
+                          <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4" />
                         </div>
                       )}
                     </div>
