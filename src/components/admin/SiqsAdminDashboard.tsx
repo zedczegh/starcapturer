@@ -15,6 +15,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useSiqsAdminData } from '@/hooks/admin/useSiqsAdminData';
 import { useCountyGroupedSiqs } from '@/hooks/admin/useCountyGroupedSiqs';
 import CountyGroupCard from './CountyGroupCard';
+import MapProviderToggle from './MapProviderToggle';
 import { motion } from 'framer-motion';
 
 const SiqsAdminDashboard: React.FC = () => {
@@ -64,6 +65,9 @@ const SiqsAdminDashboard: React.FC = () => {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
+      {/* Map Provider Settings (Admin Only) */}
+      <MapProviderToggle />
+      
       {/* Header */}
       <Card className="bg-gradient-to-r from-purple-900/30 to-blue-900/30 border-purple-700/30">
         <CardHeader>
