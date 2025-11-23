@@ -32,11 +32,30 @@ export class MotionAnimationEngine {
   private animationFrame: number | null = null;
   private currentFrame: number = 0;
   private isAnimating: boolean = false;
+  private originalImageData: ImageData | null = null;
 
   constructor(canvas: HTMLCanvasElement, sourceImage: HTMLImageElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.sourceImage = sourceImage;
+    
+    // Resize canvas to max 1080p for performance
+    const maxDimension = 1920;
+    let width = sourceImage.width;
+    let height = sourceImage.height;
+    
+    if (width > maxDimension || height > maxDimension) {
+      const scale = Math.min(maxDimension / width, maxDimension / height);
+      width = Math.floor(width * scale);
+      height = Math.floor(height * scale);
+    }
+    
+    canvas.width = width;
+    canvas.height = height;
+    
+    // Draw and store original image data
+    this.ctx.drawImage(sourceImage, 0, 0, width, height);
+    this.originalImageData = this.ctx.getImageData(0, 0, width, height);
   }
 
   /**
@@ -163,21 +182,29 @@ export class MotionAnimationEngine {
     let totalDy = 0;
     let totalWeight = 0;
 
-    // Check if pixel is in a range point - if range points exist, only animate those areas
-    let inRange = this.rangePoints.length === 0; // If no range points, animate everything
+    // Check if pixel is in a range point with feathering
+    let rangeWeight = 0;
     
-    if (this.rangePoints.length > 0) {
+    if (this.rangePoints.length === 0) {
+      rangeWeight = 1; // If no range points, animate everything
+    } else {
       for (const range of this.rangePoints) {
         const dist = Math.sqrt((x - range.x) ** 2 + (y - range.y) ** 2);
         if (dist < range.radius) {
-          inRange = true;
-          break;
+          // Feathering: full strength at center, fades at edges
+          const featherDistance = 20; // pixels to fade over
+          const edgeDist = range.radius - dist;
+          if (edgeDist < featherDistance) {
+            rangeWeight = Math.max(rangeWeight, edgeDist / featherDistance);
+          } else {
+            rangeWeight = 1;
+          }
         }
       }
     }
 
     // If not in range, no movement
-    if (!inRange) {
+    if (rangeWeight === 0) {
       return { dx: 0, dy: 0 };
     }
 
@@ -189,7 +216,7 @@ export class MotionAnimationEngine {
       if (dist < maxDist) {
         const weight = Math.pow(1 - dist / maxDist, 2) * vector.strength;
         
-        // Create oscillating motion for loop effect
+        // Create smooth oscillating motion for loop effect
         const phase = (frame % 60) / 60 * Math.PI * 2;
         const amplitude = Math.sin(phase);
         
@@ -201,8 +228,8 @@ export class MotionAnimationEngine {
 
     if (totalWeight > 0) {
       return {
-        dx: totalDx / totalWeight,
-        dy: totalDy / totalWeight
+        dx: (totalDx / totalWeight) * rangeWeight,
+        dy: (totalDy / totalWeight) * rangeWeight
       };
     }
 
@@ -213,30 +240,37 @@ export class MotionAnimationEngine {
    * Render a single frame of the animation
    */
   private renderFrame(speed: number) {
-    if (!this.isAnimating) return;
+    if (!this.isAnimating || !this.originalImageData) return;
 
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
-    const sourceData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
 
-    // Apply displacement to each pixel
+    // Apply displacement to each pixel from ORIGINAL image (prevents accumulation)
     for (let y = 0; y < this.canvas.height; y++) {
       for (let x = 0; x < this.canvas.width; x++) {
         const displacement = this.calculateDisplacement(x, y, this.currentFrame);
         
+        // Sample from original image with displacement
         const sourceX = Math.round(x - displacement.dx);
         const sourceY = Math.round(y - displacement.dy);
 
-        // Bounds checking
-        if (sourceX >= 0 && sourceX < this.canvas.width && 
-            sourceY >= 0 && sourceY < this.canvas.height) {
-          const sourceIdx = (sourceY * this.canvas.width + sourceX) * 4;
-          const targetIdx = (y * this.canvas.width + x) * 4;
-
-          imageData.data[targetIdx] = sourceData.data[sourceIdx];
-          imageData.data[targetIdx + 1] = sourceData.data[sourceIdx + 1];
-          imageData.data[targetIdx + 2] = sourceData.data[sourceIdx + 2];
-          imageData.data[targetIdx + 3] = sourceData.data[sourceIdx + 3];
+        // Bounds checking with wrapping for seamless loop
+        let finalSourceX = sourceX;
+        let finalSourceY = sourceY;
+        
+        if (sourceX < 0 || sourceX >= this.canvas.width) {
+          finalSourceX = ((sourceX % this.canvas.width) + this.canvas.width) % this.canvas.width;
         }
+        if (sourceY < 0 || sourceY >= this.canvas.height) {
+          finalSourceY = ((sourceY % this.canvas.height) + this.canvas.height) % this.canvas.height;
+        }
+
+        const sourceIdx = (finalSourceY * this.canvas.width + finalSourceX) * 4;
+        const targetIdx = (y * this.canvas.width + x) * 4;
+
+        imageData.data[targetIdx] = this.originalImageData.data[sourceIdx];
+        imageData.data[targetIdx + 1] = this.originalImageData.data[sourceIdx + 1];
+        imageData.data[targetIdx + 2] = this.originalImageData.data[sourceIdx + 2];
+        imageData.data[targetIdx + 3] = this.originalImageData.data[sourceIdx + 3];
       }
     }
 
@@ -266,8 +300,10 @@ export class MotionAnimationEngine {
       this.animationFrame = null;
     }
     
-    // Redraw original image
-    this.ctx.drawImage(this.sourceImage, 0, 0, this.canvas.width, this.canvas.height);
+    // Redraw original image from stored data
+    if (this.originalImageData) {
+      this.ctx.putImageData(this.originalImageData, 0, 0);
+    }
   }
 
   /**
