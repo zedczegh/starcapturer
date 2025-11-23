@@ -1,7 +1,9 @@
 
 import React, { useEffect, useRef } from 'react';
+import { useMapProvider } from '@/contexts/MapProviderContext';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import '@/components/photoPoints/map/AMapStyles.css';
 import L from 'leaflet';
 import { createCustomMarker } from './map/MapMarkerUtils';
 import MapTooltip from './map/MapTooltip';
@@ -19,13 +21,13 @@ interface MapDisplayProps {
   siqs?: number;
 }
 
-const MapDisplay: React.FC<MapDisplayProps> = ({
+// Leaflet Map Component
+const LeafletMapDisplay: React.FC<MapDisplayProps> = ({
   position,
   locationName,
   editable = false,
   onMapReady,
   onMapClick,
-  showInfoPanel = false,
   isDarkSkyReserve = false,
   certification = '',
   siqs
@@ -33,7 +35,7 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
   const mapRef = useRef<L.Map | null>(null);
 
   // Custom marker icon
-  const markerColor = isDarkSkyReserve || certification ? '#8b5cf6' : '#3b82f6';
+  const markerColor = isDarkSkyReserve || certification ? '#8b5cf6' : '#e11d48';
   const markerIcon = createCustomMarker(markerColor);
   
   // MapReady component to handle initialization
@@ -61,7 +63,7 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
   return (
     <MapContainer
       center={position}
-      zoom={10}
+      zoom={13}
       scrollWheelZoom={false}
       style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}
       className="z-0"
@@ -92,6 +94,98 @@ const MapDisplay: React.FC<MapDisplayProps> = ({
       )}
     </MapContainer>
   );
+};
+
+// AMap Component
+const AMapDisplay: React.FC<MapDisplayProps> = ({
+  position,
+  editable = false,
+  onMapReady,
+  onMapClick,
+}) => {
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const mapInstance = useRef<any>(null);
+  const markerRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!mapContainer.current || mapInstance.current) return;
+
+    const map = new (window as any).AMap.Map(mapContainer.current, {
+      center: [position[1], position[0]], // AMap uses [lng, lat]
+      zoom: 13,
+      mapStyle: 'amap://styles/whitesmoke',
+      showLabel: true,
+      showIndoorMap: false,
+    });
+
+    mapInstance.current = map;
+
+    // Red marker for location
+    const marker = new (window as any).AMap.Marker({
+      position: [position[1], position[0]],
+      icon: new (window as any).AMap.Icon({
+        size: new (window as any).AMap.Size(32, 42),
+        image: 'data:image/svg+xml;base64,' + btoa(`
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42">
+            <path d="M16 0C7.2 0 0 7.2 0 16c0 11 16 26 16 26s16-15 16-26c0-8.8-7.2-16-16-16z" fill="#e11d48"/>
+            <circle cx="16" cy="16" r="6" fill="white"/>
+          </svg>
+        `),
+        imageSize: new (window as any).AMap.Size(32, 42),
+      }),
+      title: 'Location',
+      anchor: 'bottom-center',
+      zIndex: 200,
+    });
+
+    map.add(marker);
+    markerRef.current = marker;
+
+    if (editable && onMapClick) {
+      map.on('click', (e: any) => {
+        onMapClick(e.lnglat.lat, e.lnglat.lng);
+      });
+    }
+
+    if (onMapReady) {
+      map.on('complete', onMapReady);
+    }
+
+    return () => {
+      if (mapInstance.current) {
+        mapInstance.current.destroy();
+        mapInstance.current = null;
+      }
+    };
+  }, []);
+
+  // Update marker position when coordinates change
+  useEffect(() => {
+    if (markerRef.current) {
+      markerRef.current.setPosition([position[1], position[0]]);
+    }
+    if (mapInstance.current) {
+      mapInstance.current.setCenter([position[1], position[0]]);
+    }
+  }, [position]);
+
+  return (
+    <div 
+      ref={mapContainer} 
+      style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}
+      className="z-0"
+    />
+  );
+};
+
+const MapDisplay: React.FC<MapDisplayProps> = (props) => {
+  const { provider, isAMapReady } = useMapProvider();
+
+  if (provider === 'amap' && isAMapReady) {
+    return <AMapDisplay {...props} />;
+  }
+
+  return <LeafletMapDisplay {...props} />;
 };
 
 export default MapDisplay;

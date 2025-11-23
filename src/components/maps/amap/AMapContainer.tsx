@@ -197,7 +197,9 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
 
     // Setup location details handler
     (window as any).viewUserLocationDetails = () => {
-      window.location.href = `/location/${userLocation.latitude.toFixed(6)},${userLocation.longitude.toFixed(6)}`;
+      const url = `/location/${userLocation.latitude.toFixed(6)},${userLocation.longitude.toFixed(6)}`;
+      // Use direct navigation without waiting for async operations  
+      window.location.href = url;
     };
 
     // Create popup content
