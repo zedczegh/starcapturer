@@ -11,7 +11,9 @@ import {
   Pause, 
   Download, 
   RotateCcw,
-  Hand
+  Hand,
+  Undo2,
+  Redo2
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -44,6 +46,8 @@ export const MotionAnimationCanvas = ({
   const [isDrawing, setIsDrawing] = useState(false);
   const [motionArrowStart, setMotionArrowStart] = useState<{x: number, y: number} | null>(null);
   const [motionTrailPoints, setMotionTrailPoints] = useState<{x: number, y: number}[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const historyRef = useRef<Array<{ type: 'motion' | 'anchor' | 'erase', data: any }>>([]);
 
   // Initialize canvas and animation engine
   useEffect(() => {
@@ -113,11 +117,22 @@ export const MotionAnimationCanvas = ({
     }
   };
 
+  const addToHistory = (type: 'motion' | 'anchor' | 'erase', data: any) => {
+    // Remove any redo history when adding new action
+    historyRef.current = historyRef.current.slice(0, historyIndex + 1);
+    historyRef.current.push({ type, data });
+    setHistoryIndex(historyRef.current.length - 1);
+  };
+
   const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = overlayCanvasRef.current;
     if (!canvas || !animationEngineRef.current) return;
 
     if (activeTool === "motion" && motionArrowStart && motionTrailPoints.length > 1) {
+      // Store motion trail in history
+      const trailData = [...motionTrailPoints];
+      addToHistory('motion', { points: trailData, strength: motionStrength / 100 });
+
       // Add motion vectors along the trail
       for (let i = 0; i < motionTrailPoints.length - 1; i++) {
         const start = motionTrailPoints[i];
@@ -190,8 +205,10 @@ export const MotionAnimationCanvas = ({
 
     if (activeTool === "anchor") {
       animationEngineRef.current.addAnchorPoint(x, y, brushSize);
+      addToHistory('anchor', { x, y, radius: brushSize });
     } else if (activeTool === "erase") {
       animationEngineRef.current.removeAtPoint(x, y, brushSize);
+      addToHistory('erase', { x, y, radius: brushSize });
     }
 
     redrawOverlay();
@@ -243,11 +260,70 @@ export const MotionAnimationCanvas = ({
     }
   };
 
+  const handleUndo = () => {
+    if (historyIndex < 0) {
+      toast.info(t("Nothing to undo", "没有可撤销的操作"));
+      return;
+    }
+
+    setHistoryIndex(historyIndex - 1);
+    rebuildFromHistory(historyIndex - 1);
+    toast.success(t("Undo successful", "撤销成功"));
+  };
+
+  const handleRedo = () => {
+    if (historyIndex >= historyRef.current.length - 1) {
+      toast.info(t("Nothing to redo", "没有可重做的操作"));
+      return;
+    }
+
+    setHistoryIndex(historyIndex + 1);
+    rebuildFromHistory(historyIndex + 1);
+    toast.success(t("Redo successful", "重做成功"));
+  };
+
+  const rebuildFromHistory = (targetIndex: number) => {
+    if (!animationEngineRef.current) return;
+
+    // Clear everything
+    animationEngineRef.current.clear();
+
+    // Rebuild from history up to targetIndex
+    for (let i = 0; i <= targetIndex; i++) {
+      const action = historyRef.current[i];
+      
+      if (action.type === 'motion') {
+        const { points, strength } = action.data;
+        for (let j = 0; j < points.length - 1; j++) {
+          const start = points[j];
+          const end = points[j + 1];
+          animationEngineRef.current.addMotionVector(
+            start.x,
+            start.y,
+            end.x,
+            end.y,
+            strength
+          );
+        }
+      } else if (action.type === 'anchor') {
+        const { x, y, radius } = action.data;
+        animationEngineRef.current.addAnchorPoint(x, y, radius);
+      } else if (action.type === 'erase') {
+        const { x, y, radius } = action.data;
+        animationEngineRef.current.removeAtPoint(x, y, radius);
+      }
+    }
+
+    redrawOverlay();
+  };
+
   const handleClear = () => {
     const overlayCanvas = overlayCanvasRef.current;
     if (!animationEngineRef.current || !overlayCanvas) return;
     
     animationEngineRef.current.clear();
+    historyRef.current = [];
+    setHistoryIndex(-1);
     overlayCanvas.style.opacity = "1"; // Show overlay after clearing
     setIsPlaying(false);
     redrawOverlay();
@@ -298,17 +374,37 @@ export const MotionAnimationCanvas = ({
             <Button
               variant="outline"
               size="sm"
+              onClick={handleUndo}
+              disabled={historyIndex < 0}
+              title={t("Undo", "撤销")}
+            >
+              <Undo2 className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t("Undo", "撤销")}</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRedo}
+              disabled={historyIndex >= historyRef.current.length - 1}
+              title={t("Redo", "重做")}
+            >
+              <Redo2 className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t("Redo", "重做")}</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handlePlayPause}
             >
               {isPlaying ? (
                 <>
-                  <Pause className="w-4 h-4 mr-2" />
-                  {t("Pause", "暂停")}
+                  <Pause className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">{t("Pause", "暂停")}</span>
                 </>
               ) : (
                 <>
-                  <Play className="w-4 h-4 mr-2" />
-                  {t("Play", "播放")}
+                  <Play className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">{t("Play", "播放")}</span>
                 </>
               )}
             </Button>
@@ -316,17 +412,18 @@ export const MotionAnimationCanvas = ({
               variant="outline"
               size="sm"
               onClick={handleClear}
+              title={t("Clear All", "全部清空")}
             >
-              <RotateCcw className="w-4 h-4 mr-2" />
-              {t("Clear", "清空")}
+              <RotateCcw className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t("Clear", "清空")}</span>
             </Button>
             <Button
               variant="default"
               size="sm"
               onClick={handleExport}
             >
-              <Download className="w-4 h-4 mr-2" />
-              {t("Export", "导出")}
+              <Download className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t("Export", "导出")}</span>
             </Button>
           </div>
         </div>
