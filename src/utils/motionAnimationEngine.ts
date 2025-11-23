@@ -26,17 +26,28 @@ export class MotionAnimationEngine {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private sourceImage: HTMLImageElement;
+  private sourceImageData: ImageData | null = null;
   private motionVectors: MotionVector[] = [];
   private motionTrails: MotionTrail[] = [];
   private rangePoints: RangePoint[] = [];
   private animationFrame: number | null = null;
   private currentFrame: number = 0;
   private isAnimating: boolean = false;
+  private feathering: number = 20;
 
-  constructor(canvas: HTMLCanvasElement, sourceImage: HTMLImageElement) {
+  constructor(canvas: HTMLCanvasElement, sourceImage: HTMLImageElement, feathering: number = 20) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.sourceImage = sourceImage;
+    this.feathering = feathering;
+    
+    // Store the original image data for clean sampling
+    this.ctx.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
+    this.sourceImageData = this.ctx.getImageData(0, 0, canvas.width, canvas.height);
+  }
+
+  setFeathering(feathering: number) {
+    this.feathering = feathering;
   }
 
   /**
@@ -163,21 +174,27 @@ export class MotionAnimationEngine {
     let totalDy = 0;
     let totalWeight = 0;
 
-    // Check if pixel is in a range point - if range points exist, only animate those areas
-    let inRange = this.rangePoints.length === 0; // If no range points, animate everything
+    // Calculate range influence with feathering
+    let rangeInfluence = this.rangePoints.length === 0 ? 1 : 0; // If no range points, animate everything
     
     if (this.rangePoints.length > 0) {
       for (const range of this.rangePoints) {
         const dist = Math.sqrt((x - range.x) ** 2 + (y - range.y) ** 2);
+        
         if (dist < range.radius) {
-          inRange = true;
+          // Inside the range - full influence
+          rangeInfluence = 1;
           break;
+        } else if (dist < range.radius + this.feathering) {
+          // In the feathering zone - gradient falloff
+          const falloff = 1 - (dist - range.radius) / this.feathering;
+          rangeInfluence = Math.max(rangeInfluence, falloff);
         }
       }
     }
 
-    // If not in range, no movement
-    if (!inRange) {
+    // If no range influence, no movement
+    if (rangeInfluence === 0) {
       return { dx: 0, dy: 0 };
     }
 
@@ -201,8 +218,8 @@ export class MotionAnimationEngine {
 
     if (totalWeight > 0) {
       return {
-        dx: totalDx / totalWeight,
-        dy: totalDy / totalWeight
+        dx: (totalDx / totalWeight) * rangeInfluence,
+        dy: (totalDy / totalWeight) * rangeInfluence
       };
     }
 
@@ -213,12 +230,11 @@ export class MotionAnimationEngine {
    * Render a single frame of the animation
    */
   private renderFrame(speed: number) {
-    if (!this.isAnimating) return;
+    if (!this.isAnimating || !this.sourceImageData) return;
 
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
-    const sourceData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
 
-    // Apply displacement to each pixel
+    // Apply displacement to each pixel, always sampling from original image
     for (let y = 0; y < this.canvas.height; y++) {
       for (let x = 0; x < this.canvas.width; x++) {
         const displacement = this.calculateDisplacement(x, y, this.currentFrame);
@@ -232,10 +248,10 @@ export class MotionAnimationEngine {
           const sourceIdx = (sourceY * this.canvas.width + sourceX) * 4;
           const targetIdx = (y * this.canvas.width + x) * 4;
 
-          imageData.data[targetIdx] = sourceData.data[sourceIdx];
-          imageData.data[targetIdx + 1] = sourceData.data[sourceIdx + 1];
-          imageData.data[targetIdx + 2] = sourceData.data[sourceIdx + 2];
-          imageData.data[targetIdx + 3] = sourceData.data[sourceIdx + 3];
+          imageData.data[targetIdx] = this.sourceImageData.data[sourceIdx];
+          imageData.data[targetIdx + 1] = this.sourceImageData.data[sourceIdx + 1];
+          imageData.data[targetIdx + 2] = this.sourceImageData.data[sourceIdx + 2];
+          imageData.data[targetIdx + 3] = this.sourceImageData.data[sourceIdx + 3];
         }
       }
     }
