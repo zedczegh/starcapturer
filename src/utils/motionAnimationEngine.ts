@@ -33,6 +33,8 @@ export class MotionAnimationEngine {
   private animationFrame: number | null = null;
   private currentFrame: number = 0;
   private isAnimating: boolean = false;
+  private speedFactor: number = 1; // User-controlled speed multiplier
+  private lastTimestamp: number | null = null; // For time-based animation
 
   constructor(canvas: HTMLCanvasElement, sourceImage: HTMLImageElement) {
     this.canvas = canvas;
@@ -238,8 +240,18 @@ export class MotionAnimationEngine {
    * Render a single frame of the animation using bilinear interpolation
    * CRITICAL: Always samples from the ORIGINAL image to prevent cumulative distortion
    */
-  private renderFrame(speed: number) {
+  private renderFrame(timestamp: number) {
     if (!this.isAnimating) return;
+
+    // Time-based animation for consistent motion across devices
+    if (this.lastTimestamp === null) {
+      this.lastTimestamp = timestamp;
+    }
+    const deltaSeconds = (timestamp - this.lastTimestamp) / 1000;
+    this.lastTimestamp = timestamp;
+
+    // Advance a virtual "frame" counter at 60fps, scaled by speedFactor
+    const effectiveSpeed = this.speedFactor;
 
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
     // CRITICAL: Sample from ORIGINAL image data, not the modified canvas
@@ -292,9 +304,11 @@ export class MotionAnimationEngine {
     }
 
     this.ctx.putImageData(imageData, 0, 0);
-    this.currentFrame += speed;
 
-    this.animationFrame = requestAnimationFrame(() => this.renderFrame(speed));
+    // Advance virtual frame based on real time for smooth, consistent motion
+    this.currentFrame += deltaSeconds * 60 * effectiveSpeed;
+
+    this.animationFrame = requestAnimationFrame((nextTimestamp) => this.renderFrame(nextTimestamp));
   }
 
   /**
@@ -302,9 +316,13 @@ export class MotionAnimationEngine {
    */
   play(speed: number = 1) {
     if (this.isAnimating) return;
-    
+
+    // Clamp speed to a reasonable range to avoid jumpy motion
+    this.speedFactor = Math.max(0.25, Math.min(speed, 5));
     this.isAnimating = true;
-    this.renderFrame(speed);
+    this.currentFrame = 0;
+    this.lastTimestamp = null;
+    this.animationFrame = requestAnimationFrame((timestamp) => this.renderFrame(timestamp));
   }
 
   /**
