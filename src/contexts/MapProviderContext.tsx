@@ -43,7 +43,11 @@ export const MapProviderProvider: React.FC<{ children: ReactNode }> = ({ childre
             return;
           }
 
-          const { data, error } = await supabase.functions.invoke('get-amap-key');
+          const { data, error } = await supabase.functions.invoke('get-amap-key', {
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          });
 
           if (error || !data?.hasKey) {
             console.error('Failed to get AMap key:', error);
@@ -62,7 +66,6 @@ export const MapProviderProvider: React.FC<{ children: ReactNode }> = ({ childre
           console.log('AMap loaded successfully');
         } catch (error) {
           console.error('Failed to load AMap:', error);
-          // Fallback to Leaflet if AMap fails
           setProvider('leaflet');
         }
       };
