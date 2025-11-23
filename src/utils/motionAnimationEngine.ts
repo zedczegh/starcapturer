@@ -198,10 +198,10 @@ export class MotionAnimationEngine {
         const normalizedDist = dist / maxDist;
         const weight = (1 - normalizedDist) * (1 - normalizedDist) * (1 - normalizedDist) * vector.strength;
         
-        // Create smooth sinusoidal motion for seamless looping
-        // Using sine wave ensures the motion returns to the starting position smoothly
-        const phase = (frame % 60) / 60 * Math.PI * 2;
-        const amplitude = Math.sin(phase) * 0.2; // 20% displacement for subtle motion
+        // Create directional motion that loops seamlessly
+        // Use modulo to create continuous forward motion without oscillation
+        const phase = (frame % 120) / 120; // Loop every 120 frames
+        const amplitude = phase * 0.5; // 50% displacement for more visible motion
         
         totalDx += vector.dx * weight * amplitude;
         totalDy += vector.dy * weight * amplitude;
