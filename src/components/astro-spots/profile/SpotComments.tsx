@@ -462,7 +462,17 @@ export const SpotComments: React.FC<SpotCommentsProps> = ({ spotId, currentUserI
                           </div>
                           {showReplyEmojiPicker && (
                             <div className="mt-2">
-                              <EmojiPicker onEmojiClick={(emoji) => onEmojiClick(emoji, true)} />
+                              <div className="relative bg-background border border-border rounded-lg shadow-lg inline-block">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background border border-border z-10"
+                                  onClick={() => setShowReplyEmojiPicker(false)}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                                <EmojiPicker onEmojiClick={(emoji) => onEmojiClick(emoji, true)} />
+                              </div>
                             </div>
                           )}
                         </div>
@@ -611,7 +621,17 @@ export const SpotComments: React.FC<SpotCommentsProps> = ({ spotId, currentUserI
                   </div>
                   {showEmojiPicker && (
                     <div className="mt-2">
-                      <EmojiPicker onEmojiClick={(emoji) => onEmojiClick(emoji, false)} />
+                      <div className="relative bg-background border border-border rounded-lg shadow-lg inline-block">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background border border-border z-10"
+                          onClick={() => setShowEmojiPicker(false)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                        <EmojiPicker onEmojiClick={(emoji) => onEmojiClick(emoji, false)} />
+                      </div>
                     </div>
                   )}
                 </div>
