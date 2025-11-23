@@ -35,19 +35,8 @@ export const MapProviderProvider: React.FC<{ children: ReactNode }> = ({ childre
       const loadAMap = async () => {
         try {
           const { supabase } = await import('@/integrations/supabase/client');
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
           
-          if (sessionError || !session) {
-            console.error('No session found, cannot load AMap');
-            setProvider('leaflet');
-            return;
-          }
-
-          const { data, error } = await supabase.functions.invoke('get-amap-key', {
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
-            },
-          });
+          const { data, error } = await supabase.functions.invoke('get-amap-key');
 
           if (error || !data?.hasKey) {
             console.error('Failed to get AMap key:', error);

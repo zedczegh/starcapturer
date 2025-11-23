@@ -23,25 +23,7 @@ const AMapKeyConfig: React.FC = () => {
     try {
       setIsLoading(true);
       
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error('Session error:', sessionError);
-        setIsLoading(false);
-        return;
-      }
-      
-      if (!session) {
-        console.log('No active session found');
-        setIsLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase.functions.invoke('get-amap-key', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+      const { data, error } = await supabase.functions.invoke('get-amap-key');
 
       if (error) {
         console.error('Edge function error:', error);

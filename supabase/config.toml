@@ -75,4 +75,4 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.get-amap-key]
-verify_jwt = true
+verify_jwt = false
