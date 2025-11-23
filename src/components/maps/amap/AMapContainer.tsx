@@ -149,6 +149,7 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
         userAvatarUrl: userProfile?.avatar_url,
         distance: location.distance,
         locationType,
+        chineseLocationName: '', // Will be updated by geocoder if needed
       }));
     }
   }, [locations, userProfilesMap, isMobile]);
@@ -205,7 +206,11 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
     // Create popup content
     const currentSiqs = realTimeSiqsMap.get('user-location') || 0;
 
-    const createPopupContent = (locationName: string) => {
+    const createPopupContent = (locationName: string, chineseLocationName?: string) => {
+      const chineseNameHtml = chineseLocationName ? `<div style="font-size: 12px; color: #cbd5e1; margin-bottom: 6px;">
+        ${chineseLocationName}
+      </div>` : '';
+      
       return `
         <div style="
           background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.95) 100%);
@@ -221,12 +226,14 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
               <circle cx="12" cy="10" r="3"></circle>
             </svg>
-            Your Location
+            您的位置 / Your Location
           </div>
           
           <div style="font-size: 12px; color: #cbd5e1; margin-bottom: 8px;">
             ${locationName}
           </div>
+          
+          ${chineseNameHtml}
           
           <div style="font-size: 11px; color: #94a3b8; margin-bottom: 12px;">
             ${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}
@@ -266,7 +273,7 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
               <polyline points="15 3 21 3 21 9"></polyline>
               <line x1="10" y1="14" x2="21" y2="3"></line>
             </svg>
-            View Details
+            查看详情 / View Details
           </button>
           
           <button 
@@ -288,7 +295,7 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
             onmouseover="this.style.background='linear-gradient(135deg, rgba(155, 135, 245, 0.4), rgba(147, 51, 234, 0.4))'"
             onmouseout="this.style.background='linear-gradient(135deg, rgba(155, 135, 245, 0.3), rgba(147, 51, 234, 0.3))'"
           >
-            Create My Spot
+            创建我的观星点 / Create My Spot
           </button>
         </div>
       `;
@@ -313,7 +320,17 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
         const { getEnhancedLocationDetails } = await import('@/services/geocoding/enhancedReverseGeocoding');
         const details = await getEnhancedLocationDetails(userLocation.latitude, userLocation.longitude, 'en');
         const locationName = details.formattedName || 'Your Location';
-        infoWindow.setContent(createPopupContent(locationName));
+        
+        // Use AMap Geocoder to get Chinese location name
+        const geocoder = new (window as any).AMap.Geocoder({ city: '全国', radius: 1000 });
+        geocoder.getAddress([userLocation.longitude, userLocation.latitude], (status: string, result: any) => {
+          if (status === 'complete' && result.regeocode) {
+            const chineseLocationName = result.regeocode.formattedAddress;
+            infoWindow.setContent(createPopupContent(locationName, chineseLocationName));
+          } else {
+            infoWindow.setContent(createPopupContent(locationName));
+          }
+        });
       } catch (error) {
         console.error('Error fetching location name:', error);
         infoWindow.setContent(createPopupContent('Your Location'));
@@ -426,6 +443,9 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
       if (location.certification === 'Atlas Obscura') locationType = 'Atlas Obscura';
       else if (location.certification?.toLowerCase().includes('mountain')) locationType = 'Mountain';
 
+      // Fetch Chinese location name using AMap Geocoder
+      let chineseLocationName = '';
+      
       // Create info window with current SIQS
       const infoWindow = new (window as any).AMap.InfoWindow({
         content: createAMapPopupContent({
@@ -440,8 +460,32 @@ const AMapContainer: React.FC<AMapContainerProps> = ({
           userAvatarUrl: userProfile?.avatar_url,
           distance: location.distance,
           locationType,
+          chineseLocationName,
         }),
         offset: new (window as any).AMap.Pixel(0, -markerIcon.size[1] / 2),
+      });
+
+      // Fetch Chinese name using AMap Geocoder
+      const geocoder = new (window as any).AMap.Geocoder({ city: '全国', radius: 1000 });
+      geocoder.getAddress([location.longitude, location.latitude], (status: string, result: any) => {
+        if (status === 'complete' && result.regeocode) {
+          chineseLocationName = result.regeocode.formattedAddress;
+          // Update info window with Chinese name
+          infoWindow.setContent(createAMapPopupContent({
+            location,
+            siqsScore: currentSiqs,
+            siqsLoading: false,
+            displayName: location.name,
+            isCertified,
+            onViewDetails: () => {},
+            userId: location.user_id,
+            isMobile,
+            userAvatarUrl: userProfile?.avatar_url,
+            distance: location.distance,
+            locationType,
+            chineseLocationName,
+          }));
+        }
       });
 
       marker.on('click', () => {
