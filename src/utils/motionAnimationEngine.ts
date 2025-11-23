@@ -165,6 +165,10 @@ export class MotionAnimationEngine {
    * Calculate displacement for a pixel based on motion vectors and range points
    * Uses proper motion mapping similar to Motion Leap/Pixaloop
    */
+  /**
+   * Calculate pixel displacement using smooth oscillating motion (Motion Leap technique)
+   * Key principle: Displacement oscillates smoothly from original position, creating living photo effect
+   */
   private calculateDisplacement(x: number, y: number, frame: number): { dx: number; dy: number } {
     let totalDx = 0;
     let totalDy = 0;
@@ -188,35 +192,43 @@ export class MotionAnimationEngine {
       return { dx: 0, dy: 0 };
     }
 
-    // Calculate displacement from motion vectors with much more subtle motion
+    // Motion Leap technique: Smooth oscillating displacement using sine wave with easing
+    // The motion smoothly goes forward and back, creating a natural "living photo" effect
     for (const vector of this.motionVectors) {
       const dist = Math.sqrt((x - vector.x) ** 2 + (y - vector.y) ** 2);
-      const maxDist = 150; // Influence radius
+      const maxDist = 200; // Influence radius
       
       if (dist < maxDist) {
-      const normalizedDist = dist / maxDist;
-        // Ultra-smooth falloff using quartic easing for seamless blending
-        const falloff = 1 - normalizedDist;
-        const weight = falloff * falloff * falloff * falloff * vector.strength;
+        // Smooth exponential falloff for natural motion field
+        const normalizedDist = dist / maxDist;
+        const falloff = Math.exp(-normalizedDist * 3); // Exponential decay
+        const weight = falloff * vector.strength;
         
-        // Continuous constant-speed motion with wrapping (Motion Leap style)
-        // Use modulo to wrap displacement, creating infinite seamless motion
-        const speed = 0.015; // Much faster constant speed
-        const amplitude = (frame * speed) % 30; // Wrap at 30 pixels for seamless tiling
+        // Sine wave oscillation: smooth forward and backward motion
+        // This creates the characteristic Motion Leap "breathing" effect
+        const cycleLength = 180; // Frames per complete cycle (adjust for speed)
+        const phase = (frame % cycleLength) / cycleLength;
+        const sineValue = Math.sin(phase * Math.PI * 2);
         
-        totalDx += vector.dx * weight * amplitude;
-        totalDy += vector.dy * weight * amplitude;
+        // Apply ease-in-out to sine wave for ultra-smooth motion
+        const eased = sineValue * Math.abs(sineValue); // Quadratic easing
+        
+        // Small displacement magnitude (2-6 pixels typical for Motion Leap)
+        const maxDisplacement = 4;
+        const displacement = eased * maxDisplacement;
+        
+        totalDx += vector.dx * weight * displacement;
+        totalDy += vector.dy * weight * displacement;
         totalWeight += weight;
       }
     }
 
-  if (totalWeight > 0) {
-      // Normalize displacement
-      const dx = totalDx / totalWeight;
-      const dy = totalDy / totalWeight;
-      
-      // No clamping - let displacement wrap naturally for continuous motion
-      return { dx, dy };
+    if (totalWeight > 0) {
+      // Normalize by total weight for smooth blending
+      return {
+        dx: totalDx / totalWeight,
+        dy: totalDy / totalWeight
+      };
     }
 
     return { dx: 0, dy: 0 };
