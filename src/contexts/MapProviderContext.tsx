@@ -83,7 +83,7 @@ export const MapProviderProvider: React.FC<{ children: ReactNode }> = ({ childre
           await AMapLoader.default.load({
             key: data.key,
             version: '2.0',
-            plugins: ['AMap.Marker', 'AMap.InfoWindow', 'AMap.Scale', 'AMap.ToolBar']
+            plugins: ['AMap.Marker', 'AMap.InfoWindow', 'AMap.Scale', 'AMap.ToolBar', 'AMap.Geocoder']
           });
           
           setIsAMapReady(true);
