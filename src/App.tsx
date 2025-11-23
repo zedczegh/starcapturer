@@ -43,6 +43,7 @@ import StarFieldGenerator from './pages/StarFieldGenerator';
 import AstroMath from './pages/AstroMath';
 import ParallelVideoGenerator from './pages/ParallelVideoGenerator';
 import CriticalAnalysis from './pages/CriticalAnalysis';
+import MotionAnimation from './pages/MotionAnimation';
 import DeveloperPage from './pages/about/DeveloperPage';
 import UtilitiesPage from './pages/about/UtilitiesPage';
 import SiqsPage from './pages/about/SiqsPage';
@@ -156,6 +157,7 @@ function AppContent() {
       <Route path="/astro-math" element={<AstroMath />} />
       <Route path="/parallel-video-generator" element={<ParallelVideoGenerator />} />
       <Route path="/critical-analysis" element={<CriticalAnalysis />} />
+      <Route path="/motion-animation" element={<MotionAnimation />} />
       <Route path="/space-tracker" element={
         <Suspense fallback={<SimpleLoadingFallback />}>
           <LazySpaceStationTracker />
