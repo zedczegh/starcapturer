@@ -107,8 +107,17 @@ export const MotionAnimationCanvas = ({
       setIsDrawing(true);
       setRangeStrokePoints([{ x, y }]);
       setLastBrushPoint({ x, y });
-      // Draw first point
+      // Add first point and draw initial circle
       drawBrushAtPoint(x, y);
+      
+      // Draw preview
+      const canvas = overlayCanvasRef.current;
+      if (canvas) {
+        requestAnimationFrame(() => {
+          redrawOverlay();
+          drawContinuousBrushStroke([{ x, y }], brushSize, activeTool === "erase");
+        });
+      }
     }
   };
 
@@ -142,14 +151,19 @@ export const MotionAnimationCanvas = ({
         
         // Only add point if moved at least 1/3 of brush size
         if (dist >= brushSize / 3) {
-          setRangeStrokePoints(prev => [...prev, { x, y }]);
+          const newPoints = [...rangeStrokePoints, { x, y }];
+          setRangeStrokePoints(newPoints);
           setLastBrushPoint({ x, y });
           
-          // Throttled redraw
+          // Add to engine silently
+          drawBrushAtPoint(x, y);
+          
+          // Draw continuous stroke preview
           if (!canvas.dataset.drawing) {
             canvas.dataset.drawing = "true";
             requestAnimationFrame(() => {
-              drawBrushAtPoint(x, y);
+              redrawOverlay();
+              drawContinuousBrushStroke(newPoints, brushSize, activeTool === "erase");
               canvas.dataset.drawing = "";
             });
           }
@@ -208,6 +222,8 @@ export const MotionAnimationCanvas = ({
       
       if (activeTool === "range") {
         addToHistory('range', strokeData);
+        // Add the stroke for visualization
+        animationEngineRef.current.addRangeStroke(rangeStrokePoints, brushSize);
       } else {
         addToHistory('erase', strokeData);
       }
@@ -270,15 +286,58 @@ export const MotionAnimationCanvas = ({
   const drawBrushAtPoint = (x: number, y: number) => {
     if (!animationEngineRef.current) return;
 
+    // Don't draw individual points - we'll draw the entire stroke at once
+    // Just add to the engine silently
     if (activeTool === "range") {
-      // Skip keyframe generation during stroke (batch mode)
       animationEngineRef.current.addRangePoint(x, y, brushSize, true);
     } else if (activeTool === "erase") {
-      // Skip keyframe generation during stroke (batch mode)
       animationEngineRef.current.removeAtPoint(x, y, brushSize, true);
     }
+  };
 
-    redrawOverlay();
+  const drawContinuousBrushStroke = (points: {x: number, y: number}[], radius: number, isErase: boolean = false) => {
+    const canvas = overlayCanvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!ctx || points.length === 0) return;
+
+    // Draw smooth continuous stroke
+    ctx.beginPath();
+    
+    if (points.length === 1) {
+      // Single point - draw as circle
+      ctx.arc(points[0].x, points[0].y, radius, 0, Math.PI * 2);
+    } else {
+      // Multiple points - create smooth stroke path
+      ctx.moveTo(points[0].x, points[0].y);
+      
+      for (let i = 1; i < points.length; i++) {
+        const xc = (points[i].x + points[i - 1].x) / 2;
+        const yc = (points[i].y + points[i - 1].y) / 2;
+        ctx.quadraticCurveTo(points[i - 1].x, points[i - 1].y, xc, yc);
+      }
+      
+      // Connect to last point
+      ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
+      
+      // Create offset path for stroke width
+      ctx.lineWidth = radius * 2;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+    }
+    
+    if (isErase) {
+      ctx.strokeStyle = "rgba(239, 68, 68, 0.3)";
+      ctx.fillStyle = "rgba(239, 68, 68, 0.1)";
+    } else {
+      ctx.strokeStyle = "rgba(34, 197, 94, 0.6)";
+      ctx.fillStyle = "rgba(34, 197, 94, 0.3)";
+    }
+    
+    if (points.length === 1) {
+      ctx.fill();
+    } else {
+      ctx.stroke();
+    }
   };
 
   const redrawOverlay = () => {
@@ -387,6 +446,8 @@ export const MotionAnimationCanvas = ({
           for (const point of points) {
             animationEngineRef.current.addRangePoint(point.x, point.y, radius, true);
           }
+          // Add the stroke for visualization
+          animationEngineRef.current.addRangeStroke(points, radius);
         } else {
           // Old single-point format
           const { x, y, radius } = action.data;
