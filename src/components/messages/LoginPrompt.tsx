@@ -17,7 +17,7 @@ const LoginPrompt: React.FC = () => {
   }, []);
   
   return (
-    <div className="container mx-auto px-4 py-16 flex flex-col items-center justify-center">
+    <div className="container mx-auto px-0 sm:px-4 py-16 flex flex-col items-center justify-center">
       <Card className="p-8 max-w-md w-full glassmorphism text-center">
         <MessageCircle className="mx-auto h-16 w-16 mb-4 text-primary/40" />
         <h2 className="text-xl font-semibold text-white mb-4">

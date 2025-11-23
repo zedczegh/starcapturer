@@ -188,7 +188,7 @@ const ProfileMainNew = ({
         </div>
       </div>
 
-      <div className="container mx-auto px-3 sm:px-4 md:px-6 max-w-7xl">
+      <div className="container mx-auto px-0 sm:px-3 md:px-6 max-w-7xl">
         {/* Avatar positioned below background */}
         <div className="relative -mt-24 sm:-mt-28 mb-0 flex justify-center z-10">
           <div className="relative">

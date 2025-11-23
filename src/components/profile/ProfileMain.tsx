@@ -41,7 +41,7 @@ const ProfileMain = ({
       </div>
     </div>
 
-    <div className="container mx-auto px-3 sm:px-4 md:px-6 max-w-7xl">
+    <div className="container mx-auto px-0 sm:px-3 md:px-6 max-w-7xl">
       {/* Enhanced Profile Header Section with Glow */}
       <div className="relative -mt-20 sm:-mt-24 mb-6 sm:mb-8">
         <Card className="bg-cosmic-900/90 backdrop-blur-2xl border border-primary/20 shadow-2xl shadow-primary/10 p-5 sm:p-6 md:p-8 hover:shadow-primary/20 transition-shadow duration-500">

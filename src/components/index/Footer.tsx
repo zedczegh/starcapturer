@@ -9,7 +9,7 @@ const Footer: React.FC = () => {
   
   return (
     <footer className="bg-cosmic-900 border-t border-cosmic-800 py-8">
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-0 sm:px-4">
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center mb-6 md:mb-0">
             <Compass className="h-6 w-6 text-primary mr-2" />

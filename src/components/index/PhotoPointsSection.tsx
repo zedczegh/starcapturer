@@ -10,7 +10,7 @@ const PhotoPointsSection: React.FC = () => {
   
   return (
     <section className="py-16 bg-cosmic-800">
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-0 sm:px-4">
         <div className="flex flex-col items-center text-center mb-12">
           <div className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 mb-6">
             <Map className="h-3.5 w-3.5 text-primary mr-2" />

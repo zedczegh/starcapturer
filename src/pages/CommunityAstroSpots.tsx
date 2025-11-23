@@ -159,7 +159,7 @@ const CommunityAstroSpots: React.FC = () => {
       
       <div className="relative z-10">
         <PhotoPointsLayout pageTitle={t("Meteo Spots Community | Meteotinary", "趣小众社区 | 趣小众")}>
-          <div className="max-w-5xl mx-auto pt-10 px-4 pb-14">
+          <div className="max-w-5xl mx-auto pt-6 sm:pt-10 px-0 sm:px-4 pb-10 sm:pb-14">
         {/* Header Section */}
         <CommunitySpotHeader 
           titleVariants={titleVariants} 
@@ -168,7 +168,7 @@ const CommunityAstroSpots: React.FC = () => {
         />
 
         {/* View Toggle and Map Toggle */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-4 sm:mb-6 px-3 sm:px-0">
           <ViewToggle 
             activeView={activeView}
             onViewChange={setActiveView}

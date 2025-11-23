@@ -165,7 +165,7 @@ const LocationDetailsViewport: React.FC<LocationDetailsViewportProps> = ({
 
   return (
     <div 
-      className={`container relative z-10 mx-auto px-4 py-8 ${paddingTop}`}
+      className={`w-full relative z-10 mx-auto px-0 sm:px-4 py-6 sm:py-8 ${paddingTop}`}
       data-refresh-trigger="true"
       ref={detailsContainerRef}
     >
