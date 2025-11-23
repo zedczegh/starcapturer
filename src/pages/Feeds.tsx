@@ -69,30 +69,30 @@ const Feeds: React.FC = () => {
       <NavBar />
       
       <PullToRefresh onRefresh={refresh} refreshing={refreshing}>
-        <div className="container mx-auto px-4 py-8 pt-20 max-w-2xl">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent mb-2">
+        <div className="w-full mx-auto px-0 sm:px-4 py-6 sm:py-8 pt-16 sm:pt-20 max-w-2xl">
+          <div className="mb-6 sm:mb-8 px-3 sm:px-0">
+            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent mb-2">
               {t("Feeds", "动态")}
             </h1>
-            <p className="text-cosmic-300 text-sm">
+            <p className="text-cosmic-300 text-xs sm:text-sm">
               {t("Explore posts from the community", "探索社区动态")}
             </p>
           </div>
 
           {/* Filter Tabs */}
-          <div className="mb-6">
+          <div className="mb-4 sm:mb-6 px-3 sm:px-0">
             <Tabs value={feedFilter} onValueChange={(v) => setFeedFilter(v as 'all' | 'following')} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-cosmic-800/60 backdrop-blur-xl border border-primary/20">
+              <TabsList className="grid w-full grid-cols-2 bg-cosmic-800/60 backdrop-blur-xl border-transparent sm:border-primary/20 rounded-none sm:rounded-lg">
                 <TabsTrigger 
                   value="all" 
-                  className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary gap-2"
+                  className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary gap-2 text-sm"
                 >
                   <Globe className="h-4 w-4" />
                   {t("All Posts", "所有动态")}
                 </TabsTrigger>
                 <TabsTrigger 
                   value="following" 
-                  className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary gap-2"
+                  className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary gap-2 text-sm"
                   disabled={!user}
                 >
                   <Users className="h-4 w-4" />
@@ -104,7 +104,7 @@ const Feeds: React.FC = () => {
 
           {/* Hashtag Filter Display */}
           {hashtag && (
-            <div className="mb-4 flex items-center gap-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
+            <div className="mb-4 flex items-center gap-2 p-3 bg-primary/10 rounded-none sm:rounded-lg border-l-0 border-r-0 sm:border-l sm:border-r border-y sm:border border-primary/20 mx-0 sm:mx-0">
               <span className="text-sm text-foreground">
                 {t("Filtering by:", "筛选：")} <span className="font-semibold text-primary">#{hashtag}</span>
               </span>
@@ -124,7 +124,7 @@ const Feeds: React.FC = () => {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : posts.length === 0 ? (
-            <div className="text-center py-20">
+            <div className="text-center py-20 px-3">
               <Image className="h-12 w-12 mx-auto mb-4 opacity-50 text-cosmic-400" />
               <p className="text-cosmic-300">
                 {t("No posts yet", "暂无动态")}
@@ -136,7 +136,7 @@ const Feeds: React.FC = () => {
               )}
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-3 sm:space-y-6">
               <AnimatePresence mode="popLayout">
                 {posts.map((post, index) => (
                   <FeedPostCard
