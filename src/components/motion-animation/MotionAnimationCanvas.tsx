@@ -129,11 +129,11 @@ export const MotionAnimationCanvas = ({
     if (!canvas || !animationEngineRef.current) return;
 
     if (activeTool === "motion" && motionArrowStart && motionTrailPoints.length > 1) {
-      // Store motion trail in history
+      // Store entire motion trail as one action in history
       const trailData = [...motionTrailPoints];
       addToHistory('motion', { points: trailData, strength: motionStrength / 100 });
 
-      // Add motion vectors along the trail
+      // Add motion vectors along the trail (for animation calculation)
       for (let i = 0; i < motionTrailPoints.length - 1; i++) {
         const start = motionTrailPoints[i];
         const end = motionTrailPoints[i + 1];
@@ -146,6 +146,9 @@ export const MotionAnimationCanvas = ({
           motionStrength / 100
         );
       }
+
+      // Store the trail as a single path for display (not individual vectors)
+      animationEngineRef.current.addMotionTrail(trailData);
       
       setMotionArrowStart(null);
       setMotionTrailPoints([]);
@@ -294,6 +297,7 @@ export const MotionAnimationCanvas = ({
       
       if (action.type === 'motion') {
         const { points, strength } = action.data;
+        // Add motion vectors for animation
         for (let j = 0; j < points.length - 1; j++) {
           const start = points[j];
           const end = points[j + 1];
@@ -305,6 +309,8 @@ export const MotionAnimationCanvas = ({
             strength
           );
         }
+        // Add trail for display
+        animationEngineRef.current.addMotionTrail(points);
       } else if (action.type === 'anchor') {
         const { x, y, radius } = action.data;
         animationEngineRef.current.addAnchorPoint(x, y, radius);
