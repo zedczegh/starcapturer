@@ -40,6 +40,7 @@ export const MotionAnimationCanvas = ({
   const [activeTool, setActiveTool] = useState<Tool>("motion");
   const [brushSize, setBrushSize] = useState(30);
   const [motionStrength, setMotionStrength] = useState(50);
+  const [displacementAmount, setDisplacementAmount] = useState(100); // Max displacement in pixels
   const [animationSpeed, setAnimationSpeed] = useState(300); // 300% speed by default (relative to base 100)
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -75,10 +76,17 @@ export const MotionAnimationCanvas = ({
     // Draw image
     ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
 
-    // Initialize animation engine
-    animationEngineRef.current = new MotionAnimationEngine(canvas, imageElement);
+    // Initialize animation engine with displacement amount
+    animationEngineRef.current = new MotionAnimationEngine(canvas, imageElement, displacementAmount);
 
-  }, [imageElement]);
+  }, [imageElement, displacementAmount]);
+
+  // When displacement amount changes, update the engine
+  useEffect(() => {
+    if (animationEngineRef.current) {
+      animationEngineRef.current.setMaxDisplacement(displacementAmount);
+    }
+  }, [displacementAmount]);
 
   // When the animation speed changes while playing, restart the engine with the new speed
   useEffect(() => {
@@ -677,6 +685,18 @@ export const MotionAnimationCanvas = ({
           </TabsContent>
 
           <TabsContent value="animation" className="space-y-6 mt-4">
+            <div>
+              <Label>{t("Displacement Amount", "位移量")}: {displacementAmount}px</Label>
+              <Slider
+                value={[displacementAmount]}
+                onValueChange={([value]) => setDisplacementAmount(value)}
+                min={10}
+                max={200}
+                step={10}
+                className="mt-2"
+              />
+            </div>
+            
             <div>
               <Label>{t("Animation Speed", "动画速度")}: {animationSpeed}%</Label>
               <Slider

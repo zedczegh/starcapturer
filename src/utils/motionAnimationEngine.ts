@@ -42,16 +42,18 @@ export class MotionAnimationEngine {
   private rangeStrokes: RangeStroke[] = []; // Store complete strokes for visualization
   private animationFrame: number | null = null;
   private isAnimating: boolean = false;
+  private maxDisplacement: number = 100; // Configurable max displacement in pixels
   
   // Keyframe-based animation
   private keyframes: Keyframe[] = [];
   private currentTime: number = 0;
   private animationDuration: number = 3000; // 3 seconds for full loop
 
-  constructor(canvas: HTMLCanvasElement, sourceImage: HTMLImageElement) {
+  constructor(canvas: HTMLCanvasElement, sourceImage: HTMLImageElement, maxDisplacement: number = 100) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.sourceImage = sourceImage;
+    this.maxDisplacement = maxDisplacement;
     
     // Store original image data
     this.ctx.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
@@ -110,6 +112,13 @@ export class MotionAnimationEngine {
 
   // Public method to manually trigger keyframe generation (for batch operations)
   public updateKeyframes() {
+    this.generateKeyframes();
+  }
+
+  // Public method to update displacement amount
+  public setMaxDisplacement(amount: number) {
+    this.maxDisplacement = amount;
+    // Regenerate keyframes with new displacement
     this.generateKeyframes();
   }
 
@@ -315,13 +324,12 @@ export class MotionAnimationEngine {
         const falloff = Math.exp(-normalizedDist * 3);
         const weight = falloff * vector.strength;
         
-        // Increased displacement for much more visible motion (max 100 pixels)
-        const maxDisplacement = 100;
+        // Use configurable max displacement
         const normalizedDx = vector.dx / Math.max(Math.abs(vector.dx), Math.abs(vector.dy), 1);
         const normalizedDy = vector.dy / Math.max(Math.abs(vector.dx), Math.abs(vector.dy), 1);
         
-        totalDx += normalizedDx * weight * maxDisplacement * intensity;
-        totalDy += normalizedDy * weight * maxDisplacement * intensity;
+        totalDx += normalizedDx * weight * this.maxDisplacement * intensity;
+        totalDy += normalizedDy * weight * this.maxDisplacement * intensity;
         totalWeight += weight;
       }
     }
@@ -337,7 +345,7 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Render loop with fade in/out for smooth displacement animation
+   * Render loop with continuous fade in/out for seamless infinite loop
    */
   private renderLoop(timestamp: number) {
     if (!this.isAnimating) return;
@@ -360,19 +368,10 @@ export class MotionAnimationEngine {
     
     const easedProgress = easeInOutCubic(progress);
     
-    // Calculate fade alpha based on progress
-    // Fade in: 0-15% of animation
-    // Full opacity: 15-70% of animation  
-    // Fade out: 70-100% of animation
-    let alpha = 1.0;
-    
-    if (progress < 0.15) {
-      // Fade in from original image
-      alpha = progress / 0.15;
-    } else if (progress > 0.7) {
-      // Fade out back to original image
-      alpha = 1 - ((progress - 0.7) / 0.3);
-    }
+    // Continuous rolling fade - smooth sine wave for seamless infinite loop
+    // Alpha oscillates smoothly between 0.3 and 1.0
+    const fadePhase = progress * Math.PI * 2; // Full sine wave cycle
+    const alpha = 0.65 + 0.35 * Math.sin(fadePhase); // Oscillates 0.3 to 1.0
     
     // Calculate which frames to blend
     const framePosition = easedProgress * numFrames;
@@ -380,7 +379,7 @@ export class MotionAnimationEngine {
     const frame2Index = (frame1Index + 1) % numFrames;
     const blendFactor = framePosition - Math.floor(framePosition);
 
-    // Blend frames with alpha for fade effect
+    // Blend frames with rolling fade effect
     this.blendTwoFramesWithFade(frame1Index, frame2Index, blendFactor, alpha);
 
     this.animationFrame = requestAnimationFrame((t) => this.renderLoop(t));
