@@ -26,6 +26,7 @@ export class MotionAnimationEngine {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private sourceImage: HTMLImageElement;
+  private originalImageData: ImageData; // Store original image data
   private motionVectors: MotionVector[] = [];
   private motionTrails: MotionTrail[] = [];
   private rangePoints: RangePoint[] = [];
@@ -37,6 +38,11 @@ export class MotionAnimationEngine {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.sourceImage = sourceImage;
+    
+    // CRITICAL: Store the original image data once at initialization
+    // This prevents cumulative distortion by always sampling from the original
+    this.ctx.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
+    this.originalImageData = this.ctx.getImageData(0, 0, canvas.width, canvas.height);
   }
 
   /**
@@ -188,13 +194,14 @@ export class MotionAnimationEngine {
       const maxDist = 150; // Influence radius
       
       if (dist < maxDist) {
-        // Smoother falloff using cubic easing
+        // Smoother falloff using cubic easing for natural-looking motion
         const normalizedDist = dist / maxDist;
         const weight = (1 - normalizedDist) * (1 - normalizedDist) * (1 - normalizedDist) * vector.strength;
         
-        // Create smooth oscillating motion with much smaller amplitude
+        // Create smooth sinusoidal motion for seamless looping
+        // Using sine wave ensures the motion returns to the starting position smoothly
         const phase = (frame % 60) / 60 * Math.PI * 2;
-        const amplitude = Math.sin(phase) * 0.15; // CRITICAL: Much smaller displacement (15% instead of 100%)
+        const amplitude = Math.sin(phase) * 0.2; // 20% displacement for subtle motion
         
         totalDx += vector.dx * weight * amplitude;
         totalDy += vector.dy * weight * amplitude;
@@ -206,7 +213,7 @@ export class MotionAnimationEngine {
       // Normalize and limit maximum displacement to prevent artifacts
       const dx = totalDx / totalWeight;
       const dy = totalDy / totalWeight;
-      const maxDisplacement = 5; // Maximum 5 pixels displacement
+      const maxDisplacement = 8; // Maximum 8 pixels displacement
       const magnitude = Math.sqrt(dx * dx + dy * dy);
       
       if (magnitude > maxDisplacement) {
@@ -225,19 +232,21 @@ export class MotionAnimationEngine {
 
   /**
    * Render a single frame of the animation using bilinear interpolation
-   * This prevents artifacts and creates smooth motion like Motion Leap
+   * CRITICAL: Always samples from the ORIGINAL image to prevent cumulative distortion
    */
   private renderFrame(speed: number) {
     if (!this.isAnimating) return;
 
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
-    const sourceData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+    // CRITICAL: Sample from ORIGINAL image data, not the modified canvas
+    const sourceData = this.originalImageData;
 
-    // Apply displacement to each pixel with bilinear interpolation
+    // Apply displacement to each pixel with bilinear interpolation (backward warping)
     for (let y = 0; y < this.canvas.height; y++) {
       for (let x = 0; x < this.canvas.width; x++) {
         const displacement = this.calculateDisplacement(x, y, this.currentFrame);
         
+        // Backward warping: where should we sample FROM to fill this pixel?
         const sourceX = x - displacement.dx;
         const sourceY = y - displacement.dy;
 
