@@ -435,14 +435,17 @@ export class MotionAnimationEngine {
       return { dx: 0, dy: 0 };
     }
 
-    // Calculate smooth motion field
+    // Calculate smooth motion field with extended radius and gentler falloff
+    // Dynamic max distance based on image size to ensure good coverage
+    const baseMaxDist = Math.max(this.canvas.width, this.canvas.height) * 0.4;
+    
     for (const vector of this.motionVectors) {
       const dist = Math.sqrt((x - vector.x) ** 2 + (y - vector.y) ** 2);
-      const maxDist = 200;
       
-      if (dist < maxDist) {
-        const normalizedDist = dist / maxDist;
-        const falloff = Math.exp(-normalizedDist * 3);
+      if (dist < baseMaxDist) {
+        const normalizedDist = dist / baseMaxDist;
+        // Gentler falloff curve - use quadratic instead of exponential for smoother distribution
+        const falloff = Math.pow(1 - normalizedDist, 1.5);
         const weight = falloff * vector.strength;
         
         // Use configurable max displacement
