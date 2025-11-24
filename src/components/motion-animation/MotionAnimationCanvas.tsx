@@ -53,6 +53,7 @@ export const MotionAnimationCanvas = ({
   const lastBrushPointRef = useRef<{x: number, y: number} | null>(null);
   const historyRef = useRef<Array<{ type: 'motion' | 'range' | 'erase', data: any }>>([]);
   const rafIdRef = useRef<number | null>(null);
+  const keyframeDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize canvas and animation engine
   useEffect(() => {
@@ -81,6 +82,15 @@ export const MotionAnimationCanvas = ({
 
     animationEngineRef.current = new MotionAnimationEngine(canvas, imageElement, displacementAmount);
  
+    // Cleanup on unmount
+    return () => {
+      if (keyframeDebounceRef.current) {
+        clearTimeout(keyframeDebounceRef.current);
+      }
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+    };
   }, [imageElement]);
 
   // When displacement amount changes, update the engine
@@ -161,6 +171,22 @@ export const MotionAnimationCanvas = ({
     }
   };
 
+  // Debounced keyframe generation to prevent freezing during rapid strokes
+  const scheduleKeyframeGeneration = () => {
+    // Clear any pending generation
+    if (keyframeDebounceRef.current) {
+      clearTimeout(keyframeDebounceRef.current);
+    }
+    
+    // Schedule new generation after 300ms of inactivity
+    keyframeDebounceRef.current = setTimeout(() => {
+      if (animationEngineRef.current) {
+        animationEngineRef.current.updateKeyframes();
+      }
+      keyframeDebounceRef.current = null;
+    }, 300);
+  };
+
   // Throttle redraw using RAF to prevent flickering
   const scheduleRedraw = () => {
     if (rafIdRef.current !== null) return; // Already scheduled
@@ -220,8 +246,8 @@ export const MotionAnimationCanvas = ({
       // Store the trail as a single path for display (not individual vectors)
       animationEngineRef.current.addMotionTrail(trailData);
       
-      // Generate keyframes once after all vectors are added
-      animationEngineRef.current.updateKeyframes();
+      // Schedule debounced keyframe generation (prevents freezing during rapid strokes)
+      scheduleKeyframeGeneration();
       
       motionArrowStartRef.current = null;
       motionTrailPointsRef.current = [];
@@ -241,8 +267,8 @@ export const MotionAnimationCanvas = ({
         addToHistory('erase', strokeData);
       }
       
-      // Now generate keyframes once after the complete stroke
-      animationEngineRef.current.updateKeyframes();
+      // Schedule debounced keyframe generation (prevents freezing during rapid strokes)
+      scheduleKeyframeGeneration();
       
       rangeStrokePointsRef.current = [];
       lastBrushPointRef.current = null;
@@ -480,7 +506,7 @@ export const MotionAnimationCanvas = ({
     }
 
     // Generate keyframes once after rebuilding all history
-    animationEngineRef.current.updateKeyframes();
+    scheduleKeyframeGeneration();
     
     redrawOverlay();
   };
