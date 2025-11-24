@@ -225,16 +225,15 @@ export class MotionAnimationEngine {
     this.keyframes = [];
     const numFrames = 12;
     for (let i = 0; i < numFrames; i++) {
-      const phase = i / (numFrames - 1); // 0..1 over full loop
-      const angle = phase * Math.PI * 2; // 0..2π
-      const s = Math.sin(angle); // -1..1, controls direction
-      const magnitude = 0.15 + 0.85 * Math.abs(s); // 0.15..1..0.15, never fully static
-      const signedIntensity = magnitude * (s === 0 ? 1 : Math.sign(s)); // positive then negative for ping-pong
+      // Use sine wave so displacement ramps up then down (0 -> 1 -> 0) while always flowing in the same direction
+      const phase = i / (numFrames - 1);
+      const base = Math.sin(phase * Math.PI); // 0..1..0
+      const intensity = 0.15 + 0.85 * base;   // Never fully static, 0.15..1..0.15
 
       this.keyframes.push({
         imageData: i === 0
           ? this.cloneImageData(this.originalImageData)
-          : this.createDisplacedFrame(signedIntensity)
+          : this.createDisplacedFrame(intensity)
       });
     }
 
