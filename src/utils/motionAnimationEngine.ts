@@ -409,14 +409,8 @@ export class MotionAnimationEngine {
     const progress = (timestamp % this.animationDuration) / this.animationDuration;
     const numFrames = this.keyframes.length;
     
-    // Use ease-in-out for smooth acceleration and deceleration
-    const easeInOutCubic = (t: number): number => {
-      return t < 0.5
-        ? 4 * t * t * t
-        : 1 - Math.pow(-2 * t + 2, 3) / 2;
-    };
-    
-    const easedProgress = easeInOutCubic(progress);
+    // Use linear progress for seamless continuous looping (no easing to avoid deceleration/stops)
+    const linearProgress = progress;
     
     // Sync fade with displacement: fade in as displacement increases, fade out as it decreases
     // Match the same sine wave used in keyframe generation for perfect sync
@@ -430,7 +424,7 @@ export class MotionAnimationEngine {
     
     
     // Calculate which frames to blend
-    const framePosition = easedProgress * numFrames;
+    const framePosition = linearProgress * numFrames;
     const frame1Index = Math.floor(framePosition) % numFrames;
     const frame2Index = (frame1Index + 1) % numFrames;
     const blendFactor = framePosition - Math.floor(framePosition);
