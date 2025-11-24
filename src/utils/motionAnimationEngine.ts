@@ -416,13 +416,12 @@ export class MotionAnimationEngine {
     
     // Each cycle: 0-0.7 = ramp up displacement, 0.7-1.0 = fade out
     const calculateCycleAlpha = (cycleProgress: number) => {
-      const minAlpha = 0.4; // Higher minimum for increased opacity
       if (cycleProgress < 0.7) {
-        // Ramp up from minAlpha to 1 (fully displaced) over first 70%
-        return minAlpha + (1 - minAlpha) * (cycleProgress / 0.7);
+        // Ramp up from 0 (original) to 1 (fully displaced) over first 70%
+        return cycleProgress / 0.7;
       } else {
-        // Fade out from 1 to minAlpha over last 30%
-        return 1.0 - (1 - minAlpha) * ((cycleProgress - 0.7) / 0.3);
+        // Fade out from 1 to 0 over last 30%
+        return 1.0 - ((cycleProgress - 0.7) / 0.3);
       }
     };
     
@@ -476,18 +475,14 @@ export class MotionAnimationEngine {
       const g2 = frame3.data[i + 1] * (1 - blend2) + frame4.data[i + 1] * blend2;
       const b2 = frame3.data[i + 2] * (1 - blend2) + frame4.data[i + 2] * blend2;
       
-      // Blend each cycle with original based on its alpha (reduced blur mixing)
-      const blurReduction = 0.7; // Reduce blur by limiting original frame influence
-      const effectiveAlpha1 = Math.min(1, alpha1 + (1 - alpha1) * blurReduction);
-      const effectiveAlpha2 = Math.min(1, alpha2 + (1 - alpha2) * blurReduction);
+      // Blend each cycle with original based on its alpha
+      const r1WithOrig = r1 * alpha1 + originalFrame.data[i] * (1 - alpha1);
+      const g1WithOrig = g1 * alpha1 + originalFrame.data[i + 1] * (1 - alpha1);
+      const b1WithOrig = b1 * alpha1 + originalFrame.data[i + 2] * (1 - alpha1);
       
-      const r1WithOrig = r1 * effectiveAlpha1 + originalFrame.data[i] * (1 - effectiveAlpha1);
-      const g1WithOrig = g1 * effectiveAlpha1 + originalFrame.data[i + 1] * (1 - effectiveAlpha1);
-      const b1WithOrig = b1 * effectiveAlpha1 + originalFrame.data[i + 2] * (1 - effectiveAlpha1);
-      
-      const r2WithOrig = r2 * effectiveAlpha2 + originalFrame.data[i] * (1 - effectiveAlpha2);
-      const g2WithOrig = g2 * effectiveAlpha2 + originalFrame.data[i + 1] * (1 - effectiveAlpha2);
-      const b2WithOrig = b2 * effectiveAlpha2 + originalFrame.data[i + 2] * (1 - effectiveAlpha2);
+      const r2WithOrig = r2 * alpha2 + originalFrame.data[i] * (1 - alpha2);
+      const g2WithOrig = g2 * alpha2 + originalFrame.data[i + 1] * (1 - alpha2);
+      const b2WithOrig = b2 * alpha2 + originalFrame.data[i + 2] * (1 - alpha2);
       
       // Composite both cycles using max (whichever is more displaced)
       blendedImageData.data[i] = Math.round(Math.max(r1WithOrig, r2WithOrig));
