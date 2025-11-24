@@ -600,15 +600,12 @@ export class MotionAnimationEngine {
     const cycle2Progress = (progress + 0.5) % 1.0;
     
     // Calculate alpha for each cycle (0-1 fade in/out)
-    // Ensure complete transparency at start and end points
     const calculateCycleAlpha = (cycleProgress: number) => {
-      if (cycleProgress < 0.65) {
-        // Fade in over first 65%
-        return cycleProgress / 0.65;
+      if (cycleProgress < 0.7) {
+        return cycleProgress / 0.7;
       } else {
-        // Fade out over last 35% - reaches 0 at cycleProgress = 1.0
-        const fadeProgress = (cycleProgress - 0.65) / 0.35;
-        return Math.max(0, 1 - fadeProgress);
+        const fadeProgress = (cycleProgress - 0.7) / 0.3;
+        return 1 - fadeProgress;
       }
     };
     
@@ -670,24 +667,29 @@ export class MotionAnimationEngine {
       
       let r, g, b;
       
-      // Core brightening temporarily disabled: always use stable non-pulsing blend
-      const totalAlphaSafe = Math.max(0.00001, totalAlpha);
-      
-      // When both cycles are very low, show original image for clean fade
-      if (totalAlpha < 0.02) {
-        r = originalFrame.data[i];
-        g = originalFrame.data[i + 1];
-        b = originalFrame.data[i + 2];
+      if (this.coreBrightening) {
+        // Brightening on: reduce blur factor to keep animated regions more visible with pulsing
+        const rCycles = totalAlpha > 0 ? (r1 * alpha1 + r2 * alpha2) / totalAlpha : r1;
+        const gCycles = totalAlpha > 0 ? (g1 * alpha1 + g2 * alpha2) / totalAlpha : g1;
+        const bCycles = totalAlpha > 0 ? (b1 * alpha1 + b2 * alpha2) / totalAlpha : b1;
+        
+        const blurFactor = 0.3;
+        r = rCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i] * blurFactor * (1 - totalAlpha);
+        g = gCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 1] * blurFactor * (1 - totalAlpha);
+        b = bCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 2] * blurFactor * (1 - totalAlpha);
       } else {
-        // Pure cycle crossfade - weighted by actual alpha values
-        const weight1 = alpha1 / totalAlphaSafe;
-        const weight2 = alpha2 / totalAlphaSafe;
+        // Brightening off: maintain constant visibility without pulsing
+        // Pure cycle crossfade - no alpha-based fading to original image
+        const safeAlpha1 = Math.max(0.0001, alpha1);
+        const safeAlpha2 = Math.max(0.0001, alpha2);
+        const weight1 = safeAlpha1 / (safeAlpha1 + safeAlpha2);
+        const weight2 = safeAlpha2 / (safeAlpha1 + safeAlpha2);
 
         const rCycles = r1 * weight1 + r2 * weight2;
         const gCycles = g1 * weight1 + g2 * weight2;
         const bCycles = b1 * weight1 + b2 * weight2;
         
-        // Apply motion blur only if set
+        // Apply motion blur only if set (doesn't affect pulsing)
         if (this.motionBlurAmount > 0.01) {
           r = rCycles * (1 - this.motionBlurAmount) + originalFrame.data[i] * this.motionBlurAmount;
           g = gCycles * (1 - this.motionBlurAmount) + originalFrame.data[i + 1] * this.motionBlurAmount;
