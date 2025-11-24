@@ -417,11 +417,11 @@ export class MotionAnimationEngine {
     const phase = progress;
     const intensityCurve = Math.sin(phase * Math.PI); // 0..1..0 matches keyframe intensity
     // Alpha follows intensity: low when near original, high at max displacement
-    // Use motionBlurAmount to control the maximum alpha (0 = always show original, 1 = full blur)
-    const minAlpha = Math.max(0.1, 1 - this.motionBlurAmount); // Never go completely invisible
-    const maxAlpha = 0.3 + 0.7 * this.motionBlurAmount; // Scale max alpha by blur amount
+    // To avoid visible "stops", never let alpha get too low so we always see some motion
+    const minAlpha = 0.6; // 60% displaced image even at lowest intensity
+    const maxAlpha = 1.0; // fully displaced at peak
     const alpha = minAlpha + (maxAlpha - minAlpha) * intensityCurve;
-    
+
     
     // Calculate which frames to blend
     const framePosition = linearProgress * numFrames;
