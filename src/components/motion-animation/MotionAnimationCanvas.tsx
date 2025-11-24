@@ -742,9 +742,9 @@ export const MotionAnimationCanvas = ({
               <Slider
                 value={[displacementAmount]}
                 onValueChange={([value]) => setDisplacementAmount(value)}
-                min={10}
+                min={0}
                 max={200}
-                step={10}
+                step={1}
                 className="mt-2"
               />
             </div>
