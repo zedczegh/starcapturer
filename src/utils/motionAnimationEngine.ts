@@ -260,20 +260,20 @@ export class MotionAnimationEngine {
 
   /**
    * Create a single displaced frame with controlled displacement
-   * Uses nearest neighbor for low displacement to avoid blur, bilinear for higher
+   * Uses nearest neighbor for sharp results, avoiding interpolation blur
    */
   private createDisplacedFrame(sourceData: ImageData): ImageData {
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
     
-    // If displacement is very low, use nearest neighbor to avoid interpolation blur
-    const useNearestNeighbor = this.maxDisplacement < 5;
+    // Use nearest neighbor for all displacements to avoid blur and skewing
+    const useNearestNeighbor = this.maxDisplacement < 20;
 
     for (let y = 0; y < this.canvas.height; y++) {
       for (let x = 0; x < this.canvas.width; x++) {
         const displacement = this.calculateDisplacement(x, y, 1);
         
         // Skip displacement entirely if it's negligible
-        if (Math.abs(displacement.dx) < 0.1 && Math.abs(displacement.dy) < 0.1) {
+        if (Math.abs(displacement.dx) < 0.01 && Math.abs(displacement.dy) < 0.01) {
           const targetIdx = (y * this.canvas.width + x) * 4;
           const sourceIdx = targetIdx;
           for (let channel = 0; channel < 4; channel++) {
@@ -360,6 +360,7 @@ export class MotionAnimationEngine {
           const d = Math.sqrt((x - points[0].x) ** 2 + (y - points[0].y) ** 2);
           if (d < minDist) minDist = d;
         } else {
+          // Check distance to all line segments
           for (let i = 0; i < points.length - 1; i++) {
             const p1 = points[i];
             const p2 = points[i + 1];
@@ -368,6 +369,13 @@ export class MotionAnimationEngine {
               minDist = d;
               radiusForMin = radius;
             }
+          }
+          // Also check distance to the last point itself
+          const lastPoint = points[points.length - 1];
+          const d = Math.sqrt((x - lastPoint.x) ** 2 + (y - lastPoint.y) ** 2);
+          if (d < minDist) {
+            minDist = d;
+            radiusForMin = radius;
           }
         }
       }
@@ -384,9 +392,19 @@ export class MotionAnimationEngine {
       if (minDist === Infinity) {
         selectionWeight = 0;
       } else {
-        // Soft edge: 1 at center, smoothly falls to 0 at radius
-        const normalized = Math.min(1, Math.max(0, minDist / radiusForMin));
-        selectionWeight = 1 - normalized;
+        // Hard edge within radius, soft falloff outside
+        // Pixels within 80% of radius get full weight, then soft falloff
+        const innerRadius = radiusForMin * 0.8;
+        if (minDist <= innerRadius) {
+          selectionWeight = 1;
+        } else if (minDist >= radiusForMin) {
+          selectionWeight = 0;
+        } else {
+          // Smooth falloff in outer 20%
+          const falloffDist = minDist - innerRadius;
+          const falloffRange = radiusForMin - innerRadius;
+          selectionWeight = 1 - (falloffDist / falloffRange);
+        }
       }
     }
 
