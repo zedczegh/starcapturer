@@ -51,7 +51,7 @@ export class MotionAnimationEngine {
   private currentTime: number = 0;
   private animationDuration: number = 3000; // 3 seconds for full loop
 
-  constructor(canvas: HTMLCanvasElement, sourceImage: HTMLImageElement, maxDisplacement: number = 100, motionBlurAmount: number = 0.3, coreBrightening: boolean = true) {
+  constructor(canvas: HTMLCanvasElement, sourceImage: HTMLImageElement, maxDisplacement: number = 100, motionBlurAmount: number = 0.3, coreBrightening: boolean = false) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.sourceImage = sourceImage;
@@ -485,16 +485,33 @@ export class MotionAnimationEngine {
       
       // Composite both cycles together for seamless crossfade
       const totalAlpha = Math.min(1, alpha1 + alpha2);
-      const rCycles = totalAlpha > 0 ? (r1 * alpha1 + r2 * alpha2) / totalAlpha : r1;
-      const gCycles = totalAlpha > 0 ? (g1 * alpha1 + g2 * alpha2) / totalAlpha : g1;
-      const bCycles = totalAlpha > 0 ? (b1 * alpha1 + b2 * alpha2) / totalAlpha : b1;
       
-      // Blend composited cycles with original frame
-      // Core brightening effect reduces blur for more visible animated regions
-      const blurFactor = this.coreBrightening ? 0.3 : 1.0; // 0.3 = brightening on, 1.0 = off (normal blend)
-      const r = rCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i] * blurFactor * (1 - totalAlpha);
-      const g = gCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 1] * blurFactor * (1 - totalAlpha);
-      const b = bCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 2] * blurFactor * (1 - totalAlpha);
+      let r, g, b;
+      
+      if (this.coreBrightening) {
+        // Brightening on: reduce blur factor to keep animated regions more visible
+        const rCycles = totalAlpha > 0 ? (r1 * alpha1 + r2 * alpha2) / totalAlpha : r1;
+        const gCycles = totalAlpha > 0 ? (g1 * alpha1 + g2 * alpha2) / totalAlpha : g1;
+        const bCycles = totalAlpha > 0 ? (b1 * alpha1 + b2 * alpha2) / totalAlpha : b1;
+        
+        const blurFactor = 0.3;
+        r = rCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i] * blurFactor * (1 - totalAlpha);
+        g = gCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 1] * blurFactor * (1 - totalAlpha);
+        b = bCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 2] * blurFactor * (1 - totalAlpha);
+      } else {
+        // Brightening off: normal alpha blending with original frame
+        const r1WithOrig = r1 * alpha1 + originalFrame.data[i] * (1 - alpha1);
+        const g1WithOrig = g1 * alpha1 + originalFrame.data[i + 1] * (1 - alpha1);
+        const b1WithOrig = b1 * alpha1 + originalFrame.data[i + 2] * (1 - alpha1);
+        
+        const r2WithOrig = r2 * alpha2 + originalFrame.data[i] * (1 - alpha2);
+        const g2WithOrig = g2 * alpha2 + originalFrame.data[i + 1] * (1 - alpha2);
+        const b2WithOrig = b2 * alpha2 + originalFrame.data[i + 2] * (1 - alpha2);
+        
+        r = totalAlpha > 0 ? (r1WithOrig * alpha1 + r2WithOrig * alpha2) / totalAlpha : originalFrame.data[i];
+        g = totalAlpha > 0 ? (g1WithOrig * alpha1 + g2WithOrig * alpha2) / totalAlpha : originalFrame.data[i + 1];
+        b = totalAlpha > 0 ? (b1WithOrig * alpha1 + b2WithOrig * alpha2) / totalAlpha : originalFrame.data[i + 2];
+      }
       
       blendedImageData.data[i] = Math.round(r);
       blendedImageData.data[i + 1] = Math.round(g);
