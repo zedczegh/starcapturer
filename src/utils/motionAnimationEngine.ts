@@ -415,18 +415,14 @@ export class MotionAnimationEngine {
     const cycle2Progress = (progress + 0.5) % 1.0;
     
     // Each cycle: 0-0.7 = ramp up displacement, 0.7-1.0 = fade out
-    // Higher minimum alpha for increased opacity and reduced blur
     const calculateCycleAlpha = (cycleProgress: number) => {
-      const minAlpha = 0.7; // Minimum opacity - keeps animated regions more visible
-      const maxAlpha = 1.0;
-      
       if (cycleProgress < 0.7) {
-        // Ramp up from 0.7 (more opaque) to 1 (fully displaced) over first 70%
-        return minAlpha + ((maxAlpha - minAlpha) * (cycleProgress / 0.7));
+        // Ramp up from 0 to 1 over first 70%
+        return cycleProgress / 0.7;
       } else {
-        // Fade out from 1 to 0.7 over last 30% (never fully transparent)
+        // Fade out from 1 to 0 over last 30%
         const fadeProgress = (cycleProgress - 0.7) / 0.3;
-        return maxAlpha - ((maxAlpha - minAlpha) * fadeProgress);
+        return 1 - fadeProgress;
       }
     };
     
@@ -480,19 +476,22 @@ export class MotionAnimationEngine {
       const g2 = frame3.data[i + 1] * (1 - blend2) + frame4.data[i + 1] * blend2;
       const b2 = frame3.data[i + 2] * (1 - blend2) + frame4.data[i + 2] * blend2;
       
-      // Blend each cycle with original based on its alpha
-      const r1WithOrig = r1 * alpha1 + originalFrame.data[i] * (1 - alpha1);
-      const g1WithOrig = g1 * alpha1 + originalFrame.data[i + 1] * (1 - alpha1);
-      const b1WithOrig = b1 * alpha1 + originalFrame.data[i + 2] * (1 - alpha1);
+      // Composite both cycles together for seamless crossfade
+      const totalAlpha = Math.min(1, alpha1 + alpha2);
+      const rCycles = totalAlpha > 0 ? (r1 * alpha1 + r2 * alpha2) / totalAlpha : r1;
+      const gCycles = totalAlpha > 0 ? (g1 * alpha1 + g2 * alpha2) / totalAlpha : g1;
+      const bCycles = totalAlpha > 0 ? (b1 * alpha1 + b2 * alpha2) / totalAlpha : b1;
       
-      const r2WithOrig = r2 * alpha2 + originalFrame.data[i] * (1 - alpha2);
-      const g2WithOrig = g2 * alpha2 + originalFrame.data[i + 1] * (1 - alpha2);
-      const b2WithOrig = b2 * alpha2 + originalFrame.data[i + 2] * (1 - alpha2);
+      // Blend composited cycles with original frame
+      // Reduce original frame contribution for higher visibility (less blur)
+      const blurFactor = 0.3; // Lower = more visible animated regions, less blur
+      const r = rCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i] * blurFactor * (1 - totalAlpha);
+      const g = gCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 1] * blurFactor * (1 - totalAlpha);
+      const b = bCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 2] * blurFactor * (1 - totalAlpha);
       
-      // Composite both cycles using max (whichever is more displaced)
-      blendedImageData.data[i] = Math.round(Math.max(r1WithOrig, r2WithOrig));
-      blendedImageData.data[i + 1] = Math.round(Math.max(g1WithOrig, g2WithOrig));
-      blendedImageData.data[i + 2] = Math.round(Math.max(b1WithOrig, b2WithOrig));
+      blendedImageData.data[i] = Math.round(r);
+      blendedImageData.data[i + 1] = Math.round(g);
+      blendedImageData.data[i + 2] = Math.round(b);
       blendedImageData.data[i + 3] = 255;
     }
 
