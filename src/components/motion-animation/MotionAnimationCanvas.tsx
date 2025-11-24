@@ -93,10 +93,12 @@ export const MotionAnimationCanvas = ({
     };
   }, [imageElement]);
 
-  // When displacement amount changes, update the engine
+  // When displacement amount changes, update the engine and debounce keyframe regen
   useEffect(() => {
     if (animationEngineRef.current) {
       animationEngineRef.current.setMaxDisplacement(displacementAmount);
+      // Let the debounced generator handle heavy work so slider drags stay smooth
+      scheduleKeyframeGeneration();
     }
   }, [displacementAmount]);
 

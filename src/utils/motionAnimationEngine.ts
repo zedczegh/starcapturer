@@ -117,9 +117,10 @@ export class MotionAnimationEngine {
 
   // Public method to update displacement amount
   public setMaxDisplacement(amount: number) {
+    // Only update the parameter here; actual keyframe regeneration
+    // is debounced and controlled from the canvas layer so that
+    // slider drags stay responsive without blocking the main thread.
     this.maxDisplacement = amount;
-    // Regenerate keyframes with new displacement
-    this.generateKeyframes();
   }
 
   clear() {
