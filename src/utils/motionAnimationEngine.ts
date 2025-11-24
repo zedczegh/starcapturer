@@ -260,16 +260,27 @@ export class MotionAnimationEngine {
 
   /**
    * Create a single displaced frame with controlled displacement
-   * Uses wraparound/tiling for seamless looping
+   * Uses nearest neighbor for low displacement to avoid blur, bilinear for higher
    */
   private createDisplacedFrame(sourceData: ImageData): ImageData {
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
+    
+    // If displacement is very low, use nearest neighbor to avoid interpolation blur
+    const useNearestNeighbor = this.maxDisplacement < 5;
 
     for (let y = 0; y < this.canvas.height; y++) {
       for (let x = 0; x < this.canvas.width; x++) {
-        // Use full configured displacement strength (intensity = 1) and rely on
-        // cumulative advection + wraparound to create continuous motion
         const displacement = this.calculateDisplacement(x, y, 1);
+        
+        // Skip displacement entirely if it's negligible
+        if (Math.abs(displacement.dx) < 0.1 && Math.abs(displacement.dy) < 0.1) {
+          const targetIdx = (y * this.canvas.width + x) * 4;
+          const sourceIdx = targetIdx;
+          for (let channel = 0; channel < 4; channel++) {
+            imageData.data[targetIdx + channel] = sourceData.data[sourceIdx + channel];
+          }
+          continue;
+        }
         
         // Backward warping with wraparound for seamless loop
         let sourceX = x - displacement.dx;
@@ -279,33 +290,44 @@ export class MotionAnimationEngine {
         sourceX = ((sourceX % this.canvas.width) + this.canvas.width) % this.canvas.width;
         sourceY = ((sourceY % this.canvas.height) + this.canvas.height) % this.canvas.height;
 
-        // Bilinear interpolation with wraparound
-        const x1 = Math.floor(sourceX);
-        const y1 = Math.floor(sourceY);
-        const x2 = (x1 + 1) % this.canvas.width;
-        const y2 = (y1 + 1) % this.canvas.height;
-        
-        const fx = sourceX - x1;
-        const fy = sourceY - y1;
-
         const targetIdx = (y * this.canvas.width + x) * 4;
 
-        const idx11 = (y1 * this.canvas.width + x1) * 4;
-        const idx21 = (y1 * this.canvas.width + x2) * 4;
-        const idx12 = (y2 * this.canvas.width + x1) * 4;
-        const idx22 = (y2 * this.canvas.width + x2) * 4;
+        if (useNearestNeighbor) {
+          // Nearest neighbor - no interpolation blur
+          const nearX = Math.round(sourceX) % this.canvas.width;
+          const nearY = Math.round(sourceY) % this.canvas.height;
+          const sourceIdx = (nearY * this.canvas.width + nearX) * 4;
+          
+          for (let channel = 0; channel < 4; channel++) {
+            imageData.data[targetIdx + channel] = sourceData.data[sourceIdx + channel];
+          }
+        } else {
+          // Bilinear interpolation for smooth displacement
+          const x1 = Math.floor(sourceX);
+          const y1 = Math.floor(sourceY);
+          const x2 = (x1 + 1) % this.canvas.width;
+          const y2 = (y1 + 1) % this.canvas.height;
+          
+          const fx = sourceX - x1;
+          const fy = sourceY - y1;
 
-        for (let channel = 0; channel < 4; channel++) {
-          const c11 = sourceData.data[idx11 + channel];
-          const c21 = sourceData.data[idx21 + channel];
-          const c12 = sourceData.data[idx12 + channel];
-          const c22 = sourceData.data[idx22 + channel];
+          const idx11 = (y1 * this.canvas.width + x1) * 4;
+          const idx21 = (y1 * this.canvas.width + x2) * 4;
+          const idx12 = (y2 * this.canvas.width + x1) * 4;
+          const idx22 = (y2 * this.canvas.width + x2) * 4;
 
-          const c1 = c11 * (1 - fx) + c21 * fx;
-          const c2 = c12 * (1 - fx) + c22 * fx;
-          const interpolated = c1 * (1 - fy) + c2 * fy;
+          for (let channel = 0; channel < 4; channel++) {
+            const c11 = sourceData.data[idx11 + channel];
+            const c21 = sourceData.data[idx21 + channel];
+            const c12 = sourceData.data[idx12 + channel];
+            const c22 = sourceData.data[idx22 + channel];
 
-          imageData.data[targetIdx + channel] = Math.round(interpolated);
+            const c1 = c11 * (1 - fx) + c21 * fx;
+            const c2 = c12 * (1 - fx) + c22 * fx;
+            const interpolated = c1 * (1 - fy) + c2 * fy;
+
+            imageData.data[targetIdx + channel] = Math.round(interpolated);
+          }
         }
       }
     }
@@ -499,16 +521,28 @@ export class MotionAnimationEngine {
         g = gCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 1] * blurFactor * (1 - totalAlpha);
         b = bCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 2] * blurFactor * (1 - totalAlpha);
       } else {
-        // Brightening off: composite only the displaced cycles (no blend with original)
-        // This keeps overall brightness stable while the motion loops seamlessly
-        const safeAlpha1 = Math.max(0.0001, alpha1);
-        const safeAlpha2 = Math.max(0.0001, alpha2);
-        const weight1 = safeAlpha1 / (safeAlpha1 + safeAlpha2);
-        const weight2 = safeAlpha2 / (safeAlpha1 + safeAlpha2);
+        // Brightening off: composite only the displaced cycles
+        // Motion blur amount controls how much original frame is blended in
+        if (this.motionBlurAmount > 0.01) {
+          // With motion blur: blend with original based on blur amount
+          const rCycles = totalAlpha > 0 ? (r1 * alpha1 + r2 * alpha2) / totalAlpha : r1;
+          const gCycles = totalAlpha > 0 ? (g1 * alpha1 + g2 * alpha2) / totalAlpha : g1;
+          const bCycles = totalAlpha > 0 ? (b1 * alpha1 + b2 * alpha2) / totalAlpha : b1;
+          
+          r = rCycles * (1 - this.motionBlurAmount) + originalFrame.data[i] * this.motionBlurAmount;
+          g = gCycles * (1 - this.motionBlurAmount) + originalFrame.data[i + 1] * this.motionBlurAmount;
+          b = bCycles * (1 - this.motionBlurAmount) + originalFrame.data[i + 2] * this.motionBlurAmount;
+        } else {
+          // No motion blur: pure cycle crossfade, no original frame
+          const safeAlpha1 = Math.max(0.0001, alpha1);
+          const safeAlpha2 = Math.max(0.0001, alpha2);
+          const weight1 = safeAlpha1 / (safeAlpha1 + safeAlpha2);
+          const weight2 = safeAlpha2 / (safeAlpha1 + safeAlpha2);
 
-        r = r1 * weight1 + r2 * weight2;
-        g = g1 * weight1 + g2 * weight2;
-        b = b1 * weight1 + b2 * weight2;
+          r = r1 * weight1 + r2 * weight2;
+          g = g1 * weight1 + g2 * weight2;
+          b = b1 * weight1 + b2 * weight2;
+        }
       }
       
       blendedImageData.data[i] = Math.round(r);
