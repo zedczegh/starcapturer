@@ -415,13 +415,14 @@ export class MotionAnimationEngine {
     const cycle2Progress = (progress + 0.5) % 1.0;
     
     // Each cycle: 0-0.7 = ramp up displacement, 0.7-1.0 = fade out
+    // Reduce max displacement to 0.4 to prevent excessive shape distortion
     const calculateCycleAlpha = (cycleProgress: number) => {
       if (cycleProgress < 0.7) {
-        // Ramp up from 0 (original) to 1 (fully displaced) over first 70%
-        return cycleProgress / 0.7;
+        // Ramp up from 0 (original) to 0.4 (moderate displacement) over first 70%
+        return (cycleProgress / 0.7) * 0.4;
       } else {
-        // Fade out from 1 to 0 over last 30%
-        return 1.0 - ((cycleProgress - 0.7) / 0.3);
+        // Fade out from 0.4 to 0 over last 30%
+        return 0.4 * (1.0 - ((cycleProgress - 0.7) / 0.3));
       }
     };
     
