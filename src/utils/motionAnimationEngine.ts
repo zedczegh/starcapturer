@@ -553,7 +553,7 @@ export class MotionAnimationEngine {
       let r, g, b;
       
       if (this.coreBrightening) {
-        // Brightening on: reduce blur factor to keep animated regions more visible
+        // Brightening on: reduce blur factor to keep animated regions more visible with pulsing
         const rCycles = totalAlpha > 0 ? (r1 * alpha1 + r2 * alpha2) / totalAlpha : r1;
         const gCycles = totalAlpha > 0 ? (g1 * alpha1 + g2 * alpha2) / totalAlpha : g1;
         const bCycles = totalAlpha > 0 ? (b1 * alpha1 + b2 * alpha2) / totalAlpha : b1;
@@ -563,26 +563,26 @@ export class MotionAnimationEngine {
         g = gCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 1] * blurFactor * (1 - totalAlpha);
         b = bCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 2] * blurFactor * (1 - totalAlpha);
       } else {
-        // Brightening off: composite only the displaced cycles
+        // Brightening off: maintain constant visibility without pulsing
+        // Pure cycle crossfade - no alpha-based fading to original image
+        const safeAlpha1 = Math.max(0.0001, alpha1);
+        const safeAlpha2 = Math.max(0.0001, alpha2);
+        const weight1 = safeAlpha1 / (safeAlpha1 + safeAlpha2);
+        const weight2 = safeAlpha2 / (safeAlpha1 + safeAlpha2);
+
+        const rCycles = r1 * weight1 + r2 * weight2;
+        const gCycles = g1 * weight1 + g2 * weight2;
+        const bCycles = b1 * weight1 + b2 * weight2;
+        
+        // Apply motion blur only if set (doesn't affect pulsing)
         if (this.motionBlurAmount > 0.01) {
-          // With motion blur: blend with original based on blur amount
-          const rCycles = totalAlpha > 0 ? (r1 * alpha1 + r2 * alpha2) / totalAlpha : r1;
-          const gCycles = totalAlpha > 0 ? (g1 * alpha1 + g2 * alpha2) / totalAlpha : g1;
-          const bCycles = totalAlpha > 0 ? (b1 * alpha1 + b2 * alpha2) / totalAlpha : b1;
-          
           r = rCycles * (1 - this.motionBlurAmount) + originalFrame.data[i] * this.motionBlurAmount;
           g = gCycles * (1 - this.motionBlurAmount) + originalFrame.data[i + 1] * this.motionBlurAmount;
           b = bCycles * (1 - this.motionBlurAmount) + originalFrame.data[i + 2] * this.motionBlurAmount;
         } else {
-          // No motion blur: pure cycle crossfade
-          const safeAlpha1 = Math.max(0.0001, alpha1);
-          const safeAlpha2 = Math.max(0.0001, alpha2);
-          const weight1 = safeAlpha1 / (safeAlpha1 + safeAlpha2);
-          const weight2 = safeAlpha2 / (safeAlpha1 + safeAlpha2);
-
-          r = r1 * weight1 + r2 * weight2;
-          g = g1 * weight1 + g2 * weight2;
-          b = b1 * weight1 + b2 * weight2;
+          r = rCycles;
+          g = gCycles;
+          b = bCycles;
         }
       }
       
