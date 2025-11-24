@@ -44,18 +44,20 @@ export class MotionAnimationEngine {
   private isAnimating: boolean = false;
   private maxDisplacement: number = 100; // Configurable max displacement in pixels
   private motionBlurAmount: number = 0.3; // 0 = no blur (always show original), 1 = max blur
+  private coreBrightening: boolean = true; // Enable core brightening effect
   
   // Keyframe-based animation
   private keyframes: Keyframe[] = [];
   private currentTime: number = 0;
   private animationDuration: number = 3000; // 3 seconds for full loop
 
-  constructor(canvas: HTMLCanvasElement, sourceImage: HTMLImageElement, maxDisplacement: number = 100, motionBlurAmount: number = 0.3) {
+  constructor(canvas: HTMLCanvasElement, sourceImage: HTMLImageElement, maxDisplacement: number = 100, motionBlurAmount: number = 0.3, coreBrightening: boolean = true) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.sourceImage = sourceImage;
     this.maxDisplacement = maxDisplacement;
     this.motionBlurAmount = motionBlurAmount;
+    this.coreBrightening = coreBrightening;
     
     // Store original image data
     this.ctx.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
@@ -129,6 +131,11 @@ export class MotionAnimationEngine {
   public setMotionBlur(amount: number) {
     // Convert 0-100 slider value to 0-1 range
     this.motionBlurAmount = amount / 100;
+  }
+  
+  // Public method to update core brightening
+  public setCoreBrightening(enabled: boolean) {
+    this.coreBrightening = enabled;
   }
 
   clear() {
@@ -483,8 +490,8 @@ export class MotionAnimationEngine {
       const bCycles = totalAlpha > 0 ? (b1 * alpha1 + b2 * alpha2) / totalAlpha : b1;
       
       // Blend composited cycles with original frame
-      // Reduce original frame contribution for higher visibility (less blur)
-      const blurFactor = 0.3; // Lower = more visible animated regions, less blur
+      // Core brightening effect reduces blur for more visible animated regions
+      const blurFactor = this.coreBrightening ? 0.3 : 1.0; // 0.3 = brightening on, 1.0 = off (normal blend)
       const r = rCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i] * blurFactor * (1 - totalAlpha);
       const g = gCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 1] * blurFactor * (1 - totalAlpha);
       const b = bCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 2] * blurFactor * (1 - totalAlpha);

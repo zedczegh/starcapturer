@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { 
   ArrowRight, 
@@ -43,6 +44,7 @@ export const MotionAnimationCanvas = ({
   const [displacementAmount, setDisplacementAmount] = useState(10); // Max displacement in pixels
   const [animationSpeed, setAnimationSpeed] = useState(60); // 60% speed by default (relative to base 100)
   const [motionBlur, setMotionBlur] = useState(30); // Motion blur amount 0-100
+  const [coreBrightening, setCoreBrightening] = useState(true); // Core brightening effect
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -81,7 +83,7 @@ export const MotionAnimationCanvas = ({
     // Draw image
     ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
 
-    animationEngineRef.current = new MotionAnimationEngine(canvas, imageElement, displacementAmount, motionBlur);
+    animationEngineRef.current = new MotionAnimationEngine(canvas, imageElement, displacementAmount, motionBlur, coreBrightening);
  
     // Show overlay initially so users can see their strokes
     overlayCanvas.style.opacity = "1";
@@ -110,6 +112,13 @@ export const MotionAnimationCanvas = ({
       animationEngineRef.current.setMotionBlur(motionBlur);
     }
   }, [motionBlur]);
+
+  // When core brightening changes, update the engine parameter
+  useEffect(() => {
+    if (animationEngineRef.current) {
+      animationEngineRef.current.setCoreBrightening(coreBrightening);
+    }
+  }, [coreBrightening]);
 
   // When the animation speed changes while playing, update it dynamically
   useEffect(() => {
@@ -761,6 +770,14 @@ export const MotionAnimationCanvas = ({
                 max={100}
                 step={5}
                 className="mt-2"
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <Label>{t("Core Brightening", "核心增亮")}</Label>
+              <Switch
+                checked={coreBrightening}
+                onCheckedChange={setCoreBrightening}
               />
             </div>
           </TabsContent>
