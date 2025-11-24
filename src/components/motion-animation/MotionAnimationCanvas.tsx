@@ -40,8 +40,9 @@ export const MotionAnimationCanvas = ({
   const [activeTool, setActiveTool] = useState<Tool>("motion");
   const [brushSize, setBrushSize] = useState(30);
   const [motionStrength, setMotionStrength] = useState(50);
-  const [displacementAmount, setDisplacementAmount] = useState(100); // Max displacement in pixels
-  const [animationSpeed, setAnimationSpeed] = useState(300); // 300% speed by default (relative to base 100)
+  const [displacementAmount, setDisplacementAmount] = useState(10); // Max displacement in pixels
+  const [animationSpeed, setAnimationSpeed] = useState(60); // 60% speed by default (relative to base 100)
+  const [motionBlur, setMotionBlur] = useState(30); // Motion blur amount 0-100
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -80,7 +81,7 @@ export const MotionAnimationCanvas = ({
     // Draw image
     ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
 
-    animationEngineRef.current = new MotionAnimationEngine(canvas, imageElement, displacementAmount);
+    animationEngineRef.current = new MotionAnimationEngine(canvas, imageElement, displacementAmount, motionBlur);
  
     // Show overlay initially so users can see their strokes
     overlayCanvas.style.opacity = "1";
@@ -102,6 +103,13 @@ export const MotionAnimationCanvas = ({
       animationEngineRef.current.setMaxDisplacement(displacementAmount);
     }
   }, [displacementAmount]);
+
+  // When motion blur changes, update the engine parameter
+  useEffect(() => {
+    if (animationEngineRef.current) {
+      animationEngineRef.current.setMotionBlur(motionBlur);
+    }
+  }, [motionBlur]);
 
   // When the animation speed changes while playing, update it dynamically
   useEffect(() => {
@@ -730,6 +738,18 @@ export const MotionAnimationCanvas = ({
                 min={10}
                 max={200}
                 step={10}
+                className="mt-2"
+              />
+            </div>
+            
+            <div>
+              <Label>{t("Motion Blur", "运动模糊")}: {motionBlur}%</Label>
+              <Slider
+                value={[motionBlur]}
+                onValueChange={([value]) => setMotionBlur(value)}
+                min={0}
+                max={100}
+                step={5}
                 className="mt-2"
               />
             </div>

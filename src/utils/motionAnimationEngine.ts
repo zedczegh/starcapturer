@@ -43,17 +43,19 @@ export class MotionAnimationEngine {
   private animationFrame: number | null = null;
   private isAnimating: boolean = false;
   private maxDisplacement: number = 100; // Configurable max displacement in pixels
+  private motionBlurAmount: number = 0.3; // 0 = no blur (always show original), 1 = max blur
   
   // Keyframe-based animation
   private keyframes: Keyframe[] = [];
   private currentTime: number = 0;
   private animationDuration: number = 3000; // 3 seconds for full loop
 
-  constructor(canvas: HTMLCanvasElement, sourceImage: HTMLImageElement, maxDisplacement: number = 100) {
+  constructor(canvas: HTMLCanvasElement, sourceImage: HTMLImageElement, maxDisplacement: number = 100, motionBlurAmount: number = 0.3) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d")!;
     this.sourceImage = sourceImage;
     this.maxDisplacement = maxDisplacement;
+    this.motionBlurAmount = motionBlurAmount;
     
     // Store original image data
     this.ctx.drawImage(sourceImage, 0, 0, canvas.width, canvas.height);
@@ -121,6 +123,12 @@ export class MotionAnimationEngine {
     // is debounced and controlled from the canvas layer so that
     // slider drags stay responsive without blocking the main thread.
     this.maxDisplacement = amount;
+  }
+  
+  // Public method to update motion blur amount
+  public setMotionBlur(amount: number) {
+    // Convert 0-100 slider value to 0-1 range
+    this.motionBlurAmount = amount / 100;
   }
 
   clear() {
@@ -415,7 +423,11 @@ export class MotionAnimationEngine {
     const phase = progress;
     const intensityCurve = Math.sin(phase * Math.PI); // 0..1..0 matches keyframe intensity
     // Alpha follows intensity: low when near original, high at max displacement
-    const alpha = 0.3 + 0.7 * intensityCurve; // Oscillates 0.3 to 1.0
+    // Use motionBlurAmount to control the maximum alpha (0 = always show original, 1 = full blur)
+    const minAlpha = Math.max(0.1, 1 - this.motionBlurAmount); // Never go completely invisible
+    const maxAlpha = 0.3 + 0.7 * this.motionBlurAmount; // Scale max alpha by blur amount
+    const alpha = minAlpha + (maxAlpha - minAlpha) * intensityCurve;
+    
     
     // Calculate which frames to blend
     const framePosition = easedProgress * numFrames;
