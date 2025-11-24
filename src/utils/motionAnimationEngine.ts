@@ -415,13 +415,19 @@ export class MotionAnimationEngine {
     const cycle2Progress = (progress + 0.5) % 1.0;
     
     // Each cycle: 0-0.7 = ramp up displacement, 0.7-1.0 = fade out
+    // Using easing functions for smoother transitions
     const calculateCycleAlpha = (cycleProgress: number) => {
       if (cycleProgress < 0.7) {
-        // Ramp up from 0 (original) to 1 (fully displaced) over first 70%
-        return cycleProgress / 0.7;
+        // Smooth ramp up from 0.92 (mostly displaced) to 1.0 (fully displaced) over first 70%
+        // Using easeInOutQuad for smoother acceleration
+        const t = cycleProgress / 0.7;
+        const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        return 0.92 + (eased * 0.08); // Range from 0.92 to 1.0
       } else {
-        // Fade out from 1 to 0 over last 30%
-        return 1.0 - ((cycleProgress - 0.7) / 0.3);
+        // Smooth fade from 1.0 back to 0.92 over last 30%
+        const t = (cycleProgress - 0.7) / 0.3;
+        const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        return 1.0 - (eased * 0.08); // Range from 1.0 to 0.92
       }
     };
     
