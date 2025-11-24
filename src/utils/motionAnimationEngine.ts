@@ -670,49 +670,32 @@ export class MotionAnimationEngine {
       
       let r, g, b;
       
-      if (this.coreBrightening) {
-        // Brightening on: subtle, controlled glow based on combined alpha
-        const rCycles = totalAlpha > 0 ? (r1 * alpha1 + r2 * alpha2) / totalAlpha : r1;
-        const gCycles = totalAlpha > 0 ? (g1 * alpha1 + g2 * alpha2) / totalAlpha : g1;
-        const bCycles = totalAlpha > 0 ? (b1 * alpha1 + b2 * alpha2) / totalAlpha : b1;
-
-        // Gentle brightness boost (max +25%) instead of strong pulsing
-        const boost = 1 + 0.25 * totalAlpha;
-        let rBright = rCycles * boost;
-        let gBright = gCycles * boost;
-        let bBright = bCycles * boost;
-
-        // Respect motion blur amount when brightening is enabled
-        const blurFactor = this.motionBlurAmount;
-        r = rBright * (1 - blurFactor) + originalFrame.data[i] * blurFactor;
-        g = gBright * (1 - blurFactor) + originalFrame.data[i + 1] * blurFactor;
-        b = bBright * (1 - blurFactor) + originalFrame.data[i + 2] * blurFactor;
+      // Core brightening temporarily disabled: always use stable non-pulsing blend
+      const totalAlphaSafe = Math.max(0.00001, totalAlpha);
+      
+      // When both cycles are very low, show original image for clean fade
+      if (totalAlpha < 0.02) {
+        r = originalFrame.data[i];
+        g = originalFrame.data[i + 1];
+        b = originalFrame.data[i + 2];
       } else {
-        // Brightening off: maintain constant visibility without pulsing
-        // When both cycles are very low, show original image for clean fade
-        if (totalAlpha < 0.02) {
-          r = originalFrame.data[i];
-          g = originalFrame.data[i + 1];
-          b = originalFrame.data[i + 2];
-        } else {
-          // Pure cycle crossfade - weighted by actual alpha values
-          const weight1 = alpha1 / totalAlpha;
-          const weight2 = alpha2 / totalAlpha;
+        // Pure cycle crossfade - weighted by actual alpha values
+        const weight1 = alpha1 / totalAlphaSafe;
+        const weight2 = alpha2 / totalAlphaSafe;
 
-          const rCycles = r1 * weight1 + r2 * weight2;
-          const gCycles = g1 * weight1 + g2 * weight2;
-          const bCycles = b1 * weight1 + b2 * weight2;
-          
-          // Apply motion blur only if set (doesn't affect pulsing)
-          if (this.motionBlurAmount > 0.01) {
-            r = rCycles * (1 - this.motionBlurAmount) + originalFrame.data[i] * this.motionBlurAmount;
-            g = gCycles * (1 - this.motionBlurAmount) + originalFrame.data[i + 1] * this.motionBlurAmount;
-            b = bCycles * (1 - this.motionBlurAmount) + originalFrame.data[i + 2] * this.motionBlurAmount;
-          } else {
-            r = rCycles;
-            g = gCycles;
-            b = bCycles;
-          }
+        const rCycles = r1 * weight1 + r2 * weight2;
+        const gCycles = g1 * weight1 + g2 * weight2;
+        const bCycles = b1 * weight1 + b2 * weight2;
+        
+        // Apply motion blur only if set
+        if (this.motionBlurAmount > 0.01) {
+          r = rCycles * (1 - this.motionBlurAmount) + originalFrame.data[i] * this.motionBlurAmount;
+          g = gCycles * (1 - this.motionBlurAmount) + originalFrame.data[i + 1] * this.motionBlurAmount;
+          b = bCycles * (1 - this.motionBlurAmount) + originalFrame.data[i + 2] * this.motionBlurAmount;
+        } else {
+          r = rCycles;
+          g = gCycles;
+          b = bCycles;
         }
       }
       
