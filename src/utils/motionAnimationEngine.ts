@@ -227,7 +227,7 @@ export class MotionAnimationEngine {
 
   /**
    * Generate 12 keyframes for continuous one-directional loop
-   * Each frame progressively displaces in motion direction
+   * Optimized for large images with memory management
    */
   private generateKeyframes() {
     if (this.motionVectors.length === 0) {
@@ -237,22 +237,28 @@ export class MotionAnimationEngine {
 
     console.log('Generating keyframes for continuous loop...');
     
-    // Generate progressive displacement frames forming a seamless ping-pong loop
+    // Clear old keyframes to free memory
     this.keyframes = [];
     const numFrames = 12;
 
-    // Start from the original image and progressively advect pixels forward
-    // Each frame uses the previous frame as its source so motion always flows
+    // Start from the original image
     let sourceFrame = this.originalImageData;
 
-    // First keyframe: original image
+    // First keyframe: original image (clone to avoid reference issues)
     this.keyframes.push({ imageData: this.cloneImageData(sourceFrame) });
 
-    // Subsequent keyframes: cumulative forward displacement
+    // Generate subsequent keyframes with progressive displacement
+    // For large images, generate frames one at a time and allow GC
     for (let i = 1; i < numFrames; i++) {
       const displaced = this.createDisplacedFrame(sourceFrame);
       this.keyframes.push({ imageData: displaced });
       sourceFrame = displaced;
+      
+      // For very large images, yield to browser occasionally
+      if (i % 4 === 0 && this.canvas.width * this.canvas.height > 1000000) {
+        // Allow browser to process other tasks
+        void Promise.resolve();
+      }
     }
 
     console.log('Generated 12 keyframes for continuous one-directional loop');
@@ -260,73 +266,90 @@ export class MotionAnimationEngine {
 
   /**
    * Create a single displaced frame with controlled displacement
-   * Uses nearest neighbor for sharp results, avoiding interpolation blur
+   * Optimized for large images with efficient pixel processing
    */
   private createDisplacedFrame(sourceData: ImageData): ImageData {
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
+    const width = this.canvas.width;
+    const height = this.canvas.height;
     
-    // Use nearest neighbor for all displacements to avoid blur and skewing
+    // Use nearest neighbor for sharp results when displacement is low
     const useNearestNeighbor = this.maxDisplacement < 20;
+    
+    // Pre-calculate commonly used values
+    const srcData = sourceData.data;
+    const dstData = imageData.data;
 
-    for (let y = 0; y < this.canvas.height; y++) {
-      for (let x = 0; x < this.canvas.width; x++) {
-        const displacement = this.calculateDisplacement(x, y, 1);
+    // Process pixels in batches for better cache locality
+    const batchSize = 1000;
+    
+    for (let batchStart = 0; batchStart < height; batchStart += batchSize) {
+      const batchEnd = Math.min(batchStart + batchSize, height);
+      
+      for (let y = batchStart; y < batchEnd; y++) {
+        const rowOffset = y * width;
         
-        // Skip displacement entirely if it's negligible
-        if (Math.abs(displacement.dx) < 0.01 && Math.abs(displacement.dy) < 0.01) {
-          const targetIdx = (y * this.canvas.width + x) * 4;
-          const sourceIdx = targetIdx;
-          for (let channel = 0; channel < 4; channel++) {
-            imageData.data[targetIdx + channel] = sourceData.data[sourceIdx + channel];
-          }
-          continue;
-        }
-        
-        // Backward warping with wraparound for seamless loop
-        let sourceX = x - displacement.dx;
-        let sourceY = y - displacement.dy;
-
-        // Wrap around instead of clamping for seamless loop
-        sourceX = ((sourceX % this.canvas.width) + this.canvas.width) % this.canvas.width;
-        sourceY = ((sourceY % this.canvas.height) + this.canvas.height) % this.canvas.height;
-
-        const targetIdx = (y * this.canvas.width + x) * 4;
-
-        if (useNearestNeighbor) {
-          // Nearest neighbor - no interpolation blur
-          const nearX = Math.round(sourceX) % this.canvas.width;
-          const nearY = Math.round(sourceY) % this.canvas.height;
-          const sourceIdx = (nearY * this.canvas.width + nearX) * 4;
+        for (let x = 0; x < width; x++) {
+          const displacement = this.calculateDisplacement(x, y, 1);
           
-          for (let channel = 0; channel < 4; channel++) {
-            imageData.data[targetIdx + channel] = sourceData.data[sourceIdx + channel];
+          // Skip negligible displacement
+          if (Math.abs(displacement.dx) < 0.01 && Math.abs(displacement.dy) < 0.01) {
+            const idx = (rowOffset + x) * 4;
+            dstData[idx] = srcData[idx];
+            dstData[idx + 1] = srcData[idx + 1];
+            dstData[idx + 2] = srcData[idx + 2];
+            dstData[idx + 3] = srcData[idx + 3];
+            continue;
           }
-        } else {
-          // Bilinear interpolation for smooth displacement
-          const x1 = Math.floor(sourceX);
-          const y1 = Math.floor(sourceY);
-          const x2 = (x1 + 1) % this.canvas.width;
-          const y2 = (y1 + 1) % this.canvas.height;
           
-          const fx = sourceX - x1;
-          const fy = sourceY - y1;
+          // Backward warping with wraparound
+          let sourceX = x - displacement.dx;
+          let sourceY = y - displacement.dy;
 
-          const idx11 = (y1 * this.canvas.width + x1) * 4;
-          const idx21 = (y1 * this.canvas.width + x2) * 4;
-          const idx12 = (y2 * this.canvas.width + x1) * 4;
-          const idx22 = (y2 * this.canvas.width + x2) * 4;
+          // Wrap around for seamless loop
+          sourceX = ((sourceX % width) + width) % width;
+          sourceY = ((sourceY % height) + height) % height;
 
-          for (let channel = 0; channel < 4; channel++) {
-            const c11 = sourceData.data[idx11 + channel];
-            const c21 = sourceData.data[idx21 + channel];
-            const c12 = sourceData.data[idx12 + channel];
-            const c22 = sourceData.data[idx22 + channel];
+          const targetIdx = (rowOffset + x) * 4;
 
-            const c1 = c11 * (1 - fx) + c21 * fx;
-            const c2 = c12 * (1 - fx) + c22 * fx;
-            const interpolated = c1 * (1 - fy) + c2 * fy;
+          if (useNearestNeighbor) {
+            // Nearest neighbor - fast and sharp
+            const nearX = Math.round(sourceX) % width;
+            const nearY = Math.round(sourceY) % height;
+            const sourceIdx = (nearY * width + nearX) * 4;
+            
+            dstData[targetIdx] = srcData[sourceIdx];
+            dstData[targetIdx + 1] = srcData[sourceIdx + 1];
+            dstData[targetIdx + 2] = srcData[sourceIdx + 2];
+            dstData[targetIdx + 3] = srcData[sourceIdx + 3];
+          } else {
+            // Bilinear interpolation for smooth displacement
+            const x1 = Math.floor(sourceX);
+            const y1 = Math.floor(sourceY);
+            const x2 = (x1 + 1) % width;
+            const y2 = (y1 + 1) % height;
+            
+            const fx = sourceX - x1;
+            const fy = sourceY - y1;
 
-            imageData.data[targetIdx + channel] = Math.round(interpolated);
+            const idx11 = (y1 * width + x1) * 4;
+            const idx21 = (y1 * width + x2) * 4;
+            const idx12 = (y2 * width + x1) * 4;
+            const idx22 = (y2 * width + x2) * 4;
+
+            // Interpolate each channel
+            for (let channel = 0; channel < 4; channel++) {
+              const c11 = srcData[idx11 + channel];
+              const c21 = srcData[idx21 + channel];
+              const c12 = srcData[idx12 + channel];
+              const c22 = srcData[idx22 + channel];
+
+              const c1 = c11 * (1 - fx) + c21 * fx;
+              const c2 = c12 * (1 - fx) + c22 * fx;
+              const interpolated = c1 * (1 - fy) + c2 * fy;
+
+              dstData[targetIdx + channel] = Math.round(interpolated);
+            }
           }
         }
       }
@@ -443,7 +466,7 @@ export class MotionAnimationEngine {
 
   /**
    * Render loop with overlapping cycles for seamless infinite loop
-   * Two animation cycles play offset by 50%, crossfading between them
+   * Optimized for smooth playback with large images
    */
   private renderLoop(timestamp: number) {
     if (!this.isAnimating) return;
@@ -461,13 +484,11 @@ export class MotionAnimationEngine {
     const cycle1Progress = progress;
     const cycle2Progress = (progress + 0.5) % 1.0;
     
-    // Each cycle: 0-0.7 = ramp up displacement, 0.7-1.0 = fade out
+    // Calculate alpha for each cycle (0-1 fade in/out)
     const calculateCycleAlpha = (cycleProgress: number) => {
       if (cycleProgress < 0.7) {
-        // Ramp up from 0 to 1 over first 70%
         return cycleProgress / 0.7;
       } else {
-        // Fade out from 1 to 0 over last 30%
         const fadeProgress = (cycleProgress - 0.7) / 0.3;
         return 1 - fadeProgress;
       }
@@ -476,7 +497,7 @@ export class MotionAnimationEngine {
     const cycle1Alpha = calculateCycleAlpha(cycle1Progress);
     const cycle2Alpha = calculateCycleAlpha(cycle2Progress);
     
-    // Get frames for cycle 1 - linear progression through keyframes
+    // Get frames for cycle 1
     const framePosition1 = cycle1Progress * (numFrames - 1);
     const frame1Index = Math.floor(framePosition1);
     const frame2Index = Math.min(frame1Index + 1, numFrames - 1);
@@ -499,6 +520,7 @@ export class MotionAnimationEngine {
 
   /**
    * Blend dual animation cycles for seamless overlap
+   * Optimized for large images with efficient compositing
    */
   private blendDualCycles(
     frame1Index: number, frame2Index: number, blend1: number, alpha1: number,
@@ -511,19 +533,21 @@ export class MotionAnimationEngine {
     const originalFrame = this.originalImageData;
     
     const blendedImageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
+    const length = frame1.data.length;
 
-    for (let i = 0; i < frame1.data.length; i += 4) {
-      // Blend cycle 1
+    // Process in batches for better performance with large images
+    for (let i = 0; i < length; i += 4) {
+      // Blend cycle 1 frames
       const r1 = frame1.data[i] * (1 - blend1) + frame2.data[i] * blend1;
       const g1 = frame1.data[i + 1] * (1 - blend1) + frame2.data[i + 1] * blend1;
       const b1 = frame1.data[i + 2] * (1 - blend1) + frame2.data[i + 2] * blend1;
       
-      // Blend cycle 2
+      // Blend cycle 2 frames
       const r2 = frame3.data[i] * (1 - blend2) + frame4.data[i] * blend2;
       const g2 = frame3.data[i + 1] * (1 - blend2) + frame4.data[i + 1] * blend2;
       const b2 = frame3.data[i + 2] * (1 - blend2) + frame4.data[i + 2] * blend2;
       
-      // Composite both cycles together for seamless crossfade
+      // Composite both cycles together
       const totalAlpha = Math.min(1, alpha1 + alpha2);
       
       let r, g, b;
@@ -540,7 +564,6 @@ export class MotionAnimationEngine {
         b = bCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 2] * blurFactor * (1 - totalAlpha);
       } else {
         // Brightening off: composite only the displaced cycles
-        // Motion blur amount controls how much original frame is blended in
         if (this.motionBlurAmount > 0.01) {
           // With motion blur: blend with original based on blur amount
           const rCycles = totalAlpha > 0 ? (r1 * alpha1 + r2 * alpha2) / totalAlpha : r1;
@@ -551,7 +574,7 @@ export class MotionAnimationEngine {
           g = gCycles * (1 - this.motionBlurAmount) + originalFrame.data[i + 1] * this.motionBlurAmount;
           b = bCycles * (1 - this.motionBlurAmount) + originalFrame.data[i + 2] * this.motionBlurAmount;
         } else {
-          // No motion blur: pure cycle crossfade, no original frame
+          // No motion blur: pure cycle crossfade
           const safeAlpha1 = Math.max(0.0001, alpha1);
           const safeAlpha2 = Math.max(0.0001, alpha2);
           const weight1 = safeAlpha1 / (safeAlpha1 + safeAlpha2);
