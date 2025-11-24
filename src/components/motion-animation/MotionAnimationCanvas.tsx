@@ -96,12 +96,10 @@ export const MotionAnimationCanvas = ({
     };
   }, [imageElement]);
 
-  // When displacement amount changes, update the engine and debounce keyframe regen
+  // When displacement amount changes, just update the engine parameter
   useEffect(() => {
     if (animationEngineRef.current) {
       animationEngineRef.current.setMaxDisplacement(displacementAmount);
-      // Let the debounced generator handle heavy work so slider drags stay smooth
-      scheduleKeyframeGeneration();
     }
   }, [displacementAmount]);
 
@@ -242,12 +240,9 @@ export const MotionAnimationCanvas = ({
       // Store the trail as a single path for display (not individual vectors)
       animationEngineRef.current.addMotionTrail(trailData);
       
-      // Schedule debounced keyframe generation (prevents freezing during rapid strokes)
-      scheduleKeyframeGeneration();
-      
       motionArrowStartRef.current = null;
       motionTrailPointsRef.current = [];
-      // Don't show overlay preview - only show when playing
+      // No overlay redraw here; animation will be visible only when playing
     } else if ((activeTool === "range" || activeTool === "erase") && rangeStrokePointsRef.current.length > 0) {
       // Store the entire stroke as one history action
       const strokeData = {
@@ -263,8 +258,6 @@ export const MotionAnimationCanvas = ({
         addToHistory('erase', strokeData);
       }
       
-      // Schedule debounced keyframe generation (prevents freezing during rapid strokes)
-      scheduleKeyframeGeneration();
       
       rangeStrokePointsRef.current = [];
       lastBrushPointRef.current = null;
@@ -394,6 +387,8 @@ export const MotionAnimationCanvas = ({
       redrawOverlay();
       overlayCanvas.style.opacity = "1";
     } else {
+      // Generate keyframes on demand when starting playback to avoid blocking during drawing
+      animationEngineRef.current.updateKeyframes();
       animationEngineRef.current.play(animationSpeed / 100);
       // Hide overlay when playing to show animation
       overlayCanvas.style.opacity = "0";
@@ -502,10 +497,7 @@ export const MotionAnimationCanvas = ({
       }
     }
 
-    // Generate keyframes once after rebuilding all history
-    scheduleKeyframeGeneration();
-    
-    // Only show overlay if paused
+    // Only show overlay if paused; keyframes are generated lazily on play
     if (!isPlaying) {
       redrawOverlay();
     }
