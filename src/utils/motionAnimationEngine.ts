@@ -499,18 +499,16 @@ export class MotionAnimationEngine {
         g = gCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 1] * blurFactor * (1 - totalAlpha);
         b = bCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 2] * blurFactor * (1 - totalAlpha);
       } else {
-        // Brightening off: normal alpha blending with original frame
-        const r1WithOrig = r1 * alpha1 + originalFrame.data[i] * (1 - alpha1);
-        const g1WithOrig = g1 * alpha1 + originalFrame.data[i + 1] * (1 - alpha1);
-        const b1WithOrig = b1 * alpha1 + originalFrame.data[i + 2] * (1 - alpha1);
-        
-        const r2WithOrig = r2 * alpha2 + originalFrame.data[i] * (1 - alpha2);
-        const g2WithOrig = g2 * alpha2 + originalFrame.data[i + 1] * (1 - alpha2);
-        const b2WithOrig = b2 * alpha2 + originalFrame.data[i + 2] * (1 - alpha2);
-        
-        r = totalAlpha > 0 ? (r1WithOrig * alpha1 + r2WithOrig * alpha2) / totalAlpha : originalFrame.data[i];
-        g = totalAlpha > 0 ? (g1WithOrig * alpha1 + g2WithOrig * alpha2) / totalAlpha : originalFrame.data[i + 1];
-        b = totalAlpha > 0 ? (b1WithOrig * alpha1 + b2WithOrig * alpha2) / totalAlpha : originalFrame.data[i + 2];
+        // Brightening off: composite only the displaced cycles (no blend with original)
+        // This keeps overall brightness stable while the motion loops seamlessly
+        const safeAlpha1 = Math.max(0.0001, alpha1);
+        const safeAlpha2 = Math.max(0.0001, alpha2);
+        const weight1 = safeAlpha1 / (safeAlpha1 + safeAlpha2);
+        const weight2 = safeAlpha2 / (safeAlpha1 + safeAlpha2);
+
+        r = r1 * weight1 + r2 * weight2;
+        g = g1 * weight1 + g2 * weight2;
+        b = b1 * weight1 + b2 * weight2;
       }
       
       blendedImageData.data[i] = Math.round(r);
