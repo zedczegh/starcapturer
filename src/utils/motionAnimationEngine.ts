@@ -224,17 +224,19 @@ export class MotionAnimationEngine {
     // Generate progressive displacement frames forming a seamless ping-pong loop
     this.keyframes = [];
     const numFrames = 12;
-    for (let i = 0; i < numFrames; i++) {
-      // Use sine wave so displacement ramps up then down (0 -> 1 -> 0) while always flowing in the same direction
-      const phase = i / (numFrames - 1);
-      const base = Math.sin(phase * Math.PI); // 0..1..0
-      const intensity = 0.15 + 0.85 * base;   // Never fully static, 0.15..1..0.15
 
-      this.keyframes.push({
-        imageData: i === 0
-          ? this.cloneImageData(this.originalImageData)
-          : this.createDisplacedFrame(intensity)
-      });
+    // Start from the original image and progressively advect pixels forward
+    // Each frame uses the previous frame as its source so motion always flows
+    let sourceFrame = this.originalImageData;
+
+    // First keyframe: original image
+    this.keyframes.push({ imageData: this.cloneImageData(sourceFrame) });
+
+    // Subsequent keyframes: cumulative forward displacement
+    for (let i = 1; i < numFrames; i++) {
+      const displaced = this.createDisplacedFrame(sourceFrame);
+      this.keyframes.push({ imageData: displaced });
+      sourceFrame = displaced;
     }
 
     console.log('Generated 12 keyframes for continuous one-directional loop');
@@ -244,13 +246,14 @@ export class MotionAnimationEngine {
    * Create a single displaced frame with controlled displacement
    * Uses wraparound/tiling for seamless looping
    */
-  private createDisplacedFrame(intensity: number): ImageData {
+  private createDisplacedFrame(sourceData: ImageData): ImageData {
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
-    const sourceData = this.originalImageData;
 
     for (let y = 0; y < this.canvas.height; y++) {
       for (let x = 0; x < this.canvas.width; x++) {
-        const displacement = this.calculateDisplacement(x, y, intensity);
+        // Use full configured displacement strength (intensity = 1) and rely on
+        // cumulative advection + wraparound to create continuous motion
+        const displacement = this.calculateDisplacement(x, y, 1);
         
         // Backward warping with wraparound for seamless loop
         let sourceX = x - displacement.dx;
