@@ -156,7 +156,7 @@ export class MotionAnimationEngine {
 
   /**
    * Rebuild the unified selection mask from all range strokes and points
-   * This ensures each pixel is only covered once, eliminating overlapping issues
+   * Optimized with bounding box culling and spatial optimization
    */
   private rebuildSelectionMask() {
     const width = this.canvas.width;
@@ -174,16 +174,36 @@ export class MotionAnimationEngine {
       return;
     }
     
-    // Render all strokes and points into the mask
-    // Each pixel stores the maximum selection weight (0-255)
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const idx = y * width + x;
-        let maxWeight = 0;
-        
-        // Check all strokes
-        for (const stroke of this.rangeStrokes) {
-          const { points, radius } = stroke;
+    // Pre-compute bounding boxes for each stroke to skip irrelevant pixels
+    const strokeBounds: Array<{minX: number, maxX: number, minY: number, maxY: number, stroke: RangeStroke}> = [];
+    
+    for (const stroke of this.rangeStrokes) {
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      
+      for (const point of stroke.points) {
+        minX = Math.min(minX, point.x - stroke.radius);
+        maxX = Math.max(maxX, point.x + stroke.radius);
+        minY = Math.min(minY, point.y - stroke.radius);
+        maxY = Math.max(maxY, point.y + stroke.radius);
+      }
+      
+      strokeBounds.push({
+        minX: Math.max(0, Math.floor(minX)),
+        maxX: Math.min(width - 1, Math.ceil(maxX)),
+        minY: Math.max(0, Math.floor(minY)),
+        maxY: Math.min(height - 1, Math.ceil(maxY)),
+        stroke
+      });
+    }
+    
+    // Process each stroke's bounding box independently
+    for (const bound of strokeBounds) {
+      const { minX, maxX, minY, maxY, stroke } = bound;
+      const { points, radius } = stroke;
+      
+      for (let y = minY; y <= maxY; y++) {
+        for (let x = minX; x <= maxX; x++) {
+          const idx = y * width + x;
           let minDist = Infinity;
           
           if (points.length === 1) {
@@ -203,39 +223,90 @@ export class MotionAnimationEngine {
             minDist = Math.min(minDist, d);
           }
           
-          // Calculate weight with soft falloff
+          // Calculate weight with softer, smoother falloff
           let weight = 0;
-          const innerRadius = radius * 0.8;
+          const innerRadius = radius * 0.7; // Slightly smaller inner core for softer edges
           if (minDist <= innerRadius) {
             weight = 1;
           } else if (minDist < radius) {
             const falloffDist = minDist - innerRadius;
             const falloffRange = radius - innerRadius;
-            weight = 1 - (falloffDist / falloffRange);
+            // Use smoothstep for better edge quality
+            const t = falloffDist / falloffRange;
+            weight = 1 - (t * t * (3 - 2 * t)); // Smoothstep interpolation
           }
           
-          maxWeight = Math.max(maxWeight, weight);
+          // Take maximum weight (no overlapping accumulation)
+          const currentWeight = this.selectionMask[idx];
+          this.selectionMask[idx] = Math.max(currentWeight, Math.round(weight * 255));
         }
-        
-        // Check all individual points
-        for (const range of this.rangePoints) {
+      }
+    }
+    
+    // Process individual points with bounding boxes
+    for (const range of this.rangePoints) {
+      const minX = Math.max(0, Math.floor(range.x - range.radius));
+      const maxX = Math.min(width - 1, Math.ceil(range.x + range.radius));
+      const minY = Math.max(0, Math.floor(range.y - range.radius));
+      const maxY = Math.min(height - 1, Math.ceil(range.y + range.radius));
+      
+      for (let y = minY; y <= maxY; y++) {
+        for (let x = minX; x <= maxX; x++) {
+          const idx = y * width + x;
           const d = Math.sqrt((x - range.x) ** 2 + (y - range.y) ** 2);
           
           let weight = 0;
-          const innerRadius = range.radius * 0.8;
+          const innerRadius = range.radius * 0.7;
           if (d <= innerRadius) {
             weight = 1;
           } else if (d < range.radius) {
             const falloffDist = d - innerRadius;
             const falloffRange = range.radius - innerRadius;
-            weight = 1 - (falloffDist / falloffRange);
+            const t = falloffDist / falloffRange;
+            weight = 1 - (t * t * (3 - 2 * t)); // Smoothstep
           }
           
-          maxWeight = Math.max(maxWeight, weight);
+          const currentWeight = this.selectionMask[idx];
+          this.selectionMask[idx] = Math.max(currentWeight, Math.round(weight * 255));
         }
+      }
+    }
+    
+    // Apply edge smoothing pass for better blending
+    this.smoothSelectionEdges();
+  }
+  
+  /**
+   * Apply a smoothing pass to selection edges for better blending
+   */
+  private smoothSelectionEdges() {
+    if (!this.selectionMask) return;
+    
+    const width = this.canvas.width;
+    const height = this.canvas.height;
+    const tempMask = new Uint8Array(this.selectionMask);
+    
+    // 3x3 box blur for edge smoothing
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const idx = y * width + x;
         
-        // Store as 0-255
-        this.selectionMask[idx] = Math.round(maxWeight * 255);
+        // Only smooth edge pixels (not fully selected or fully unselected)
+        const centerVal = tempMask[idx];
+        if (centerVal > 20 && centerVal < 235) {
+          let sum = 0;
+          let count = 0;
+          
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              const nIdx = (y + dy) * width + (x + dx);
+              sum += tempMask[nIdx];
+              count++;
+            }
+          }
+          
+          this.selectionMask[idx] = Math.round(sum / count);
+        }
       }
     }
   }
