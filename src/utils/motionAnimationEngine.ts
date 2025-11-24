@@ -221,18 +221,20 @@ export class MotionAnimationEngine {
 
     console.log('Generating keyframes for continuous loop...');
     
-    // Generate 12 progressive displacement frames forming a seamless loop
+    // Generate progressive displacement frames forming a seamless ping-pong loop
     this.keyframes = [];
     const numFrames = 12;
     for (let i = 0; i < numFrames; i++) {
-      // Use sine wave so displacement ramps up then down (0 -> 1 -> 0)
-      const phase = i / (numFrames - 1);
-      const base = Math.sin(phase * Math.PI); // 0..1..0
-      const intensity = 0.15 + 0.85 * base;   // Never fully static, 0.15..1..0.15
+      const phase = i / (numFrames - 1); // 0..1 over full loop
+      const angle = phase * Math.PI * 2; // 0..2π
+      const s = Math.sin(angle); // -1..1, controls direction
+      const magnitude = 0.15 + 0.85 * Math.abs(s); // 0.15..1..0.15, never fully static
+      const signedIntensity = magnitude * (s === 0 ? 1 : Math.sign(s)); // positive then negative for ping-pong
+
       this.keyframes.push({
         imageData: i === 0
           ? this.cloneImageData(this.originalImageData)
-          : this.createDisplacedFrame(intensity)
+          : this.createDisplacedFrame(signedIntensity)
       });
     }
 
