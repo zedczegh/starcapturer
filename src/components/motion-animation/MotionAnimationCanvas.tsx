@@ -44,12 +44,15 @@ export const MotionAnimationCanvas = ({
   const [animationSpeed, setAnimationSpeed] = useState(300); // 300% speed by default (relative to base 100)
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [motionArrowStart, setMotionArrowStart] = useState<{x: number, y: number} | null>(null);
-  const [motionTrailPoints, setMotionTrailPoints] = useState<{x: number, y: number}[]>([]);
-  const [rangeStrokePoints, setRangeStrokePoints] = useState<{x: number, y: number}[]>([]);
-  const [lastBrushPoint, setLastBrushPoint] = useState<{x: number, y: number} | null>(null);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  
+  // Use refs for drawing state to avoid closure issues and enable immediate updates
+  const motionArrowStartRef = useRef<{x: number, y: number} | null>(null);
+  const motionTrailPointsRef = useRef<{x: number, y: number}[]>([]);
+  const rangeStrokePointsRef = useRef<{x: number, y: number}[]>([]);
+  const lastBrushPointRef = useRef<{x: number, y: number} | null>(null);
   const historyRef = useRef<Array<{ type: 'motion' | 'range' | 'erase', data: any }>>([]);
+  const rafIdRef = useRef<number | null>(null);
 
   // Initialize canvas and animation engine
   useEffect(() => {
@@ -105,27 +108,23 @@ export const MotionAnimationCanvas = ({
 
     if (activeTool === "motion") {
       setIsDrawing(true);
-      setMotionArrowStart({ x, y });
-      setMotionTrailPoints([{ x, y }]);
+      motionArrowStartRef.current = { x, y };
+      motionTrailPointsRef.current = [{ x, y }];
     } else if (activeTool === "range" || activeTool === "erase") {
       setIsDrawing(true);
-      setRangeStrokePoints([{ x, y }]);
-      setLastBrushPoint({ x, y });
-      // Add first point and draw initial circle
+      rangeStrokePointsRef.current = [{ x, y }];
+      lastBrushPointRef.current = { x, y };
+      // Add first point
       drawBrushAtPoint(x, y);
       
-      // Draw preview
-      const canvas = overlayCanvasRef.current;
-      if (canvas) {
-        requestAnimationFrame(() => {
-          redrawOverlay();
-          drawContinuousBrushStroke([{ x, y }], brushSize, activeTool === "erase");
-        });
-      }
+      // Schedule immediate redraw
+      scheduleRedraw();
     }
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
+
     const canvas = overlayCanvasRef.current;
     if (!canvas) return;
 
@@ -133,47 +132,57 @@ export const MotionAnimationCanvas = ({
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    if (activeTool === "motion" && isDrawing && motionArrowStart) {
-      // Add point to trail
-      setMotionTrailPoints(prev => [...prev, { x, y }]);
+    if (activeTool === "motion" && motionArrowStartRef.current) {
+      // Add point to trail ref
+      motionTrailPointsRef.current.push({ x, y });
       
-      // Throttled redraw using requestAnimationFrame
-      if (!canvas.dataset.drawing) {
-        canvas.dataset.drawing = "true";
-        requestAnimationFrame(() => {
-          redrawOverlay();
-          drawMotionTrail([...motionTrailPoints, { x, y }]);
-          canvas.dataset.drawing = "";
-        });
-      }
-    } else if ((activeTool === "range" || activeTool === "erase") && isDrawing) {
-      // Only draw if moved enough distance from last point (throttle)
-      if (lastBrushPoint) {
+      // Schedule redraw (automatically throttled via RAF)
+      scheduleRedraw();
+    } else if ((activeTool === "range" || activeTool === "erase")) {
+      // Only draw if moved enough distance from last point
+      const lastPoint = lastBrushPointRef.current;
+      if (lastPoint) {
         const dist = Math.sqrt(
-          Math.pow(x - lastBrushPoint.x, 2) + Math.pow(y - lastBrushPoint.y, 2)
+          Math.pow(x - lastPoint.x, 2) + Math.pow(y - lastPoint.y, 2)
         );
         
         // Only add point if moved at least 1/3 of brush size
         if (dist >= brushSize / 3) {
-          const newPoints = [...rangeStrokePoints, { x, y }];
-          setRangeStrokePoints(newPoints);
-          setLastBrushPoint({ x, y });
+          rangeStrokePointsRef.current.push({ x, y });
+          lastBrushPointRef.current = { x, y };
           
           // Add to engine silently
           drawBrushAtPoint(x, y);
           
-          // Draw continuous stroke preview
-          if (!canvas.dataset.drawing) {
-            canvas.dataset.drawing = "true";
-            requestAnimationFrame(() => {
-              redrawOverlay();
-              drawContinuousBrushStroke(newPoints, brushSize, activeTool === "erase");
-              canvas.dataset.drawing = "";
-            });
-          }
+          // Schedule redraw
+          scheduleRedraw();
         }
       }
     }
+  };
+
+  // Throttle redraw using RAF to prevent flickering
+  const scheduleRedraw = () => {
+    if (rafIdRef.current !== null) return; // Already scheduled
+    
+    rafIdRef.current = requestAnimationFrame(() => {
+      rafIdRef.current = null;
+      
+      const canvas = overlayCanvasRef.current;
+      const ctx = canvas?.getContext("2d");
+      if (!ctx || !canvas || !animationEngineRef.current) return;
+
+      // Clear and redraw overlay
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      animationEngineRef.current.drawOverlay(ctx);
+
+      // Draw current drawing preview
+      if (activeTool === "motion" && motionTrailPointsRef.current.length > 1) {
+        drawMotionTrail(motionTrailPointsRef.current);
+      } else if ((activeTool === "range" || activeTool === "erase") && rangeStrokePointsRef.current.length > 0) {
+        drawContinuousBrushStroke(rangeStrokePointsRef.current, brushSize, activeTool === "erase");
+      }
+    });
   };
 
   const addToHistory = (type: 'motion' | 'range' | 'erase', data: any) => {
@@ -187,15 +196,15 @@ export const MotionAnimationCanvas = ({
     const canvas = overlayCanvasRef.current;
     if (!canvas || !animationEngineRef.current) return;
 
-    if (activeTool === "motion" && motionArrowStart && motionTrailPoints.length > 1) {
+    if (activeTool === "motion" && motionArrowStartRef.current && motionTrailPointsRef.current.length > 1) {
       // Store entire motion trail as one action in history
-      const trailData = [...motionTrailPoints];
+      const trailData = [...motionTrailPointsRef.current];
       addToHistory('motion', { points: trailData, strength: motionStrength / 100 });
 
       // Add motion vectors along the trail (for animation calculation)
-      for (let i = 0; i < motionTrailPoints.length - 1; i++) {
-        const start = motionTrailPoints[i];
-        const end = motionTrailPoints[i + 1];
+      for (let i = 0; i < trailData.length - 1; i++) {
+        const start = trailData[i];
+        const end = trailData[i + 1];
         
         // Skip keyframe generation for each vector (batch mode)
         animationEngineRef.current.addMotionVector(
@@ -214,20 +223,20 @@ export const MotionAnimationCanvas = ({
       // Generate keyframes once after all vectors are added
       animationEngineRef.current.updateKeyframes();
       
-      setMotionArrowStart(null);
-      setMotionTrailPoints([]);
+      motionArrowStartRef.current = null;
+      motionTrailPointsRef.current = [];
       redrawOverlay();
-    } else if ((activeTool === "range" || activeTool === "erase") && rangeStrokePoints.length > 0) {
+    } else if ((activeTool === "range" || activeTool === "erase") && rangeStrokePointsRef.current.length > 0) {
       // Store the entire stroke as one history action
       const strokeData = {
-        points: [...rangeStrokePoints],
+        points: [...rangeStrokePointsRef.current],
         radius: brushSize
       };
       
       if (activeTool === "range") {
         addToHistory('range', strokeData);
         // Add the stroke for visualization
-        animationEngineRef.current.addRangeStroke(rangeStrokePoints, brushSize);
+        animationEngineRef.current.addRangeStroke(rangeStrokePointsRef.current, brushSize);
       } else {
         addToHistory('erase', strokeData);
       }
@@ -235,8 +244,8 @@ export const MotionAnimationCanvas = ({
       // Now generate keyframes once after the complete stroke
       animationEngineRef.current.updateKeyframes();
       
-      setRangeStrokePoints([]);
-      setLastBrushPoint(null);
+      rangeStrokePointsRef.current = [];
+      lastBrushPointRef.current = null;
     }
 
     setIsDrawing(false);
@@ -349,11 +358,8 @@ export const MotionAnimationCanvas = ({
     const ctx = canvas?.getContext("2d");
     if (!ctx || !canvas || !animationEngineRef.current) return;
 
-    // Use requestAnimationFrame for smooth rendering
-    requestAnimationFrame(() => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      animationEngineRef.current?.drawOverlay(ctx);
-    });
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    animationEngineRef.current.drawOverlay(ctx);
   };
 
   const handlePlayPause = () => {
@@ -498,11 +504,11 @@ export const MotionAnimationCanvas = ({
     setHistoryIndex(-1);
     
     // Reset all drawing state
+    motionArrowStartRef.current = null;
+    motionTrailPointsRef.current = [];
+    rangeStrokePointsRef.current = [];
+    lastBrushPointRef.current = null;
     setIsDrawing(false);
-    setMotionArrowStart(null);
-    setMotionTrailPoints([]);
-    setRangeStrokePoints([]);
-    setLastBrushPoint(null);
     
     // Clear and redraw original image on main canvas
     const ctx = canvas.getContext("2d");
@@ -633,10 +639,10 @@ export const MotionAnimationCanvas = ({
             onMouseUp={handleMouseUp}
             onMouseLeave={() => {
               setIsDrawing(false);
-              setMotionArrowStart(null);
-              setMotionTrailPoints([]);
-              setRangeStrokePoints([]);
-              setLastBrushPoint(null);
+              motionArrowStartRef.current = null;
+              motionTrailPointsRef.current = [];
+              rangeStrokePointsRef.current = [];
+              lastBrushPointRef.current = null;
             }}
           />
         </div>
