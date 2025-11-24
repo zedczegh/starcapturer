@@ -414,14 +414,17 @@ export class MotionAnimationEngine {
     const cycle1Progress = progress;
     const cycle2Progress = (progress + 0.5) % 1.0;
     
-    // Each cycle: 0-0.7 = ramp up displacement, 0.7-1.0 = fade out
+    // Each cycle: maintain high opacity throughout with minimal fade to original
+    // This creates the "Motion Leap" effect - always showing displaced animation
     const calculateCycleAlpha = (cycleProgress: number) => {
+      const minAlpha = 0.95; // Keep frames very opaque (95% displaced, 5% original max)
       if (cycleProgress < 0.7) {
-        // Ramp up from 0 (original) to 1 (fully displaced) over first 70%
-        return cycleProgress / 0.7;
+        // Ramp up from minAlpha to 1 (fully displaced) over first 70%
+        return minAlpha + ((1 - minAlpha) * (cycleProgress / 0.7));
       } else {
-        // Fade out from 1 to 0 over last 30%
-        return 1.0 - ((cycleProgress - 0.7) / 0.3);
+        // Gentle fade from 1 back to minAlpha over last 30% for smooth transition
+        const fadeProgress = (cycleProgress - 0.7) / 0.3;
+        return 1.0 - ((1 - minAlpha) * fadeProgress);
       }
     };
     
