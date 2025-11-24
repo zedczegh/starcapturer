@@ -415,13 +415,18 @@ export class MotionAnimationEngine {
     const cycle2Progress = (progress + 0.5) % 1.0;
     
     // Each cycle: 0-0.7 = ramp up displacement, 0.7-1.0 = fade out
+    // Higher minimum alpha for increased opacity and reduced blur
     const calculateCycleAlpha = (cycleProgress: number) => {
+      const minAlpha = 0.7; // Minimum opacity - keeps animated regions more visible
+      const maxAlpha = 1.0;
+      
       if (cycleProgress < 0.7) {
-        // Ramp up from 0 (original) to 1 (fully displaced) over first 70%
-        return cycleProgress / 0.7;
+        // Ramp up from 0.7 (more opaque) to 1 (fully displaced) over first 70%
+        return minAlpha + ((maxAlpha - minAlpha) * (cycleProgress / 0.7));
       } else {
-        // Fade out from 1 to 0 over last 30%
-        return 1.0 - ((cycleProgress - 0.7) / 0.3);
+        // Fade out from 1 to 0.7 over last 30% (never fully transparent)
+        const fadeProgress = (cycleProgress - 0.7) / 0.3;
+        return maxAlpha - ((maxAlpha - minAlpha) * fadeProgress);
       }
     };
     
