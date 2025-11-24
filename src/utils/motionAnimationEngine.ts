@@ -40,6 +40,7 @@ export class MotionAnimationEngine {
   private motionTrails: MotionTrail[] = [];
   private rangePoints: RangePoint[] = [];
   private rangeStrokes: RangeStroke[] = []; // Store complete strokes for visualization
+  private selectionMask: Uint8Array | null = null; // Unified selection mask (0-255 per pixel)
   private animationFrame: number | null = null;
   private isAnimating: boolean = false;
   private maxDisplacement: number = 100; // Configurable max displacement in pixels
@@ -85,6 +86,7 @@ export class MotionAnimationEngine {
 
   addRangePoint(x: number, y: number, radius: number, skipKeyframeGen: boolean = false) {
     this.rangePoints.push({ x, y, radius });
+    this.rebuildSelectionMask(); // Update mask
     
     // Only regenerate keyframes if not batching
     if (!skipKeyframeGen) {
@@ -95,6 +97,7 @@ export class MotionAnimationEngine {
   // Add a complete range stroke for visualization
   addRangeStroke(points: { x: number; y: number }[], radius: number) {
     this.rangeStrokes.push({ points, radius });
+    this.rebuildSelectionMask(); // Update mask
   }
 
   removeAtPoint(x: number, y: number, radius: number, skipKeyframeGen: boolean = false) {
@@ -107,6 +110,8 @@ export class MotionAnimationEngine {
       const dist = Math.sqrt((r.x - x) ** 2 + (r.y - y) ** 2);
       return dist > radius;
     });
+    
+    this.rebuildSelectionMask(); // Update mask
     
     // Only regenerate keyframes if not batching
     if (!skipKeyframeGen) {
@@ -143,9 +148,96 @@ export class MotionAnimationEngine {
     this.motionTrails = [];
     this.rangePoints = [];
     this.rangeStrokes = [];
+    this.selectionMask = null;
     this.keyframes = [];
     this.currentTime = 0;
     this.stop();
+  }
+
+  /**
+   * Rebuild the unified selection mask from all range strokes and points
+   * This ensures each pixel is only covered once, eliminating overlapping issues
+   */
+  private rebuildSelectionMask() {
+    const width = this.canvas.width;
+    const height = this.canvas.height;
+    
+    // Create or clear mask (0-255 per pixel)
+    if (!this.selectionMask) {
+      this.selectionMask = new Uint8Array(width * height);
+    } else {
+      this.selectionMask.fill(0);
+    }
+    
+    // If no selection strokes or points, leave mask empty
+    if (this.rangeStrokes.length === 0 && this.rangePoints.length === 0) {
+      return;
+    }
+    
+    // Render all strokes and points into the mask
+    // Each pixel stores the maximum selection weight (0-255)
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = y * width + x;
+        let maxWeight = 0;
+        
+        // Check all strokes
+        for (const stroke of this.rangeStrokes) {
+          const { points, radius } = stroke;
+          let minDist = Infinity;
+          
+          if (points.length === 1) {
+            const d = Math.sqrt((x - points[0].x) ** 2 + (y - points[0].y) ** 2);
+            minDist = d;
+          } else {
+            // Check distance to all line segments
+            for (let i = 0; i < points.length - 1; i++) {
+              const p1 = points[i];
+              const p2 = points[i + 1];
+              const d = this.distanceToLineSegment(x, y, p1.x, p1.y, p2.x, p2.y);
+              minDist = Math.min(minDist, d);
+            }
+            // Also check last point
+            const lastPoint = points[points.length - 1];
+            const d = Math.sqrt((x - lastPoint.x) ** 2 + (y - lastPoint.y) ** 2);
+            minDist = Math.min(minDist, d);
+          }
+          
+          // Calculate weight with soft falloff
+          let weight = 0;
+          const innerRadius = radius * 0.8;
+          if (minDist <= innerRadius) {
+            weight = 1;
+          } else if (minDist < radius) {
+            const falloffDist = minDist - innerRadius;
+            const falloffRange = radius - innerRadius;
+            weight = 1 - (falloffDist / falloffRange);
+          }
+          
+          maxWeight = Math.max(maxWeight, weight);
+        }
+        
+        // Check all individual points
+        for (const range of this.rangePoints) {
+          const d = Math.sqrt((x - range.x) ** 2 + (y - range.y) ** 2);
+          
+          let weight = 0;
+          const innerRadius = range.radius * 0.8;
+          if (d <= innerRadius) {
+            weight = 1;
+          } else if (d < range.radius) {
+            const falloffDist = d - innerRadius;
+            const falloffRange = range.radius - innerRadius;
+            weight = 1 - (falloffDist / falloffRange);
+          }
+          
+          maxWeight = Math.max(maxWeight, weight);
+        }
+        
+        // Store as 0-255
+        this.selectionMask[idx] = Math.round(maxWeight * 255);
+      }
+    }
   }
 
   drawOverlay(overlayCtx: CanvasRenderingContext2D) {
@@ -366,68 +458,17 @@ export class MotionAnimationEngine {
     let totalDy = 0;
     let totalWeight = 0;
 
-    // Selection feathering based on continuous strokes / points
+    // Use pre-computed selection mask for fast lookup (eliminates overlapping issues)
     let selectionWeight = 1;
-
-    // If we have any selection strokes or points, compute a soft mask 0..1
-    if (this.rangeStrokes.length > 0 || this.rangePoints.length > 0) {
-      let minDist = Infinity;
-      let radiusForMin = 1;
-
-      // Check strokes first (continuous brush areas)
-      for (const stroke of this.rangeStrokes) {
-        const { points, radius } = stroke;
-        radiusForMin = radius;
-
-        if (points.length === 1) {
-          const d = Math.sqrt((x - points[0].x) ** 2 + (y - points[0].y) ** 2);
-          if (d < minDist) minDist = d;
-        } else {
-          // Check distance to all line segments
-          for (let i = 0; i < points.length - 1; i++) {
-            const p1 = points[i];
-            const p2 = points[i + 1];
-            const d = this.distanceToLineSegment(x, y, p1.x, p1.y, p2.x, p2.y);
-            if (d < minDist) {
-              minDist = d;
-              radiusForMin = radius;
-            }
-          }
-          // Also check distance to the last point itself
-          const lastPoint = points[points.length - 1];
-          const d = Math.sqrt((x - lastPoint.x) ** 2 + (y - lastPoint.y) ** 2);
-          if (d < minDist) {
-            minDist = d;
-            radiusForMin = radius;
-          }
-        }
-      }
-
-      // Fallback / combination with individual range points
-      for (const range of this.rangePoints) {
-        const d = Math.sqrt((x - range.x) ** 2 + (y - range.y) ** 2);
-        if (d < minDist) {
-          minDist = d;
-          radiusForMin = range.radius;
-        }
-      }
-
-      if (minDist === Infinity) {
-        selectionWeight = 0;
+    
+    if (this.selectionMask && (this.rangeStrokes.length > 0 || this.rangePoints.length > 0)) {
+      const maskIdx = Math.floor(y) * this.canvas.width + Math.floor(x);
+      
+      // Check bounds
+      if (maskIdx >= 0 && maskIdx < this.selectionMask.length) {
+        selectionWeight = this.selectionMask[maskIdx] / 255;
       } else {
-        // Hard edge within radius, soft falloff outside
-        // Pixels within 80% of radius get full weight, then soft falloff
-        const innerRadius = radiusForMin * 0.8;
-        if (minDist <= innerRadius) {
-          selectionWeight = 1;
-        } else if (minDist >= radiusForMin) {
-          selectionWeight = 0;
-        } else {
-          // Smooth falloff in outer 20%
-          const falloffDist = minDist - innerRadius;
-          const falloffRange = radiusForMin - innerRadius;
-          selectionWeight = 1 - (falloffDist / falloffRange);
-        }
+        selectionWeight = 0;
       }
     }
 
