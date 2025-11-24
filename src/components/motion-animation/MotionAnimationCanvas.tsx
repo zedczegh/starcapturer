@@ -82,6 +82,9 @@ export const MotionAnimationCanvas = ({
 
     animationEngineRef.current = new MotionAnimationEngine(canvas, imageElement, displacementAmount);
  
+    // Start with overlay hidden - only show when paused/playing
+    overlayCanvas.style.opacity = "0";
+
     // Cleanup on unmount
     return () => {
       if (keyframeDebounceRef.current) {
@@ -126,11 +129,8 @@ export const MotionAnimationCanvas = ({
       setIsDrawing(true);
       rangeStrokePointsRef.current = [{ x, y }];
       lastBrushPointRef.current = { x, y };
-      // Add first point
+      // Add first point silently (no preview)
       drawBrushAtPoint(x, y);
-      
-      // Schedule immediate redraw
-      scheduleRedraw();
     }
   };
 
@@ -145,11 +145,8 @@ export const MotionAnimationCanvas = ({
     const y = e.clientY - rect.top;
 
     if (activeTool === "motion" && motionArrowStartRef.current) {
-      // Add point to trail ref
+      // Add point to trail ref silently (no preview)
       motionTrailPointsRef.current.push({ x, y });
-      
-      // Schedule redraw (automatically throttled via RAF)
-      scheduleRedraw();
     } else if ((activeTool === "range" || activeTool === "erase")) {
       // Only draw if moved enough distance from last point
       const lastPoint = lastBrushPointRef.current;
@@ -163,11 +160,8 @@ export const MotionAnimationCanvas = ({
           rangeStrokePointsRef.current.push({ x, y });
           lastBrushPointRef.current = { x, y };
           
-          // Add to engine silently
+          // Add to engine silently (no preview)
           drawBrushAtPoint(x, y);
-          
-          // Schedule redraw
-          scheduleRedraw();
         }
       }
     }
@@ -253,7 +247,7 @@ export const MotionAnimationCanvas = ({
       
       motionArrowStartRef.current = null;
       motionTrailPointsRef.current = [];
-      redrawOverlay();
+      // Don't show overlay preview - only show when playing
     } else if ((activeTool === "range" || activeTool === "erase") && rangeStrokePointsRef.current.length > 0) {
       // Store the entire stroke as one history action
       const strokeData = {
@@ -396,11 +390,12 @@ export const MotionAnimationCanvas = ({
 
     if (isPlaying) {
       animationEngineRef.current.stop();
-      // Show overlay when paused
+      // Show overlay with drawn elements when paused
+      redrawOverlay();
       overlayCanvas.style.opacity = "1";
     } else {
       animationEngineRef.current.play(animationSpeed / 100);
-      // Hide overlay when playing
+      // Hide overlay when playing to show animation
       overlayCanvas.style.opacity = "0";
     }
     setIsPlaying(!isPlaying);
@@ -510,7 +505,10 @@ export const MotionAnimationCanvas = ({
     // Generate keyframes once after rebuilding all history
     scheduleKeyframeGeneration();
     
-    redrawOverlay();
+    // Only show overlay if paused
+    if (!isPlaying) {
+      redrawOverlay();
+    }
   };
 
   const handleClear = () => {
@@ -555,8 +553,8 @@ export const MotionAnimationCanvas = ({
     delete canvas.dataset.drawing;
     delete overlayCanvas.dataset.drawing;
     
-    // Show overlay
-    overlayCanvas.style.opacity = "1";
+    // Keep overlay hidden until play is pressed
+    overlayCanvas.style.opacity = "0";
     
     toast.success(t("Reset complete - all animations cleared", "重置完成 - 所有动画已清除"));
   };
