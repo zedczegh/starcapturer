@@ -395,7 +395,8 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Render loop with continuous fade in/out for seamless infinite loop
+   * Render loop with overlapping cycles for seamless infinite loop
+   * Two animation cycles play offset by 50%, crossfading between them
    */
   private renderLoop(timestamp: number) {
     if (!this.isAnimating) return;
@@ -409,30 +410,87 @@ export class MotionAnimationEngine {
     const progress = (timestamp % this.animationDuration) / this.animationDuration;
     const numFrames = this.keyframes.length;
     
-    // Use linear progress for seamless continuous looping (no easing to avoid deceleration/stops)
+    // Use linear progress for constant motion
     const linearProgress = progress;
     
-    // Sync fade with displacement: fade in as displacement increases, fade out as it decreases
-    // Match the same sine wave used in keyframe generation for perfect sync
-    const phase = progress;
-    const intensityCurve = Math.sin(phase * Math.PI); // 0..1..0 matches keyframe intensity
-    // Alpha follows intensity: low when near original, high at max displacement
-    // To avoid visible "stops", never let alpha get too low so we always see some motion
-    const minAlpha = 0.6; // 60% displaced image even at lowest intensity
-    const maxAlpha = 1.0; // fully displaced at peak
-    const alpha = minAlpha + (maxAlpha - minAlpha) * intensityCurve;
-
+    // Calculate two animation cycles offset by 50%
+    const cycle1Progress = linearProgress;
+    const cycle2Progress = (linearProgress + 0.5) % 1.0;
     
-    // Calculate which frames to blend
-    const framePosition = linearProgress * numFrames;
-    const frame1Index = Math.floor(framePosition) % numFrames;
+    // Calculate intensity for each cycle (sine wave 0..1..0)
+    const cycle1Intensity = Math.sin(cycle1Progress * Math.PI);
+    const cycle2Intensity = Math.sin(cycle2Progress * Math.PI);
+    
+    // Calculate alpha for each cycle - reduce blur by using higher minimum alpha
+    const minAlpha = 0.85; // Much less blur - 85% displaced even at lowest
+    const maxAlpha = 1.0;
+    const cycle1Alpha = minAlpha + (maxAlpha - minAlpha) * cycle1Intensity;
+    const cycle2Alpha = minAlpha + (maxAlpha - minAlpha) * cycle2Intensity;
+    
+    // Get frames for cycle 1
+    const framePosition1 = cycle1Progress * numFrames;
+    const frame1Index = Math.floor(framePosition1) % numFrames;
     const frame2Index = (frame1Index + 1) % numFrames;
-    const blendFactor = framePosition - Math.floor(framePosition);
-
-    // Blend frames with rolling fade effect
-    this.blendTwoFramesWithFade(frame1Index, frame2Index, blendFactor, alpha);
+    const blendFactor1 = framePosition1 - Math.floor(framePosition1);
+    
+    // Get frames for cycle 2
+    const framePosition2 = cycle2Progress * numFrames;
+    const frame3Index = Math.floor(framePosition2) % numFrames;
+    const frame4Index = (frame3Index + 1) % numFrames;
+    const blendFactor2 = framePosition2 - Math.floor(framePosition2);
+    
+    // Render both cycles and composite them
+    this.blendDualCycles(
+      frame1Index, frame2Index, blendFactor1, cycle1Alpha,
+      frame3Index, frame4Index, blendFactor2, cycle2Alpha
+    );
 
     this.animationFrame = requestAnimationFrame((t) => this.renderLoop(t));
+  }
+
+  /**
+   * Blend dual animation cycles for seamless overlap
+   */
+  private blendDualCycles(
+    frame1Index: number, frame2Index: number, blend1: number, alpha1: number,
+    frame3Index: number, frame4Index: number, blend2: number, alpha2: number
+  ) {
+    const frame1 = this.keyframes[frame1Index].imageData;
+    const frame2 = this.keyframes[frame2Index].imageData;
+    const frame3 = this.keyframes[frame3Index].imageData;
+    const frame4 = this.keyframes[frame4Index].imageData;
+    const originalFrame = this.originalImageData;
+    
+    const blendedImageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
+
+    for (let i = 0; i < frame1.data.length; i += 4) {
+      // Blend cycle 1
+      const r1 = frame1.data[i] * (1 - blend1) + frame2.data[i] * blend1;
+      const g1 = frame1.data[i + 1] * (1 - blend1) + frame2.data[i + 1] * blend1;
+      const b1 = frame1.data[i + 2] * (1 - blend1) + frame2.data[i + 2] * blend1;
+      
+      // Blend cycle 2
+      const r2 = frame3.data[i] * (1 - blend2) + frame4.data[i] * blend2;
+      const g2 = frame3.data[i + 1] * (1 - blend2) + frame4.data[i + 1] * blend2;
+      const b2 = frame3.data[i + 2] * (1 - blend2) + frame4.data[i + 2] * blend2;
+      
+      // Blend each cycle with original based on its alpha
+      const r1WithOrig = r1 * alpha1 + originalFrame.data[i] * (1 - alpha1);
+      const g1WithOrig = g1 * alpha1 + originalFrame.data[i + 1] * (1 - alpha1);
+      const b1WithOrig = b1 * alpha1 + originalFrame.data[i + 2] * (1 - alpha1);
+      
+      const r2WithOrig = r2 * alpha2 + originalFrame.data[i] * (1 - alpha2);
+      const g2WithOrig = g2 * alpha2 + originalFrame.data[i + 1] * (1 - alpha2);
+      const b2WithOrig = b2 * alpha2 + originalFrame.data[i + 2] * (1 - alpha2);
+      
+      // Composite both cycles using max (whichever is more displaced)
+      blendedImageData.data[i] = Math.round(Math.max(r1WithOrig, r2WithOrig));
+      blendedImageData.data[i + 1] = Math.round(Math.max(g1WithOrig, g2WithOrig));
+      blendedImageData.data[i + 2] = Math.round(Math.max(b1WithOrig, b2WithOrig));
+      blendedImageData.data[i + 3] = 255;
+    }
+
+    this.ctx.putImageData(blendedImageData, 0, 0);
   }
 
   /**
