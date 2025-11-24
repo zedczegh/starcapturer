@@ -82,8 +82,8 @@ export const MotionAnimationCanvas = ({
 
     animationEngineRef.current = new MotionAnimationEngine(canvas, imageElement, displacementAmount);
  
-    // Start with overlay hidden - only show when paused/playing
-    overlayCanvas.style.opacity = "0";
+    // Show overlay initially so users can see their strokes
+    overlayCanvas.style.opacity = "1";
 
     // Cleanup on unmount
     return () => {
@@ -242,7 +242,9 @@ export const MotionAnimationCanvas = ({
       
       motionArrowStartRef.current = null;
       motionTrailPointsRef.current = [];
-      // No overlay redraw here; animation will be visible only when playing
+      
+      // Show the completed stroke immediately
+      redrawOverlay();
     } else if ((activeTool === "range" || activeTool === "erase") && rangeStrokePointsRef.current.length > 0) {
       // Store the entire stroke as one history action
       const strokeData = {
@@ -261,6 +263,9 @@ export const MotionAnimationCanvas = ({
       
       rangeStrokePointsRef.current = [];
       lastBrushPointRef.current = null;
+      
+      // Show the completed stroke immediately
+      redrawOverlay();
     }
 
     setIsDrawing(false);
@@ -545,8 +550,8 @@ export const MotionAnimationCanvas = ({
     delete canvas.dataset.drawing;
     delete overlayCanvas.dataset.drawing;
     
-    // Keep overlay hidden until play is pressed
-    overlayCanvas.style.opacity = "0";
+    // Keep overlay visible so strokes remain visible
+    overlayCanvas.style.opacity = "1";
     
     toast.success(t("Reset complete - all animations cleared", "重置完成 - 所有动画已清除"));
   };
