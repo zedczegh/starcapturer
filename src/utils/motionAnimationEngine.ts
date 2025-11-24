@@ -405,10 +405,12 @@ export class MotionAnimationEngine {
     
     const easedProgress = easeInOutCubic(progress);
     
-    // Continuous rolling fade - smooth sine wave for seamless infinite loop
-    // Alpha oscillates very subtly between 0.85 and 1.0 to prevent original image from showing
-    const fadePhase = progress * Math.PI * 2; // Full sine wave cycle
-    const alpha = 0.925 + 0.075 * Math.sin(fadePhase); // Oscillates 0.85 to 1.0
+    // Sync fade with displacement: fade in as displacement increases, fade out as it decreases
+    // Match the same sine wave used in keyframe generation for perfect sync
+    const phase = progress;
+    const intensityCurve = Math.sin(phase * Math.PI); // 0..1..0 matches keyframe intensity
+    // Alpha follows intensity: low when near original, high at max displacement
+    const alpha = 0.3 + 0.7 * intensityCurve; // Oscillates 0.3 to 1.0
     
     // Calculate which frames to blend
     const framePosition = easedProgress * numFrames;
