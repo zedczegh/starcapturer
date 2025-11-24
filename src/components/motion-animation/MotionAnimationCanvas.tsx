@@ -46,6 +46,7 @@ export const MotionAnimationCanvas = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [cursorPos, setCursorPos] = useState<{x: number, y: number} | null>(null);
   
   // Use refs for drawing state to avoid closure issues and enable immediate updates
   const motionArrowStartRef = useRef<{x: number, y: number} | null>(null);
@@ -141,14 +142,21 @@ export const MotionAnimationCanvas = ({
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
-
     const canvas = overlayCanvasRef.current;
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+
+    // Update cursor position for preview
+    setCursorPos({ x, y });
+
+    if (!isDrawing) {
+      // Just update cursor preview when not drawing
+      scheduleRedraw();
+      return;
+    }
 
     if (activeTool === "motion" && motionArrowStartRef.current) {
       // Add point to trail ref silently (no preview)
@@ -204,6 +212,11 @@ export const MotionAnimationCanvas = ({
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       animationEngineRef.current.drawOverlay(ctx);
 
+      // Draw cursor preview if hovering and not drawing
+      if (cursorPos && !isDrawing) {
+        drawCursorPreview(ctx, cursorPos.x, cursorPos.y);
+      }
+
       // Draw current drawing preview
       if (activeTool === "motion" && motionTrailPointsRef.current.length > 1) {
         drawMotionTrail(motionTrailPointsRef.current);
@@ -251,7 +264,7 @@ export const MotionAnimationCanvas = ({
       motionArrowStartRef.current = null;
       motionTrailPointsRef.current = [];
       
-      // Show the completed stroke immediately
+      // Show the completed stroke immediately (cursor preview will be shown if still hovering)
       redrawOverlay();
     } else if ((activeTool === "range" || activeTool === "erase") && rangeStrokePointsRef.current.length > 0) {
       // Store the entire stroke as one history action
@@ -272,7 +285,7 @@ export const MotionAnimationCanvas = ({
       rangeStrokePointsRef.current = [];
       lastBrushPointRef.current = null;
       
-      // Show the completed stroke immediately
+      // Show the completed stroke immediately (cursor preview will be shown if still hovering)
       redrawOverlay();
     }
 
@@ -388,6 +401,50 @@ export const MotionAnimationCanvas = ({
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     animationEngineRef.current.drawOverlay(ctx);
+    
+    // Draw cursor preview if hovering and not drawing
+    if (cursorPos && !isDrawing) {
+      drawCursorPreview(ctx, cursorPos.x, cursorPos.y);
+    }
+  };
+
+  const drawCursorPreview = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
+    ctx.save();
+    
+    if (activeTool === "motion") {
+      // Draw arrow preview for motion tool
+      ctx.strokeStyle = "rgba(59, 130, 246, 0.5)";
+      ctx.fillStyle = "rgba(59, 130, 246, 0.5)";
+      ctx.lineWidth = 2;
+      
+      // Draw small arrow pointing right
+      const arrowLength = 30;
+      ctx.beginPath();
+      ctx.moveTo(x - arrowLength / 2, y);
+      ctx.lineTo(x + arrowLength / 2, y);
+      ctx.stroke();
+      
+      // Arrowhead
+      const headSize = 8;
+      ctx.beginPath();
+      ctx.moveTo(x + arrowLength / 2, y);
+      ctx.lineTo(x + arrowLength / 2 - headSize, y - headSize / 2);
+      ctx.lineTo(x + arrowLength / 2 - headSize, y + headSize / 2);
+      ctx.closePath();
+      ctx.fill();
+    } else if (activeTool === "range" || activeTool === "erase") {
+      // Draw circle preview for brush tools
+      ctx.strokeStyle = activeTool === "erase" ? "rgba(239, 68, 68, 0.5)" : "rgba(34, 197, 94, 0.5)";
+      ctx.fillStyle = activeTool === "erase" ? "rgba(239, 68, 68, 0.1)" : "rgba(34, 197, 94, 0.1)";
+      ctx.lineWidth = 2;
+      
+      ctx.beginPath();
+      ctx.arc(x, y, brushSize, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fill();
+    }
+    
+    ctx.restore();
   };
 
   const handlePlayPause = () => {
@@ -670,10 +727,21 @@ export const MotionAnimationCanvas = ({
             onMouseUp={handleMouseUp}
             onMouseLeave={() => {
               setIsDrawing(false);
+              setCursorPos(null);
               motionArrowStartRef.current = null;
               motionTrailPointsRef.current = [];
               rangeStrokePointsRef.current = [];
               lastBrushPointRef.current = null;
+              redrawOverlay(); // Clear cursor preview
+            }}
+            onMouseEnter={(e) => {
+              const canvas = overlayCanvasRef.current;
+              if (!canvas) return;
+              const rect = canvas.getBoundingClientRect();
+              const x = e.clientX - rect.left;
+              const y = e.clientY - rect.top;
+              setCursorPos({ x, y });
+              redrawOverlay();
             }}
           />
         </div>
