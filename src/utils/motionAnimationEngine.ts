@@ -410,34 +410,35 @@ export class MotionAnimationEngine {
     const progress = (timestamp % this.animationDuration) / this.animationDuration;
     const numFrames = this.keyframes.length;
     
-    // Use linear progress for constant motion
-    const linearProgress = progress;
-    
     // Calculate two animation cycles offset by 50%
-    const cycle1Progress = linearProgress;
-    const cycle2Progress = (linearProgress + 0.5) % 1.0;
+    const cycle1Progress = progress;
+    const cycle2Progress = (progress + 0.5) % 1.0;
     
-    // Calculate intensity for each cycle (sine wave 0..1..0)
-    const cycle1Intensity = Math.sin(cycle1Progress * Math.PI);
-    const cycle2Intensity = Math.sin(cycle2Progress * Math.PI);
+    // Each cycle: 0-0.7 = ramp up displacement, 0.7-1.0 = fade out
+    const calculateCycleAlpha = (cycleProgress: number) => {
+      if (cycleProgress < 0.7) {
+        // Ramp up from 0 (original) to 1 (fully displaced) over first 70%
+        return cycleProgress / 0.7;
+      } else {
+        // Fade out from 1 to 0 over last 30%
+        return 1.0 - ((cycleProgress - 0.7) / 0.3);
+      }
+    };
     
-    // Calculate alpha for each cycle - reduce blur by using higher minimum alpha
-    const minAlpha = 0.85; // Much less blur - 85% displaced even at lowest
-    const maxAlpha = 1.0;
-    const cycle1Alpha = minAlpha + (maxAlpha - minAlpha) * cycle1Intensity;
-    const cycle2Alpha = minAlpha + (maxAlpha - minAlpha) * cycle2Intensity;
+    const cycle1Alpha = calculateCycleAlpha(cycle1Progress);
+    const cycle2Alpha = calculateCycleAlpha(cycle2Progress);
     
-    // Get frames for cycle 1
-    const framePosition1 = cycle1Progress * numFrames;
-    const frame1Index = Math.floor(framePosition1) % numFrames;
-    const frame2Index = (frame1Index + 1) % numFrames;
-    const blendFactor1 = framePosition1 - Math.floor(framePosition1);
+    // Get frames for cycle 1 - linear progression through keyframes
+    const framePosition1 = cycle1Progress * (numFrames - 1);
+    const frame1Index = Math.floor(framePosition1);
+    const frame2Index = Math.min(frame1Index + 1, numFrames - 1);
+    const blendFactor1 = framePosition1 - frame1Index;
     
     // Get frames for cycle 2
-    const framePosition2 = cycle2Progress * numFrames;
-    const frame3Index = Math.floor(framePosition2) % numFrames;
-    const frame4Index = (frame3Index + 1) % numFrames;
-    const blendFactor2 = framePosition2 - Math.floor(framePosition2);
+    const framePosition2 = cycle2Progress * (numFrames - 1);
+    const frame3Index = Math.floor(framePosition2);
+    const frame4Index = Math.min(frame3Index + 1, numFrames - 1);
+    const blendFactor2 = framePosition2 - frame3Index;
     
     // Render both cycles and composite them
     this.blendDualCycles(

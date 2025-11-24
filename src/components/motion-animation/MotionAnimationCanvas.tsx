@@ -402,11 +402,19 @@ export const MotionAnimationCanvas = ({
       redrawOverlay();
       overlayCanvas.style.opacity = "1";
     } else {
+      // Show loading notification
+      toast.info(t("Preparing preview...", "准备预览中..."));
+      
       // Generate keyframes on demand when starting playback to avoid blocking during drawing
       animationEngineRef.current.updateKeyframes();
       animationEngineRef.current.play(animationSpeed / 100);
       // Hide overlay when playing to show animation
       overlayCanvas.style.opacity = "0";
+      
+      // Dismiss loading after a short delay
+      setTimeout(() => {
+        toast.success(t("Preview ready!", "预览就绪！"));
+      }, 500);
     }
     setIsPlaying(!isPlaying);
   };
