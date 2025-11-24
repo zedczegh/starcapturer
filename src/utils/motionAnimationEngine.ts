@@ -671,15 +671,22 @@ export class MotionAnimationEngine {
       let r, g, b;
       
       if (this.coreBrightening) {
-        // Brightening on: reduce blur factor to keep animated regions more visible with pulsing
+        // Brightening on: subtle, controlled glow based on combined alpha
         const rCycles = totalAlpha > 0 ? (r1 * alpha1 + r2 * alpha2) / totalAlpha : r1;
         const gCycles = totalAlpha > 0 ? (g1 * alpha1 + g2 * alpha2) / totalAlpha : g1;
         const bCycles = totalAlpha > 0 ? (b1 * alpha1 + b2 * alpha2) / totalAlpha : b1;
-        
-        const blurFactor = 0.3;
-        r = rCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i] * blurFactor * (1 - totalAlpha);
-        g = gCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 1] * blurFactor * (1 - totalAlpha);
-        b = bCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 2] * blurFactor * (1 - totalAlpha);
+
+        // Gentle brightness boost (max +25%) instead of strong pulsing
+        const boost = 1 + 0.25 * totalAlpha;
+        let rBright = rCycles * boost;
+        let gBright = gCycles * boost;
+        let bBright = bCycles * boost;
+
+        // Respect motion blur amount when brightening is enabled
+        const blurFactor = this.motionBlurAmount;
+        r = rBright * (1 - blurFactor) + originalFrame.data[i] * blurFactor;
+        g = gBright * (1 - blurFactor) + originalFrame.data[i + 1] * blurFactor;
+        b = bBright * (1 - blurFactor) + originalFrame.data[i + 2] * blurFactor;
       } else {
         // Brightening off: maintain constant visibility without pulsing
         // When both cycles are very low, show original image for clean fade
