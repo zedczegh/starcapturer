@@ -258,19 +258,20 @@ export class MotionAnimationEngine {
     const maskImageData = maskCtx.getImageData(0, 0, width, height);
     const maskData = maskImageData.data;
     
-    // Convert RGBA to single-channel mask (use red channel since we drew white)
+    // Convert to binary mask (hard edges, no gradients) to prevent trailing
+    // Any pixel with sufficient coverage is fully selected
+    const threshold = 128; // 50% threshold
     for (let i = 0; i < width * height; i++) {
       const pixelIndex = i * 4;
-      // Use the red channel and alpha for the mask value
       const value = maskData[pixelIndex]; // Red channel
       const alpha = maskData[pixelIndex + 3]; // Alpha channel
       
-      // Combine both for proper anti-aliasing
-      this.selectionMask[i] = Math.round((value / 255) * (alpha / 255) * 255);
+      // Binary selection: either fully selected or not selected
+      const combined = (value / 255) * (alpha / 255) * 255;
+      this.selectionMask[i] = combined >= threshold ? 255 : 0;
     }
     
-    // Apply edge smoothing for even better blending
-    this.smoothSelectionEdges();
+    // No edge smoothing - we want crisp, clean boundaries to prevent dragging
   }
   
   /**
@@ -486,13 +487,15 @@ export class MotionAnimationEngine {
       
       // Check bounds
       if (maskIdx >= 0 && maskIdx < this.selectionMask.length) {
-        selectionWeight = this.selectionMask[maskIdx] / 255;
+        // Binary selection: pixel is either fully selected (1) or not selected (0)
+        selectionWeight = this.selectionMask[maskIdx] > 127 ? 1 : 0;
       } else {
         selectionWeight = 0;
       }
     }
 
-    if (selectionWeight <= 0) {
+    // Early exit if pixel is not in selection - no partial displacement
+    if (selectionWeight === 0) {
       return { dx: 0, dy: 0 };
     }
 
@@ -524,8 +527,9 @@ export class MotionAnimationEngine {
     }
 
     if (totalWeight > 0) {
-      let dx = (totalDx / totalWeight) * selectionWeight;
-      let dy = (totalDy / totalWeight) * selectionWeight;
+      // Full displacement for selected pixels - no gradual falloff at edges
+      let dx = totalDx / totalWeight;
+      let dy = totalDy / totalWeight;
       
       // Apply reverse direction if enabled
       if (this.reverseDirection) {
