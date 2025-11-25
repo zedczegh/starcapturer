@@ -493,8 +493,8 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * CRITICAL FIX: Selection-aware displacement with boundary constraints
-   * Reduces displacement near edges and only pulls from solidly selected areas
+   * CRITICAL FIX: Selection-aware displacement with smooth edge handling
+   * Uses gradient displacement at edges to prevent duplicate appearance
    */
   private createDisplacedFrame(sourceData: ImageData): ImageData {
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
@@ -541,15 +541,25 @@ export class MotionAnimationEngine {
           continue;
         }
         
-        // Check selection density around this pixel
+        // Calculate density-based displacement scale (smooth gradient from edge to center)
         const destDensity = getSelectionDensity(x, y, 3);
-        const isEdgePixel = destDensity < 0.95;
+        
+        // Use density directly as scale - smoother transition from 0 to 1
+        // Pixels at solid center (density=1) get full displacement
+        // Pixels at edges (density<1) get proportionally reduced displacement
+        const displacementScale = Math.pow(destDensity, 1.5); // Power curve for smoother falloff
+        
+        if (displacementScale < 0.1) {
+          // Very edge pixels - copy original to avoid artifacts
+          dstData[destIdx] = srcData[destIdx];
+          dstData[destIdx + 1] = srcData[destIdx + 1];
+          dstData[destIdx + 2] = srcData[destIdx + 2];
+          dstData[destIdx + 3] = srcData[destIdx + 3];
+          continue;
+        }
         
         // Calculate displacement
         const displacement = this.calculateDisplacement(x, y, 1);
-        
-        // Reduce displacement near edges to prevent boundary crossing
-        const displacementScale = isEdgePixel ? 0.25 : 1.0;
         
         let srcX = x - displacement.dx * displacementScale;
         let srcY = y - displacement.dy * displacementScale;
@@ -561,29 +571,21 @@ export class MotionAnimationEngine {
         const sourcePosX = Math.round(srcX);
         const sourcePosY = Math.round(srcY);
         
-        // Check source pixel selection and density
+        // Always pull from calculated source if it's selected
+        // This ensures consistent displacement without fallback artifacts
         if (isSelected(sourcePosX, sourcePosY)) {
-          const srcDensity = getSelectionDensity(sourcePosX, sourcePosY, 2);
-          
-          // Only pull from solidly selected source areas (not edges)
-          if (srcDensity > 0.75) {
-            const srcIdx = (sourcePosY * width + sourcePosX) * 4;
-            dstData[destIdx] = srcData[srcIdx];
-            dstData[destIdx + 1] = srcData[srcIdx + 1];
-            dstData[destIdx + 2] = srcData[srcIdx + 2];
-            dstData[destIdx + 3] = srcData[srcIdx + 3];
-          } else {
-            // Source too close to edge - use original
-            dstData[destIdx] = srcData[destIdx];
-            dstData[destIdx + 1] = srcData[destIdx + 1];
-            dstData[destIdx + 2] = srcData[destIdx + 2];
-            dstData[destIdx + 3] = srcData[destIdx + 3];
-          }
+          const srcIdx = (sourcePosY * width + sourcePosX) * 4;
+          dstData[destIdx] = srcData[srcIdx];
+          dstData[destIdx + 1] = srcData[srcIdx + 1];
+          dstData[destIdx + 2] = srcData[srcIdx + 2];
+          dstData[destIdx + 3] = srcData[srcIdx + 3];
         } else {
-          // Source not selected - no displacement
-          dstData[destIdx] = srcData[destIdx];
-          dstData[destIdx + 1] = srcData[destIdx + 1];
-          dstData[destIdx + 2] = srcData[destIdx + 2];
+          // Source landed outside selection - blend with original to avoid hard edges
+          const srcIdx = (sourcePosY * width + sourcePosX) * 4;
+          const blendFactor = 0.7; // Favor displaced content
+          dstData[destIdx] = Math.round(srcData[srcIdx] * blendFactor + srcData[destIdx] * (1 - blendFactor));
+          dstData[destIdx + 1] = Math.round(srcData[srcIdx + 1] * blendFactor + srcData[destIdx + 1] * (1 - blendFactor));
+          dstData[destIdx + 2] = Math.round(srcData[srcIdx + 2] * blendFactor + srcData[destIdx + 2] * (1 - blendFactor));
           dstData[destIdx + 3] = srcData[destIdx + 3];
         }
       }
@@ -714,7 +716,7 @@ export class MotionAnimationEngine {
 
   /**
    * Blend dual animation cycles for seamless overlap
-   * Uses only nearest keyframes (no interpolation) to eliminate static appearance
+   * Enhanced to prevent duplicate appearance at selection edges
    */
   private blendDualCycles(
     frame1Index: number, alpha1: number,
@@ -738,6 +740,10 @@ export class MotionAnimationEngine {
       const g2 = frame2.data[i + 1];
       const b2 = frame2.data[i + 2];
       
+      const origR = originalFrame.data[i];
+      const origG = originalFrame.data[i + 1];
+      const origB = originalFrame.data[i + 2];
+      
       let r, g, b;
       
       if (this.coreBrightening) {
@@ -748,30 +754,41 @@ export class MotionAnimationEngine {
         const bCycles = totalAlpha > 0 ? (b1 * alpha1 + b2 * alpha2) / totalAlpha : b1;
         
         const blurFactor = 0.3;
-        r = rCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i] * blurFactor * (1 - totalAlpha);
-        g = gCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 1] * blurFactor * (1 - totalAlpha);
-        b = bCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 2] * blurFactor * (1 - totalAlpha);
+        r = rCycles * (1 - blurFactor * (1 - totalAlpha)) + origR * blurFactor * (1 - totalAlpha);
+        g = gCycles * (1 - blurFactor * (1 - totalAlpha)) + origG * blurFactor * (1 - totalAlpha);
+        b = bCycles * (1 - blurFactor * (1 - totalAlpha)) + origB * blurFactor * (1 - totalAlpha);
       } else {
-        // Brightening off: maintain constant visibility without pulsing
-        // Pure cycle crossfade - no alpha-based fading to original image
-        const safeAlpha1 = Math.max(0.0001, alpha1);
-        const safeAlpha2 = Math.max(0.0001, alpha2);
-        const weight1 = safeAlpha1 / (safeAlpha1 + safeAlpha2);
-        const weight2 = safeAlpha2 / (safeAlpha1 + safeAlpha2);
-
-        const rCycles = r1 * weight1 + r2 * weight2;
-        const gCycles = g1 * weight1 + g2 * weight2;
-        const bCycles = b1 * weight1 + b2 * weight2;
+        // Improved blending: prevent duplicates by strongly favoring the dominant cycle
+        const totalAlpha = alpha1 + alpha2;
         
-        // Apply motion blur only if set (doesn't affect pulsing)
-        if (this.motionBlurAmount > 0.01) {
-          r = rCycles * (1 - this.motionBlurAmount) + originalFrame.data[i] * this.motionBlurAmount;
-          g = gCycles * (1 - this.motionBlurAmount) + originalFrame.data[i + 1] * this.motionBlurAmount;
-          b = bCycles * (1 - this.motionBlurAmount) + originalFrame.data[i + 2] * this.motionBlurAmount;
+        // If both cycles are very weak (transition point), use original to avoid artifacts
+        if (totalAlpha < 0.3) {
+          r = origR;
+          g = origG;
+          b = origB;
         } else {
-          r = rCycles;
-          g = gCycles;
-          b = bCycles;
+          // Use power curve to make dominant cycle more dominant (reduces duplicate visibility)
+          const adjustedAlpha1 = Math.pow(alpha1, 0.7);
+          const adjustedAlpha2 = Math.pow(alpha2, 0.7);
+          const adjustedTotal = adjustedAlpha1 + adjustedAlpha2;
+          
+          const weight1 = adjustedAlpha1 / adjustedTotal;
+          const weight2 = adjustedAlpha2 / adjustedTotal;
+
+          const rCycles = r1 * weight1 + r2 * weight2;
+          const gCycles = g1 * weight1 + g2 * weight2;
+          const bCycles = b1 * weight1 + b2 * weight2;
+          
+          // Apply motion blur only if set (doesn't affect pulsing)
+          if (this.motionBlurAmount > 0.01) {
+            r = rCycles * (1 - this.motionBlurAmount) + origR * this.motionBlurAmount;
+            g = gCycles * (1 - this.motionBlurAmount) + origG * this.motionBlurAmount;
+            b = bCycles * (1 - this.motionBlurAmount) + origB * this.motionBlurAmount;
+          } else {
+            r = rCycles;
+            g = gCycles;
+            b = bCycles;
+          }
         }
       }
       
