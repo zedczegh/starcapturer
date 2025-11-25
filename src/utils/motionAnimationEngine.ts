@@ -156,7 +156,7 @@ export class MotionAnimationEngine {
 
   /**
    * Rebuild the unified selection mask from all range strokes and points
-   * Optimized with bounding box culling and spatial optimization
+   * Uses canvas rendering for natural, smooth painted regions
    */
   private rebuildSelectionMask() {
     const width = this.canvas.width;
@@ -174,105 +174,75 @@ export class MotionAnimationEngine {
       return;
     }
     
-    // Pre-compute bounding boxes for each stroke to skip irrelevant pixels
-    const strokeBounds: Array<{minX: number, maxX: number, minY: number, maxY: number, stroke: RangeStroke}> = [];
+    // Create an offscreen canvas to render the selection mask
+    const maskCanvas = document.createElement('canvas');
+    maskCanvas.width = width;
+    maskCanvas.height = height;
+    const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true })!;
     
+    // Set up for smooth, anti-aliased drawing
+    maskCtx.lineCap = 'round';
+    maskCtx.lineJoin = 'round';
+    maskCtx.fillStyle = 'white';
+    maskCtx.strokeStyle = 'white';
+    
+    // Draw all strokes onto the mask canvas
     for (const stroke of this.rangeStrokes) {
-      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-      
-      for (const point of stroke.points) {
-        minX = Math.min(minX, point.x - stroke.radius);
-        maxX = Math.max(maxX, point.x + stroke.radius);
-        minY = Math.min(minY, point.y - stroke.radius);
-        maxY = Math.max(maxY, point.y + stroke.radius);
-      }
-      
-      strokeBounds.push({
-        minX: Math.max(0, Math.floor(minX)),
-        maxX: Math.min(width - 1, Math.ceil(maxX)),
-        minY: Math.max(0, Math.floor(minY)),
-        maxY: Math.min(height - 1, Math.ceil(maxY)),
-        stroke
-      });
-    }
-    
-    // Process each stroke's bounding box independently
-    for (const bound of strokeBounds) {
-      const { minX, maxX, minY, maxY, stroke } = bound;
       const { points, radius } = stroke;
       
-      for (let y = minY; y <= maxY; y++) {
-        for (let x = minX; x <= maxX; x++) {
-          const idx = y * width + x;
-          let minDist = Infinity;
-          
-          if (points.length === 1) {
-            const d = Math.sqrt((x - points[0].x) ** 2 + (y - points[0].y) ** 2);
-            minDist = d;
-          } else {
-            // Check distance to all line segments
-            for (let i = 0; i < points.length - 1; i++) {
-              const p1 = points[i];
-              const p2 = points[i + 1];
-              const d = this.distanceToLineSegment(x, y, p1.x, p1.y, p2.x, p2.y);
-              minDist = Math.min(minDist, d);
-            }
-            // Also check last point
-            const lastPoint = points[points.length - 1];
-            const d = Math.sqrt((x - lastPoint.x) ** 2 + (y - lastPoint.y) ** 2);
-            minDist = Math.min(minDist, d);
-          }
-          
-          // Calculate weight with softer, smoother falloff
-          let weight = 0;
-          const innerRadius = radius * 0.7; // Slightly smaller inner core for softer edges
-          if (minDist <= innerRadius) {
-            weight = 1;
-          } else if (minDist < radius) {
-            const falloffDist = minDist - innerRadius;
-            const falloffRange = radius - innerRadius;
-            // Use smoothstep for better edge quality
-            const t = falloffDist / falloffRange;
-            weight = 1 - (t * t * (3 - 2 * t)); // Smoothstep interpolation
-          }
-          
-          // Take maximum weight (no overlapping accumulation)
-          const currentWeight = this.selectionMask[idx];
-          this.selectionMask[idx] = Math.max(currentWeight, Math.round(weight * 255));
-        }
-      }
-    }
-    
-    // Process individual points with bounding boxes
-    for (const range of this.rangePoints) {
-      const minX = Math.max(0, Math.floor(range.x - range.radius));
-      const maxX = Math.min(width - 1, Math.ceil(range.x + range.radius));
-      const minY = Math.max(0, Math.floor(range.y - range.radius));
-      const maxY = Math.min(height - 1, Math.ceil(range.y + range.radius));
+      if (points.length === 0) continue;
       
-      for (let y = minY; y <= maxY; y++) {
-        for (let x = minX; x <= maxX; x++) {
-          const idx = y * width + x;
-          const d = Math.sqrt((x - range.x) ** 2 + (y - range.y) ** 2);
-          
-          let weight = 0;
-          const innerRadius = range.radius * 0.7;
-          if (d <= innerRadius) {
-            weight = 1;
-          } else if (d < range.radius) {
-            const falloffDist = d - innerRadius;
-            const falloffRange = range.radius - innerRadius;
-            const t = falloffDist / falloffRange;
-            weight = 1 - (t * t * (3 - 2 * t)); // Smoothstep
-          }
-          
-          const currentWeight = this.selectionMask[idx];
-          this.selectionMask[idx] = Math.max(currentWeight, Math.round(weight * 255));
+      if (points.length === 1) {
+        // Single point - draw a circle
+        maskCtx.beginPath();
+        maskCtx.arc(points[0].x, points[0].y, radius, 0, Math.PI * 2);
+        maskCtx.fill();
+      } else {
+        // Multiple points - draw smooth path with round caps
+        maskCtx.lineWidth = radius * 2;
+        maskCtx.beginPath();
+        maskCtx.moveTo(points[0].x, points[0].y);
+        
+        for (let i = 1; i < points.length; i++) {
+          maskCtx.lineTo(points[i].x, points[i].y);
         }
+        
+        maskCtx.stroke();
+        
+        // Also draw circles at endpoints to ensure complete coverage
+        maskCtx.beginPath();
+        maskCtx.arc(points[0].x, points[0].y, radius, 0, Math.PI * 2);
+        maskCtx.fill();
+        
+        maskCtx.beginPath();
+        maskCtx.arc(points[points.length - 1].x, points[points.length - 1].y, radius, 0, Math.PI * 2);
+        maskCtx.fill();
       }
     }
     
-    // Apply edge smoothing pass for better blending
+    // Draw individual points
+    for (const point of this.rangePoints) {
+      maskCtx.beginPath();
+      maskCtx.arc(point.x, point.y, point.radius, 0, Math.PI * 2);
+      maskCtx.fill();
+    }
+    
+    // Extract the alpha/luminance data from the rendered mask
+    const maskImageData = maskCtx.getImageData(0, 0, width, height);
+    const maskData = maskImageData.data;
+    
+    // Convert RGBA to single-channel mask (use red channel since we drew white)
+    for (let i = 0; i < width * height; i++) {
+      const pixelIndex = i * 4;
+      // Use the red channel and alpha for the mask value
+      const value = maskData[pixelIndex]; // Red channel
+      const alpha = maskData[pixelIndex + 3]; // Alpha channel
+      
+      // Combine both for proper anti-aliasing
+      this.selectionMask[i] = Math.round((value / 255) * (alpha / 255) * 255);
+    }
+    
+    // Apply edge smoothing for even better blending
     this.smoothSelectionEdges();
   }
   
