@@ -218,27 +218,32 @@ export class MotionAnimationEngine {
         maskCtx.arc(points[0].x, points[0].y, radius, 0, Math.PI * 2);
         maskCtx.fill();
       } else {
-        // Multiple points - draw direct line segments to avoid overshoot
-        // This ensures selection matches the visual brush stroke exactly
+        // Multiple points - use stroke only for clean single-layer coverage
+        // This prevents repeated/overlapping selection that causes animation issues
         maskCtx.lineWidth = radius * 2;
         maskCtx.lineCap = "round";
         maskCtx.lineJoin = "round";
         maskCtx.beginPath();
         maskCtx.moveTo(points[0].x, points[0].y);
         
-        // Use direct lines (no curves) to prevent overselection at bends
+        // Use smooth curves matching the visual overlay exactly
         for (let i = 1; i < points.length; i++) {
-          maskCtx.lineTo(points[i].x, points[i].y);
+          const xc = (points[i].x + points[i - 1].x) / 2;
+          const yc = (points[i].y + points[i - 1].y) / 2;
+          maskCtx.quadraticCurveTo(points[i - 1].x, points[i - 1].y, xc, yc);
         }
         
+        maskCtx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
         maskCtx.stroke();
         
-        // Add circles at ALL points along the path to ensure complete coverage
-        for (const point of points) {
-          maskCtx.beginPath();
-          maskCtx.arc(point.x, point.y, radius, 0, Math.PI * 2);
-          maskCtx.fill();
-        }
+        // Add circles only at endpoints to ensure complete coverage at stroke ends
+        maskCtx.beginPath();
+        maskCtx.arc(points[0].x, points[0].y, radius, 0, Math.PI * 2);
+        maskCtx.fill();
+        
+        maskCtx.beginPath();
+        maskCtx.arc(points[points.length - 1].x, points[points.length - 1].y, radius, 0, Math.PI * 2);
+        maskCtx.fill();
       }
     }
     
@@ -320,13 +325,16 @@ export class MotionAnimationEngine {
         overlayCtx.lineWidth = 2;
         overlayCtx.stroke();
       } else {
-        // Multiple points - create stroke with direct lines to match selection exactly
+        // Multiple points - create smooth stroke
         overlayCtx.moveTo(stroke.points[0].x, stroke.points[0].y);
         
-        // Use direct lines (no curves) to match selection mask exactly
         for (let i = 1; i < stroke.points.length; i++) {
-          overlayCtx.lineTo(stroke.points[i].x, stroke.points[i].y);
+          const xc = (stroke.points[i].x + stroke.points[i - 1].x) / 2;
+          const yc = (stroke.points[i].y + stroke.points[i - 1].y) / 2;
+          overlayCtx.quadraticCurveTo(stroke.points[i - 1].x, stroke.points[i - 1].y, xc, yc);
         }
+        
+        overlayCtx.lineTo(stroke.points[stroke.points.length - 1].x, stroke.points[stroke.points.length - 1].y);
         
         overlayCtx.lineWidth = stroke.radius * 2;
         overlayCtx.lineCap = "round";
