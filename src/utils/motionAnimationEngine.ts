@@ -597,11 +597,7 @@ export class MotionAnimationEngine {
    * Updated to follow trail direction more accurately with localized influence
    */
   private calculateDisplacement(x: number, y: number, intensity: number): { dx: number; dy: number } {
-    let totalDx = 0;
-    let totalDy = 0;
-    let totalWeight = 0;
-
-    // Use pre-computed selection mask for fast lookup (eliminates overlapping issues)
+    // Use pre-computed selection mask for fast lookup
     let selectionWeight = 1;
     
     if (this.selectionMask && (this.rangeStrokes.length > 0 || this.rangePoints.length > 0)) {
@@ -610,7 +606,6 @@ export class MotionAnimationEngine {
       // Check bounds strictly
       if (maskIdx >= 0 && maskIdx < this.selectionMask.length) {
         // Strict binary selection: pixel must be fully selected (255)
-        // This prevents any animation of partially selected or unselected areas
         selectionWeight = this.selectionMask[maskIdx] === 255 ? 1 : 0;
       } else {
         selectionWeight = 0;
@@ -622,37 +617,35 @@ export class MotionAnimationEngine {
       return { dx: 0, dy: 0 };
     }
 
-    // Use much more localized influence radius for accurate directional control
-    // This prevents distant motion vectors from affecting pixels incorrectly
-    const baseMaxDist = Math.max(this.canvas.width, this.canvas.height) * 0.15;
+    // Find the NEAREST motion vector only (no weighted averaging)
+    // This prevents conflicting vectors from affecting stroke beginnings and curves
+    let nearestVector: MotionVector | null = null;
+    let nearestDist = Infinity;
     
-    // Find nearest motion vectors and weight them heavily based on distance
     for (const vector of this.motionVectors) {
       const dist = Math.sqrt((x - vector.x) ** 2 + (y - vector.y) ** 2);
       
-      if (dist < baseMaxDist) {
-        const normalizedDist = dist / baseMaxDist;
-        
-        // Much steeper falloff to prioritize nearby vectors
-        // This ensures pixels follow the direction of the closest trail segment
-        const falloff = Math.pow(1 - normalizedDist, 3.5);
-        const weight = falloff * vector.strength;
-        
-        // Use configurable max displacement - preserve exact arrow direction
-        const magnitude = Math.sqrt(vector.dx ** 2 + vector.dy ** 2);
-        const normalizedDx = magnitude > 0 ? vector.dx / magnitude : 0;
-        const normalizedDy = magnitude > 0 ? vector.dy / magnitude : 0;
-        
-        totalDx += normalizedDx * weight * this.maxDisplacement * intensity;
-        totalDy += normalizedDy * weight * this.maxDisplacement * intensity;
-        totalWeight += weight;
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearestVector = vector;
       }
     }
 
-    if (totalWeight > 0) {
-      // Full displacement for selected pixels - no gradual falloff at edges
-      let dx = totalDx / totalWeight;
-      let dy = totalDy / totalWeight;
+    if (nearestVector) {
+      // Use the nearest vector's direction with distance-based falloff
+      const magnitude = Math.sqrt(nearestVector.dx ** 2 + nearestVector.dy ** 2);
+      const normalizedDx = magnitude > 0 ? nearestVector.dx / magnitude : 0;
+      const normalizedDy = magnitude > 0 ? nearestVector.dy / magnitude : 0;
+      
+      // Apply softer distance falloff to avoid abrupt transitions
+      const maxInfluenceDist = Math.max(this.canvas.width, this.canvas.height) * 0.2;
+      const distanceFalloff = nearestDist < maxInfluenceDist 
+        ? Math.pow(1 - (nearestDist / maxInfluenceDist), 2.0)
+        : 0;
+      
+      // Calculate final displacement
+      let dx = normalizedDx * this.maxDisplacement * intensity * distanceFalloff * nearestVector.strength;
+      let dy = normalizedDy * this.maxDisplacement * intensity * distanceFalloff * nearestVector.strength;
       
       // Apply reverse direction if enabled
       if (this.reverseDirection) {
