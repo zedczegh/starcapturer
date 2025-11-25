@@ -198,26 +198,45 @@ export class MotionAnimationEngine {
         maskCtx.arc(points[0].x, points[0].y, radius, 0, Math.PI * 2);
         maskCtx.fill();
       } else {
-        // Multiple points - use EXACT same rendering as visual overlay
-        // This must match drawContinuousBrushStroke in MotionAnimationCanvas.tsx precisely
+        // Multiple points - fill densely along the path for complete coverage
+        // This ensures every pixel within the brush stroke is selected
+        
+        // First, stroke the path for base coverage
         maskCtx.lineWidth = radius * 2;
         maskCtx.lineCap = "round";
         maskCtx.lineJoin = "round";
         maskCtx.beginPath();
         maskCtx.moveTo(points[0].x, points[0].y);
         
-        // Use quadratic curves for smooth strokes
         for (let i = 1; i < points.length; i++) {
           const xc = (points[i].x + points[i - 1].x) / 2;
           const yc = (points[i].y + points[i - 1].y) / 2;
           maskCtx.quadraticCurveTo(points[i - 1].x, points[i - 1].y, xc, yc);
         }
         
-        // Connect to last point
         maskCtx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
-        
-        // Stroke only - this creates the exact same coverage as the visual overlay
         maskCtx.stroke();
+        
+        // Then, densely fill with circles to ensure 100% coverage
+        // Calculate appropriate spacing based on radius
+        const spacing = Math.max(1, radius * 0.25); // Fill every quarter-radius
+        
+        for (let i = 0; i < points.length - 1; i++) {
+          const p1 = points[i];
+          const p2 = points[i + 1];
+          const dist = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
+          const steps = Math.ceil(dist / spacing);
+          
+          for (let j = 0; j <= steps; j++) {
+            const t = j / steps;
+            const x = p1.x + (p2.x - p1.x) * t;
+            const y = p1.y + (p2.y - p1.y) * t;
+            
+            maskCtx.beginPath();
+            maskCtx.arc(x, y, radius, 0, Math.PI * 2);
+            maskCtx.fill();
+          }
+        }
       }
     }
     
