@@ -415,93 +415,86 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Create a single displaced frame with controlled displacement
-   * Optimized for large images with efficient pixel processing
+   * Create a single displaced frame using forward warping (splatting)
+   * This prevents duplication by properly filling gaps and handling overlaps
    */
   private createDisplacedFrame(sourceData: ImageData): ImageData {
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
     const width = this.canvas.width;
     const height = this.canvas.height;
     
-    // Use nearest neighbor for sharp results when displacement is low
-    const useNearestNeighbor = this.maxDisplacement < 20;
-    
-    // Pre-calculate commonly used values
     const srcData = sourceData.data;
     const dstData = imageData.data;
-
-    // Process pixels in batches for better cache locality
-    const batchSize = 1000;
     
-    for (let batchStart = 0; batchStart < height; batchStart += batchSize) {
-      const batchEnd = Math.min(batchStart + batchSize, height);
-      
-      for (let y = batchStart; y < batchEnd; y++) {
-        const rowOffset = y * width;
+    // Initialize destination with source (for non-displaced areas)
+    for (let i = 0; i < srcData.length; i++) {
+      dstData[i] = srcData[i];
+    }
+    
+    // Forward warping: push each source pixel to its displaced destination
+    // Use a weight buffer to handle overlapping pixels
+    const weightBuffer = new Float32Array(width * height);
+    const tempBuffer = new Float32Array(width * height * 4);
+    
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const displacement = this.calculateDisplacement(x, y, 1);
         
-        for (let x = 0; x < width; x++) {
-          const displacement = this.calculateDisplacement(x, y, 1);
+        // Calculate destination position
+        let destX = x + displacement.dx;
+        let destY = y + displacement.dy;
+        
+        // Wrap around for seamless loop
+        destX = ((destX % width) + width) % width;
+        destY = ((destY % height) + height) % height;
+        
+        const srcIdx = (y * width + x) * 4;
+        
+        // Splat to nearby pixels for smooth filling
+        const px = Math.floor(destX);
+        const py = Math.floor(destY);
+        const fx = destX - px;
+        const fy = destY - py;
+        
+        // Distribute pixel to 4 neighboring positions (bilinear splatting)
+        const splats = [
+          { x: px, y: py, weight: (1 - fx) * (1 - fy) },
+          { x: (px + 1) % width, y: py, weight: fx * (1 - fy) },
+          { x: px, y: (py + 1) % height, weight: (1 - fx) * fy },
+          { x: (px + 1) % width, y: (py + 1) % height, weight: fx * fy }
+        ];
+        
+        for (const splat of splats) {
+          if (splat.weight < 0.001) continue;
           
-          // Skip negligible displacement
-          if (Math.abs(displacement.dx) < 0.01 && Math.abs(displacement.dy) < 0.01) {
-            const idx = (rowOffset + x) * 4;
-            dstData[idx] = srcData[idx];
-            dstData[idx + 1] = srcData[idx + 1];
-            dstData[idx + 2] = srcData[idx + 2];
-            dstData[idx + 3] = srcData[idx + 3];
-            continue;
-          }
+          const destIdx = (splat.y * width + splat.x) * 4;
+          const bufferIdx = splat.y * width + splat.x;
           
-          // Backward warping with wraparound
-          let sourceX = x - displacement.dx;
-          let sourceY = y - displacement.dy;
-
-          // Wrap around for seamless loop
-          sourceX = ((sourceX % width) + width) % width;
-          sourceY = ((sourceY % height) + height) % height;
-
-          const targetIdx = (rowOffset + x) * 4;
-
-          if (useNearestNeighbor) {
-            // Nearest neighbor - fast and sharp
-            const nearX = Math.round(sourceX) % width;
-            const nearY = Math.round(sourceY) % height;
-            const sourceIdx = (nearY * width + nearX) * 4;
-            
-            dstData[targetIdx] = srcData[sourceIdx];
-            dstData[targetIdx + 1] = srcData[sourceIdx + 1];
-            dstData[targetIdx + 2] = srcData[sourceIdx + 2];
-            dstData[targetIdx + 3] = srcData[sourceIdx + 3];
-          } else {
-            // Bilinear interpolation for smooth displacement
-            const x1 = Math.floor(sourceX);
-            const y1 = Math.floor(sourceY);
-            const x2 = (x1 + 1) % width;
-            const y2 = (y1 + 1) % height;
-            
-            const fx = sourceX - x1;
-            const fy = sourceY - y1;
-
-            const idx11 = (y1 * width + x1) * 4;
-            const idx21 = (y1 * width + x2) * 4;
-            const idx12 = (y2 * width + x1) * 4;
-            const idx22 = (y2 * width + x2) * 4;
-
-            // Interpolate each channel
-            for (let channel = 0; channel < 4; channel++) {
-              const c11 = srcData[idx11 + channel];
-              const c21 = srcData[idx21 + channel];
-              const c12 = srcData[idx12 + channel];
-              const c22 = srcData[idx22 + channel];
-
-              const c1 = c11 * (1 - fx) + c21 * fx;
-              const c2 = c12 * (1 - fx) + c22 * fx;
-              const interpolated = c1 * (1 - fy) + c2 * fy;
-
-              dstData[targetIdx + channel] = Math.round(interpolated);
-            }
-          }
+          tempBuffer[destIdx] += srcData[srcIdx] * splat.weight;
+          tempBuffer[destIdx + 1] += srcData[srcIdx + 1] * splat.weight;
+          tempBuffer[destIdx + 2] += srcData[srcIdx + 2] * splat.weight;
+          tempBuffer[destIdx + 3] += srcData[srcIdx + 3] * splat.weight;
+          
+          weightBuffer[bufferIdx] += splat.weight;
         }
+      }
+    }
+    
+    // Normalize by weights and fill any remaining gaps
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const bufferIdx = y * width + x;
+        const destIdx = (y * width + x) * 4;
+        
+        if (weightBuffer[bufferIdx] > 0.01) {
+          // Normalize accumulated color by weight
+          const w = weightBuffer[bufferIdx];
+          dstData[destIdx] = Math.round(tempBuffer[destIdx] / w);
+          dstData[destIdx + 1] = Math.round(tempBuffer[destIdx + 1] / w);
+          dstData[destIdx + 2] = Math.round(tempBuffer[destIdx + 2] / w);
+          dstData[destIdx + 3] = Math.round(tempBuffer[destIdx + 3] / w);
+        }
+        // Else: keep original pixel (already initialized)
       }
     }
 
