@@ -425,8 +425,8 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Create a single displaced frame using forward warping (splatting)
-   * This prevents duplication by properly filling gaps and handling overlaps
+   * Create a single displaced frame using nearest-neighbor displacement
+   * This provides crisp, sharp motion without any blur
    */
   private createDisplacedFrame(sourceData: ImageData): ImageData {
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
@@ -442,69 +442,37 @@ export class MotionAnimationEngine {
     }
     
     // Forward warping: push each source pixel to its displaced destination
-    // Use a weight buffer to handle overlapping pixels
-    const weightBuffer = new Float32Array(width * height);
-    const tempBuffer = new Float32Array(width * height * 4);
+    // Use nearest neighbor for crisp, sharp results
+    const occupied = new Uint8Array(width * height); // Track which pixels have been written
     
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const displacement = this.calculateDisplacement(x, y, 1);
         
-        // Calculate destination position
-        let destX = x + displacement.dx;
-        let destY = y + displacement.dy;
+        // Skip pixels with no displacement
+        if (Math.abs(displacement.dx) < 0.1 && Math.abs(displacement.dy) < 0.1) {
+          continue;
+        }
+        
+        // Calculate destination position (nearest neighbor)
+        let destX = Math.round(x + displacement.dx);
+        let destY = Math.round(y + displacement.dy);
         
         // Wrap around for seamless loop
         destX = ((destX % width) + width) % width;
         destY = ((destY % height) + height) % height;
         
         const srcIdx = (y * width + x) * 4;
+        const destIdx = (destY * width + destX) * 4;
+        const occupiedIdx = destY * width + destX;
         
-        // Splat to nearby pixels for smooth filling
-        const px = Math.floor(destX);
-        const py = Math.floor(destY);
-        const fx = destX - px;
-        const fy = destY - py;
+        // Copy pixel to destination (nearest neighbor - no interpolation)
+        dstData[destIdx] = srcData[srcIdx];
+        dstData[destIdx + 1] = srcData[srcIdx + 1];
+        dstData[destIdx + 2] = srcData[srcIdx + 2];
+        dstData[destIdx + 3] = srcData[srcIdx + 3];
         
-        // Distribute pixel to 4 neighboring positions (bilinear splatting)
-        const splats = [
-          { x: px, y: py, weight: (1 - fx) * (1 - fy) },
-          { x: (px + 1) % width, y: py, weight: fx * (1 - fy) },
-          { x: px, y: (py + 1) % height, weight: (1 - fx) * fy },
-          { x: (px + 1) % width, y: (py + 1) % height, weight: fx * fy }
-        ];
-        
-        for (const splat of splats) {
-          if (splat.weight < 0.001) continue;
-          
-          const destIdx = (splat.y * width + splat.x) * 4;
-          const bufferIdx = splat.y * width + splat.x;
-          
-          tempBuffer[destIdx] += srcData[srcIdx] * splat.weight;
-          tempBuffer[destIdx + 1] += srcData[srcIdx + 1] * splat.weight;
-          tempBuffer[destIdx + 2] += srcData[srcIdx + 2] * splat.weight;
-          tempBuffer[destIdx + 3] += srcData[srcIdx + 3] * splat.weight;
-          
-          weightBuffer[bufferIdx] += splat.weight;
-        }
-      }
-    }
-    
-    // Normalize by weights and fill any remaining gaps
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const bufferIdx = y * width + x;
-        const destIdx = (y * width + x) * 4;
-        
-        if (weightBuffer[bufferIdx] > 0.01) {
-          // Normalize accumulated color by weight
-          const w = weightBuffer[bufferIdx];
-          dstData[destIdx] = Math.round(tempBuffer[destIdx] / w);
-          dstData[destIdx + 1] = Math.round(tempBuffer[destIdx + 1] / w);
-          dstData[destIdx + 2] = Math.round(tempBuffer[destIdx + 2] / w);
-          dstData[destIdx + 3] = Math.round(tempBuffer[destIdx + 3] / w);
-        }
-        // Else: keep original pixel (already initialized)
+        occupied[occupiedIdx] = 1;
       }
     }
 
