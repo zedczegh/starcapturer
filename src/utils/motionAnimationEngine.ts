@@ -493,8 +493,8 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * CRITICAL FIX: Selection-aware displacement with smooth edge handling
-   * Uses gradient displacement at edges to prevent duplicate appearance
+   * CRITICAL FIX: Selection-aware displacement with proper fade-out trails
+   * Creates smooth transition from displaced pixels to original at boundaries
    */
   private createDisplacedFrame(sourceData: ImageData): ImageData {
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
@@ -503,6 +503,7 @@ export class MotionAnimationEngine {
     
     const srcData = sourceData.data;
     const dstData = imageData.data;
+    const originalData = this.originalImageData.data;
     
     // Helper: Check if a pixel is selected with bounds check
     const isSelected = (x: number, y: number): boolean => {
@@ -534,25 +535,21 @@ export class MotionAnimationEngine {
         
         if (!isSelected(x, y)) {
           // Unselected pixel - copy original
-          dstData[destIdx] = srcData[destIdx];
-          dstData[destIdx + 1] = srcData[destIdx + 1];
-          dstData[destIdx + 2] = srcData[destIdx + 2];
-          dstData[destIdx + 3] = srcData[destIdx + 3];
+          dstData[destIdx] = originalData[destIdx];
+          dstData[destIdx + 1] = originalData[destIdx + 1];
+          dstData[destIdx + 2] = originalData[destIdx + 2];
+          dstData[destIdx + 3] = originalData[destIdx + 3];
           continue;
         }
         
-        // Calculate density-based displacement scale (smooth gradient from edge to center)
+        // Calculate density-based fade factor
         const destDensity = getSelectionDensity(x, y, 3);
         
-        // Gentler power curve that maintains more displacement at edges
-        // This prevents edge pixels from looking static or duplicate
-        const displacementScale = Math.pow(destDensity, 0.8); // Gentler falloff
-        
-        // Calculate displacement - ALL selected pixels must animate
+        // Calculate displacement
         const displacement = this.calculateDisplacement(x, y, 1);
         
-        let srcX = x - displacement.dx * displacementScale;
-        let srcY = y - displacement.dy * displacementScale;
+        let srcX = x - displacement.dx;
+        let srcY = y - displacement.dy;
         
         // Clamp to bounds
         srcX = Math.max(0, Math.min(width - 1, srcX));
@@ -561,13 +558,18 @@ export class MotionAnimationEngine {
         const sourcePosX = Math.round(srcX);
         const sourcePosY = Math.round(srcY);
         
-        // Always displace - never copy original for selected pixels
-        // This ensures edges animate properly in both cycles
+        // Get displaced pixel
         const srcIdx = (sourcePosY * width + sourcePosX) * 4;
-        dstData[destIdx] = srcData[srcIdx];
-        dstData[destIdx + 1] = srcData[srcIdx + 1];
-        dstData[destIdx + 2] = srcData[srcIdx + 2];
-        dstData[destIdx + 3] = srcData[srcIdx + 3];
+        
+        // Fade effect: blend displaced pixels with original based on edge proximity
+        // Core area (high density) = pure displacement
+        // Edge area (low density) = gradual fade to original for smooth trails
+        const fadeStrength = Math.pow(destDensity, 0.6); // Smooth fade curve
+        
+        dstData[destIdx] = Math.round(srcData[srcIdx] * fadeStrength + originalData[destIdx] * (1 - fadeStrength));
+        dstData[destIdx + 1] = Math.round(srcData[srcIdx + 1] * fadeStrength + originalData[destIdx + 1] * (1 - fadeStrength));
+        dstData[destIdx + 2] = Math.round(srcData[srcIdx + 2] * fadeStrength + originalData[destIdx + 2] * (1 - fadeStrength));
+        dstData[destIdx + 3] = originalData[destIdx + 3];
       }
     }
     
