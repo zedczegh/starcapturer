@@ -530,9 +530,10 @@ export class MotionAnimationEngine {
         const falloff = Math.pow(1 - normalizedDist, 1.5);
         const weight = falloff * vector.strength;
         
-        // Use configurable max displacement
-        const normalizedDx = vector.dx / Math.max(Math.abs(vector.dx), Math.abs(vector.dy), 1);
-        const normalizedDy = vector.dy / Math.max(Math.abs(vector.dx), Math.abs(vector.dy), 1);
+        // Use configurable max displacement - preserve exact arrow direction
+        const magnitude = Math.sqrt(vector.dx ** 2 + vector.dy ** 2);
+        const normalizedDx = magnitude > 0 ? vector.dx / magnitude : 0;
+        const normalizedDy = magnitude > 0 ? vector.dy / magnitude : 0;
         
         totalDx += normalizedDx * weight * this.maxDisplacement * intensity;
         totalDy += normalizedDy * weight * this.maxDisplacement * intensity;
