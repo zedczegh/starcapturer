@@ -175,8 +175,9 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Rebuild the unified selection mask from all range strokes and points
-   * Uses canvas rendering for natural, smooth painted regions
+   * Rebuild the unified selection mask - MATHEMATICAL APPROACH
+   * Build mask by calculating distance to stroke points instead of canvas rendering
+   * This gives pixel-perfect selection control without anti-aliasing artifacts
    */
   private rebuildSelectionMask() {
     const width = this.canvas.width;
@@ -194,91 +195,114 @@ export class MotionAnimationEngine {
       return;
     }
     
-    // Create an offscreen canvas to render the selection mask
-    const maskCanvas = document.createElement('canvas');
-    maskCanvas.width = width;
-    maskCanvas.height = height;
-    const maskCtx = maskCanvas.getContext('2d', { 
-      willReadFrequently: true,
-      alpha: true 
-    })!;
+    // Build selection mask mathematically - check each pixel's distance to strokes
+    // This eliminates anti-aliasing and gives exact control over selection boundaries
     
-    // Disable anti-aliasing for pixel-perfect selection boundaries
-    maskCtx.imageSmoothingEnabled = false;
-    maskCtx.lineCap = 'round';
-    maskCtx.lineJoin = 'round';
-    maskCtx.fillStyle = 'white';
-    maskCtx.strokeStyle = 'white';
-    
-    // Draw all strokes onto the mask canvas
+    // Process each stroke
     for (const stroke of this.rangeStrokes) {
       const { points, radius } = stroke;
-      
       if (points.length === 0) continue;
       
+      // For single point, select all pixels within radius
       if (points.length === 1) {
-        // Single point - draw a circle
-        maskCtx.beginPath();
-        maskCtx.arc(points[0].x, points[0].y, radius, 0, Math.PI * 2);
-        maskCtx.fill();
-      } else {
-        // Multiple points - use stroke only for clean single-layer coverage
-        // This prevents repeated/overlapping selection that causes animation issues
-        maskCtx.lineWidth = radius * 2;
-        maskCtx.lineCap = "round";
-        maskCtx.lineJoin = "round";
-        maskCtx.beginPath();
-        maskCtx.moveTo(points[0].x, points[0].y);
+        this.selectCircle(points[0].x, points[0].y, radius, width, height);
+        continue;
+      }
+      
+      // For multi-point stroke, select pixels within radius of any line segment
+      for (let i = 0; i < points.length - 1; i++) {
+        this.selectLineSegment(
+          points[i].x, points[i].y,
+          points[i + 1].x, points[i + 1].y,
+          radius, width, height
+        );
+      }
+      
+      // Add circles at endpoints for complete coverage
+      this.selectCircle(points[0].x, points[0].y, radius, width, height);
+      this.selectCircle(points[points.length - 1].x, points[points.length - 1].y, radius, width, height);
+    }
+    
+    // Process individual points
+    for (const point of this.rangePoints) {
+      this.selectCircle(point.x, point.y, point.radius, width, height);
+    }
+    
+    // Apply erosion to shrink selection by 2-3 pixels on all sides
+    // This removes edge artifacts and ensures only solidly painted areas are selected
+    this.erodeSelectionMask(width, height, 3);
+  }
+  
+  /**
+   * Select all pixels within a circle (mathematical calculation)
+   */
+  private selectCircle(cx: number, cy: number, radius: number, width: number, height: number) {
+    // Only check pixels in bounding box around circle for efficiency
+    const minX = Math.max(0, Math.floor(cx - radius));
+    const maxX = Math.min(width - 1, Math.ceil(cx + radius));
+    const minY = Math.max(0, Math.floor(cy - radius));
+    const maxY = Math.min(height - 1, Math.ceil(cy + radius));
+    
+    const radiusSq = radius * radius;
+    
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        const dx = x - cx;
+        const dy = y - cy;
+        const distSq = dx * dx + dy * dy;
         
-        // Use smooth curves matching the visual overlay exactly
-        for (let i = 1; i < points.length; i++) {
-          const xc = (points[i].x + points[i - 1].x) / 2;
-          const yc = (points[i].y + points[i - 1].y) / 2;
-          maskCtx.quadraticCurveTo(points[i - 1].x, points[i - 1].y, xc, yc);
+        if (distSq <= radiusSq) {
+          const idx = y * width + x;
+          this.selectionMask[idx] = 255;
         }
-        
-        maskCtx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
-        maskCtx.stroke();
-        
-        // Add circles only at endpoints to ensure complete coverage at stroke ends
-        maskCtx.beginPath();
-        maskCtx.arc(points[0].x, points[0].y, radius, 0, Math.PI * 2);
-        maskCtx.fill();
-        
-        maskCtx.beginPath();
-        maskCtx.arc(points[points.length - 1].x, points[points.length - 1].y, radius, 0, Math.PI * 2);
-        maskCtx.fill();
       }
     }
+  }
+  
+  /**
+   * Select all pixels within radius of a line segment (mathematical calculation)
+   */
+  private selectLineSegment(
+    x1: number, y1: number,
+    x2: number, y2: number,
+    radius: number, width: number, height: number
+  ) {
+    // Bounding box for the line segment plus radius
+    const minX = Math.max(0, Math.floor(Math.min(x1, x2) - radius));
+    const maxX = Math.min(width - 1, Math.ceil(Math.max(x1, x2) + radius));
+    const minY = Math.max(0, Math.floor(Math.min(y1, y2) - radius));
+    const maxY = Math.min(height - 1, Math.ceil(Math.max(y1, y2) + radius));
     
-    // Draw individual points
-    for (const point of this.rangePoints) {
-      maskCtx.beginPath();
-      maskCtx.arc(point.x, point.y, point.radius, 0, Math.PI * 2);
-      maskCtx.fill();
+    const radiusSq = radius * radius;
+    
+    // Line segment vector
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const lengthSq = dx * dx + dy * dy;
+    
+    if (lengthSq === 0) {
+      // Degenerate case: both points are the same
+      this.selectCircle(x1, y1, radius, width, height);
+      return;
     }
     
-    // Extract the alpha/luminance data from the rendered mask
-    const maskImageData = maskCtx.getImageData(0, 0, width, height);
-    const maskData = maskImageData.data;
-    
-    // Convert to binary mask with VERY strict threshold to prevent overselection
-    // Only pixels with near-complete coverage are selected
-    const threshold = 250; // 98% threshold - extremely strict to exclude edge pixels
-    for (let i = 0; i < width * height; i++) {
-      const pixelIndex = i * 4;
-      const value = maskData[pixelIndex]; // Red channel
-      const alpha = maskData[pixelIndex + 3]; // Alpha channel
-      
-      // Binary selection: either fully selected or not selected
-      // Use extremely strict threshold to only select core painted areas
-      const combined = (value / 255) * (alpha / 255) * 255;
-      this.selectionMask[i] = combined >= threshold ? 255 : 0;
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        // Calculate distance from pixel to line segment
+        const t = Math.max(0, Math.min(1, ((x - x1) * dx + (y - y1) * dy) / lengthSq));
+        const closestX = x1 + t * dx;
+        const closestY = y1 + t * dy;
+        
+        const distX = x - closestX;
+        const distY = y - closestY;
+        const distSq = distX * distX + distY * distY;
+        
+        if (distSq <= radiusSq) {
+          const idx = y * width + x;
+          this.selectionMask[idx] = 255;
+        }
+      }
     }
-    
-    // Apply erosion to shrink selection slightly and remove stray edge pixels
-    // This prevents accidental selection of nearby unwanted regions
-    this.erodeSelectionMask(width, height, 1);
   }
   
   /**
