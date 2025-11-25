@@ -198,9 +198,13 @@ export class MotionAnimationEngine {
     const maskCanvas = document.createElement('canvas');
     maskCanvas.width = width;
     maskCanvas.height = height;
-    const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true })!;
+    const maskCtx = maskCanvas.getContext('2d', { 
+      willReadFrequently: true,
+      alpha: true 
+    })!;
     
-    // Set up for smooth, anti-aliased drawing
+    // Disable anti-aliasing for pixel-perfect selection boundaries
+    maskCtx.imageSmoothingEnabled = false;
     maskCtx.lineCap = 'round';
     maskCtx.lineJoin = 'round';
     maskCtx.fillStyle = 'white';
@@ -258,21 +262,59 @@ export class MotionAnimationEngine {
     const maskImageData = maskCtx.getImageData(0, 0, width, height);
     const maskData = maskImageData.data;
     
-    // Convert to binary mask with stricter threshold to prevent overselection
-    // Only pixels with strong coverage are selected
-    const threshold = 200; // 78% threshold - much stricter to avoid selecting unintended areas
+    // Convert to binary mask with VERY strict threshold to prevent overselection
+    // Only pixels with near-complete coverage are selected
+    const threshold = 250; // 98% threshold - extremely strict to exclude edge pixels
     for (let i = 0; i < width * height; i++) {
       const pixelIndex = i * 4;
       const value = maskData[pixelIndex]; // Red channel
       const alpha = maskData[pixelIndex + 3]; // Alpha channel
       
       // Binary selection: either fully selected or not selected
-      // Use strict threshold to only select solidly painted areas
+      // Use extremely strict threshold to only select core painted areas
       const combined = (value / 255) * (alpha / 255) * 255;
       this.selectionMask[i] = combined >= threshold ? 255 : 0;
     }
     
-    // No edge smoothing - we want crisp, clean boundaries to prevent dragging
+    // Apply erosion to shrink selection slightly and remove stray edge pixels
+    // This prevents accidental selection of nearby unwanted regions
+    this.erodeSelectionMask(width, height, 1);
+  }
+  
+  /**
+   * Erode selection mask to shrink selection boundaries
+   * This removes stray edge pixels and prevents accidental overselection
+   */
+  private erodeSelectionMask(width: number, height: number, iterations: number = 1) {
+    for (let iter = 0; iter < iterations; iter++) {
+      const tempMask = new Uint8Array(this.selectionMask);
+      
+      for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+          const idx = y * width + x;
+          
+          // Only process selected pixels
+          if (tempMask[idx] === 255) {
+            // Check 8-connected neighbors
+            const neighbors = [
+              tempMask[idx - 1],           // left
+              tempMask[idx + 1],           // right
+              tempMask[idx - width],       // top
+              tempMask[idx + width],       // bottom
+              tempMask[idx - width - 1],   // top-left
+              tempMask[idx - width + 1],   // top-right
+              tempMask[idx + width - 1],   // bottom-left
+              tempMask[idx + width + 1]    // bottom-right
+            ];
+            
+            // If any neighbor is unselected, erode this pixel
+            if (neighbors.some(n => n === 0)) {
+              this.selectionMask[idx] = 0;
+            }
+          }
+        }
+      }
+    }
   }
   
   /**
