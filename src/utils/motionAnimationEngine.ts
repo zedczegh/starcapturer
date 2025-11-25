@@ -47,6 +47,7 @@ export class MotionAnimationEngine {
   private motionBlurAmount: number = 0.3; // 0 = no blur (always show original), 1 = max blur
   private coreBrightening: boolean = true; // Enable core brightening effect
   private reverseDirection: boolean = false; // Reverse animation direction
+  private numKeyframes: number = 12; // Number of keyframes to generate
   
   // Keyframe-based animation
   private keyframes: Keyframe[] = [];
@@ -148,6 +149,15 @@ export class MotionAnimationEngine {
   public setReverseDirection(enabled: boolean) {
     this.reverseDirection = enabled;
     // Regenerate keyframes when direction changes
+    if (this.motionVectors.length > 0 || this.rangePoints.length > 0) {
+      this.generateKeyframes();
+    }
+  }
+
+  // Public method to update number of keyframes
+  public setNumKeyframes(amount: number) {
+    this.numKeyframes = Math.max(2, Math.min(60, amount)); // Clamp between 2-60
+    // Regenerate keyframes when amount changes
     if (this.motionVectors.length > 0 || this.rangePoints.length > 0) {
       this.generateKeyframes();
     }
@@ -389,7 +399,7 @@ export class MotionAnimationEngine {
     
     // Clear old keyframes to free memory
     this.keyframes = [];
-    const numFrames = 12;
+    const numFrames = this.numKeyframes;
 
     // Start from the original image
     let sourceFrame = this.originalImageData;
@@ -411,7 +421,7 @@ export class MotionAnimationEngine {
       }
     }
 
-    console.log('Generated 12 keyframes for continuous one-directional loop');
+    console.log(`Generated ${numFrames} keyframes for continuous one-directional loop`);
   }
 
   /**
