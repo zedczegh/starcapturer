@@ -198,25 +198,29 @@ export class MotionAnimationEngine {
         maskCtx.arc(points[0].x, points[0].y, radius, 0, Math.PI * 2);
         maskCtx.fill();
       } else {
-        // Multiple points - draw smooth path with round caps
+        // Multiple points - use EXACT same rendering as visual overlay (quadratic curves)
         maskCtx.lineWidth = radius * 2;
+        maskCtx.lineCap = "round";
+        maskCtx.lineJoin = "round";
         maskCtx.beginPath();
         maskCtx.moveTo(points[0].x, points[0].y);
         
+        // Use quadratic curves for smooth strokes (matches visual overlay exactly)
         for (let i = 1; i < points.length; i++) {
-          maskCtx.lineTo(points[i].x, points[i].y);
+          const xc = (points[i].x + points[i - 1].x) / 2;
+          const yc = (points[i].y + points[i - 1].y) / 2;
+          maskCtx.quadraticCurveTo(points[i - 1].x, points[i - 1].y, xc, yc);
         }
         
+        maskCtx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
         maskCtx.stroke();
         
-        // Also draw circles at endpoints to ensure complete coverage
-        maskCtx.beginPath();
-        maskCtx.arc(points[0].x, points[0].y, radius, 0, Math.PI * 2);
-        maskCtx.fill();
-        
-        maskCtx.beginPath();
-        maskCtx.arc(points[points.length - 1].x, points[points.length - 1].y, radius, 0, Math.PI * 2);
-        maskCtx.fill();
+        // Fill the entire stroke area by drawing circles along the path
+        for (const point of points) {
+          maskCtx.beginPath();
+          maskCtx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+          maskCtx.fill();
+        }
       }
     }
     
