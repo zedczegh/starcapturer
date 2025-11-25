@@ -494,7 +494,8 @@ export class MotionAnimationEngine {
 
   /**
    * Create a single displaced frame using backward warping (pulling)
-   * This eliminates pixel duplication and dragging trails for clean motion like MotionLeap
+   * CRITICAL FIX: Only displace pixels when BOTH destination AND source are selected
+   * This prevents dragging artifacts from pulling unselected pixels into selected regions
    */
   private createDisplacedFrame(sourceData: ImageData): ImageData {
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
@@ -505,9 +506,25 @@ export class MotionAnimationEngine {
     const dstData = imageData.data;
     
     // Backward warping: for each destination pixel, pull from its source position
-    // This prevents duplication and dragging by ensuring each pixel appears only once
+    // BUT only if both source and destination are in the selection mask
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
+        const destIdx = (y * width + x) * 4;
+        const maskIdx = y * width + x;
+        
+        // Check if destination pixel is selected
+        const isDestSelected = this.selectionMask && this.selectionMask[maskIdx] === 255;
+        
+        if (!isDestSelected) {
+          // Not selected - copy from original position (no displacement)
+          const srcIdx = destIdx;
+          dstData[destIdx] = srcData[srcIdx];
+          dstData[destIdx + 1] = srcData[srcIdx + 1];
+          dstData[destIdx + 2] = srcData[srcIdx + 2];
+          dstData[destIdx + 3] = srcData[srcIdx + 3];
+          continue;
+        }
+        
         // Calculate where this pixel should pull from (reverse displacement)
         const displacement = this.calculateDisplacement(x, y, 1);
         
@@ -515,22 +532,36 @@ export class MotionAnimationEngine {
         let srcX = x - displacement.dx;
         let srcY = y - displacement.dy;
         
-        // Wrap coordinates for seamless edges
-        srcX = ((srcX % width) + width) % width;
-        srcY = ((srcY % height) + height) % height;
+        // Clamp to image bounds (don't wrap - prevents pulling from wrong areas)
+        srcX = Math.max(0, Math.min(width - 1, srcX));
+        srcY = Math.max(0, Math.min(height - 1, srcY));
         
         // Use nearest neighbor sampling for crisp results
         const sourcePosX = Math.round(srcX);
         const sourcePosY = Math.round(srcY);
         
-        const srcIdx = (sourcePosY * width + sourcePosX) * 4;
-        const destIdx = (y * width + x) * 4;
+        // Check if SOURCE pixel is also selected
+        const srcMaskIdx = sourcePosY * width + sourcePosX;
+        const isSrcSelected = this.selectionMask && this.selectionMask[srcMaskIdx] === 255;
         
-        // Copy pixel from source (no blending, no duplication)
-        dstData[destIdx] = srcData[srcIdx];
-        dstData[destIdx + 1] = srcData[srcIdx + 1];
-        dstData[destIdx + 2] = srcData[srcIdx + 2];
-        dstData[destIdx + 3] = srcData[srcIdx + 3];
+        const srcIdx = (sourcePosY * width + sourcePosX) * 4;
+        
+        if (isSrcSelected) {
+          // Both source and destination selected - safe to displace
+          dstData[destIdx] = srcData[srcIdx];
+          dstData[destIdx + 1] = srcData[srcIdx + 1];
+          dstData[destIdx + 2] = srcData[srcIdx + 2];
+          dstData[destIdx + 3] = srcData[srcIdx + 3];
+        } else {
+          // Source is NOT selected - don't pull from unselected area
+          // Instead, copy from current position (no displacement)
+          // This prevents dragging unselected pixels into the animation
+          const fallbackIdx = destIdx;
+          dstData[destIdx] = srcData[fallbackIdx];
+          dstData[destIdx + 1] = srcData[fallbackIdx + 1];
+          dstData[destIdx + 2] = srcData[fallbackIdx + 2];
+          dstData[destIdx + 3] = srcData[fallbackIdx + 3];
+        }
       }
     }
 
