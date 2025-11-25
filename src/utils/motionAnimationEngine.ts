@@ -425,8 +425,8 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Create a single displaced frame using nearest-neighbor displacement
-   * This provides crisp, sharp motion without any blur
+   * Create a single displaced frame using backward warping (pulling)
+   * This eliminates pixel duplication and dragging trails for clean motion like MotionLeap
    */
   private createDisplacedFrame(sourceData: ImageData): ImageData {
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
@@ -436,43 +436,33 @@ export class MotionAnimationEngine {
     const srcData = sourceData.data;
     const dstData = imageData.data;
     
-    // Initialize destination with source (for non-displaced areas)
-    for (let i = 0; i < srcData.length; i++) {
-      dstData[i] = srcData[i];
-    }
-    
-    // Forward warping: push each source pixel to its displaced destination
-    // Use nearest neighbor for crisp, sharp results
-    const occupied = new Uint8Array(width * height); // Track which pixels have been written
-    
+    // Backward warping: for each destination pixel, pull from its source position
+    // This prevents duplication and dragging by ensuring each pixel appears only once
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
+        // Calculate where this pixel should pull from (reverse displacement)
         const displacement = this.calculateDisplacement(x, y, 1);
         
-        // Skip pixels with no displacement
-        if (Math.abs(displacement.dx) < 0.1 && Math.abs(displacement.dy) < 0.1) {
-          continue;
-        }
+        // Pull from the source position (backward warping)
+        let srcX = x - displacement.dx;
+        let srcY = y - displacement.dy;
         
-        // Calculate destination position (nearest neighbor)
-        let destX = Math.round(x + displacement.dx);
-        let destY = Math.round(y + displacement.dy);
+        // Wrap coordinates for seamless edges
+        srcX = ((srcX % width) + width) % width;
+        srcY = ((srcY % height) + height) % height;
         
-        // Wrap around for seamless loop
-        destX = ((destX % width) + width) % width;
-        destY = ((destY % height) + height) % height;
+        // Use nearest neighbor sampling for crisp results
+        const sourcePosX = Math.round(srcX);
+        const sourcePosY = Math.round(srcY);
         
-        const srcIdx = (y * width + x) * 4;
-        const destIdx = (destY * width + destX) * 4;
-        const occupiedIdx = destY * width + destX;
+        const srcIdx = (sourcePosY * width + sourcePosX) * 4;
+        const destIdx = (y * width + x) * 4;
         
-        // Copy pixel to destination (nearest neighbor - no interpolation)
+        // Copy pixel from source (no blending, no duplication)
         dstData[destIdx] = srcData[srcIdx];
         dstData[destIdx + 1] = srcData[srcIdx + 1];
         dstData[destIdx + 2] = srcData[srcIdx + 2];
         dstData[destIdx + 3] = srcData[srcIdx + 3];
-        
-        occupied[occupiedIdx] = 1;
       }
     }
 
