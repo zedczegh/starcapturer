@@ -389,7 +389,7 @@ export class MotionAnimationEngine {
     
     // Clear old keyframes to free memory
     this.keyframes = [];
-    const numFrames = 12;
+    const numFrames = 2;
 
     // Start from the original image
     let sourceFrame = this.originalImageData;
