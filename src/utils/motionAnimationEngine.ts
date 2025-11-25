@@ -46,6 +46,7 @@ export class MotionAnimationEngine {
   private maxDisplacement: number = 100; // Configurable max displacement in pixels
   private motionBlurAmount: number = 0.3; // 0 = no blur (always show original), 1 = max blur
   private coreBrightening: boolean = true; // Enable core brightening effect
+  private reverseDirection: boolean = false; // Reverse animation direction
   
   // Keyframe-based animation
   private keyframes: Keyframe[] = [];
@@ -141,6 +142,15 @@ export class MotionAnimationEngine {
   // Public method to update core brightening
   public setCoreBrightening(enabled: boolean) {
     this.coreBrightening = enabled;
+  }
+
+  // Public method to update reverse direction
+  public setReverseDirection(enabled: boolean) {
+    this.reverseDirection = enabled;
+    // Regenerate keyframes when direction changes
+    if (this.motionVectors.length > 0 || this.rangePoints.length > 0) {
+      this.generateKeyframes();
+    }
   }
 
   clear() {
@@ -553,8 +563,15 @@ export class MotionAnimationEngine {
     }
 
     if (totalWeight > 0) {
-      const dx = (totalDx / totalWeight) * selectionWeight;
-      const dy = (totalDy / totalWeight) * selectionWeight;
+      let dx = (totalDx / totalWeight) * selectionWeight;
+      let dy = (totalDy / totalWeight) * selectionWeight;
+      
+      // Apply reverse direction if enabled
+      if (this.reverseDirection) {
+        dx = -dx;
+        dy = -dy;
+      }
+      
       return { dx, dy };
     }
 

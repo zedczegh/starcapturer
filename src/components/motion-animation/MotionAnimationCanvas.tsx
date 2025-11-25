@@ -45,6 +45,7 @@ export const MotionAnimationCanvas = ({
   const [animationSpeed, setAnimationSpeed] = useState(60); // 60% speed by default (relative to base 100)
   const [motionBlur, setMotionBlur] = useState(30); // Motion blur amount 0-100
   const [coreBrightening, setCoreBrightening] = useState(false); // Core brightening effect - off by default
+  const [reverseDirection, setReverseDirection] = useState(false); // Reverse animation direction
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -119,6 +120,13 @@ export const MotionAnimationCanvas = ({
       animationEngineRef.current.setCoreBrightening(coreBrightening);
     }
   }, [coreBrightening]);
+
+  // When reverse direction changes, update the engine parameter
+  useEffect(() => {
+    if (animationEngineRef.current) {
+      animationEngineRef.current.setReverseDirection(reverseDirection);
+    }
+  }, [reverseDirection]);
 
   // When the animation speed changes while playing, update it dynamically
   useEffect(() => {
@@ -778,6 +786,14 @@ export const MotionAnimationCanvas = ({
               <Switch
                 checked={coreBrightening}
                 onCheckedChange={setCoreBrightening}
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <Label>{t("Opposite Direction", "反向运动")}</Label>
+              <Switch
+                checked={reverseDirection}
+                onCheckedChange={setReverseDirection}
               />
             </div>
           </TabsContent>
