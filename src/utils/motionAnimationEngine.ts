@@ -513,6 +513,7 @@ export class MotionAnimationEngine {
 
   /**
    * Calculate displacement for a pixel with controlled motion
+   * Updated to follow trail direction more accurately with localized influence
    */
   private calculateDisplacement(x: number, y: number, intensity: number): { dx: number; dy: number } {
     let totalDx = 0;
@@ -537,17 +538,20 @@ export class MotionAnimationEngine {
       return { dx: 0, dy: 0 };
     }
 
-    // Calculate smooth motion field with extended radius and gentler falloff
-    // Dynamic max distance based on image size to ensure good coverage
-    const baseMaxDist = Math.max(this.canvas.width, this.canvas.height) * 0.4;
+    // Use much more localized influence radius for accurate directional control
+    // This prevents distant motion vectors from affecting pixels incorrectly
+    const baseMaxDist = Math.max(this.canvas.width, this.canvas.height) * 0.15;
     
+    // Find nearest motion vectors and weight them heavily based on distance
     for (const vector of this.motionVectors) {
       const dist = Math.sqrt((x - vector.x) ** 2 + (y - vector.y) ** 2);
       
       if (dist < baseMaxDist) {
         const normalizedDist = dist / baseMaxDist;
-        // Gentler falloff curve - use quadratic instead of exponential for smoother distribution
-        const falloff = Math.pow(1 - normalizedDist, 1.5);
+        
+        // Much steeper falloff to prioritize nearby vectors
+        // This ensures pixels follow the direction of the closest trail segment
+        const falloff = Math.pow(1 - normalizedDist, 3.5);
         const weight = falloff * vector.strength;
         
         // Use configurable max displacement - preserve exact arrow direction
