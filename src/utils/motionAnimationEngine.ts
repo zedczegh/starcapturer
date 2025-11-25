@@ -198,29 +198,26 @@ export class MotionAnimationEngine {
         maskCtx.arc(points[0].x, points[0].y, radius, 0, Math.PI * 2);
         maskCtx.fill();
       } else {
-        // Multiple points - use EXACT same rendering as visual overlay (quadratic curves)
+        // Multiple points - use EXACT same rendering as visual overlay
+        // This must match drawContinuousBrushStroke in MotionAnimationCanvas.tsx precisely
         maskCtx.lineWidth = radius * 2;
         maskCtx.lineCap = "round";
         maskCtx.lineJoin = "round";
         maskCtx.beginPath();
         maskCtx.moveTo(points[0].x, points[0].y);
         
-        // Use quadratic curves for smooth strokes (matches visual overlay exactly)
+        // Use quadratic curves for smooth strokes
         for (let i = 1; i < points.length; i++) {
           const xc = (points[i].x + points[i - 1].x) / 2;
           const yc = (points[i].y + points[i - 1].y) / 2;
           maskCtx.quadraticCurveTo(points[i - 1].x, points[i - 1].y, xc, yc);
         }
         
+        // Connect to last point
         maskCtx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
-        maskCtx.stroke();
         
-        // Fill the entire stroke area by drawing circles along the path
-        for (const point of points) {
-          maskCtx.beginPath();
-          maskCtx.arc(point.x, point.y, radius, 0, Math.PI * 2);
-          maskCtx.fill();
-        }
+        // Stroke only - this creates the exact same coverage as the visual overlay
+        maskCtx.stroke();
       }
     }
     
