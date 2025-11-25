@@ -667,7 +667,8 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Render loop - only show dominant cycle to hide duplicates
+   * Render loop with overlapping cycles for seamless infinite loop
+   * Shows only nearest keyframe (no interpolation) to eliminate static appearance
    */
   private renderLoop(timestamp: number) {
     if (!this.isAnimating) return;
@@ -698,16 +699,15 @@ export class MotionAnimationEngine {
     const cycle1Alpha = calculateCycleAlpha(cycle1Progress);
     const cycle2Alpha = calculateCycleAlpha(cycle2Progress);
     
-    // Only render the dominant cycle to hide duplicates
-    if (cycle1Alpha > cycle2Alpha) {
-      const framePosition = cycle1Progress * (numFrames - 1);
-      const frameIndex = Math.round(framePosition);
-      this.ctx.putImageData(this.keyframes[frameIndex].imageData, 0, 0);
-    } else {
-      const framePosition = cycle2Progress * (numFrames - 1);
-      const frameIndex = Math.round(framePosition);
-      this.ctx.putImageData(this.keyframes[frameIndex].imageData, 0, 0);
-    }
+    // Get nearest frame for each cycle (no interpolation)
+    const framePosition1 = cycle1Progress * (numFrames - 1);
+    const frame1Index = Math.round(framePosition1);
+    
+    const framePosition2 = cycle2Progress * (numFrames - 1);
+    const frame2Index = Math.round(framePosition2);
+    
+    // Render both cycles and composite them
+    this.blendDualCycles(frame1Index, cycle1Alpha, frame2Index, cycle2Alpha);
 
     this.animationFrame = requestAnimationFrame((t) => this.renderLoop(t));
   }
