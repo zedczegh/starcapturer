@@ -149,8 +149,11 @@ export const MotionAnimationCanvas = ({
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    // Account for canvas display size vs internal dimensions
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
 
     if (activeTool === "motion") {
       setIsDrawing(true);
@@ -172,8 +175,11 @@ export const MotionAnimationCanvas = ({
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    // Account for canvas display size vs internal dimensions
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
 
     if (activeTool === "motion" && motionArrowStartRef.current) {
       // Add point to trail and draw it in real-time

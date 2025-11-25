@@ -258,15 +258,16 @@ export class MotionAnimationEngine {
     const maskImageData = maskCtx.getImageData(0, 0, width, height);
     const maskData = maskImageData.data;
     
-    // Convert to binary mask (hard edges, no gradients) to prevent trailing
-    // Any pixel with sufficient coverage is fully selected
-    const threshold = 128; // 50% threshold
+    // Convert to binary mask with stricter threshold to prevent overselection
+    // Only pixels with strong coverage are selected
+    const threshold = 200; // 78% threshold - much stricter to avoid selecting unintended areas
     for (let i = 0; i < width * height; i++) {
       const pixelIndex = i * 4;
       const value = maskData[pixelIndex]; // Red channel
       const alpha = maskData[pixelIndex + 3]; // Alpha channel
       
       // Binary selection: either fully selected or not selected
+      // Use strict threshold to only select solidly painted areas
       const combined = (value / 255) * (alpha / 255) * 255;
       this.selectionMask[i] = combined >= threshold ? 255 : 0;
     }
@@ -485,16 +486,17 @@ export class MotionAnimationEngine {
     if (this.selectionMask && (this.rangeStrokes.length > 0 || this.rangePoints.length > 0)) {
       const maskIdx = Math.floor(y) * this.canvas.width + Math.floor(x);
       
-      // Check bounds
+      // Check bounds strictly
       if (maskIdx >= 0 && maskIdx < this.selectionMask.length) {
-        // Binary selection: pixel is either fully selected (1) or not selected (0)
-        selectionWeight = this.selectionMask[maskIdx] > 127 ? 1 : 0;
+        // Strict binary selection: pixel must be fully selected (255)
+        // This prevents any animation of partially selected or unselected areas
+        selectionWeight = this.selectionMask[maskIdx] === 255 ? 1 : 0;
       } else {
         selectionWeight = 0;
       }
     }
 
-    // Early exit if pixel is not in selection - no partial displacement
+    // Strict early exit - NEVER animate unselected pixels
     if (selectionWeight === 0) {
       return { dx: 0, dy: 0 };
     }
