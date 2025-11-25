@@ -46,6 +46,7 @@ export const MotionAnimationCanvas = ({
   const [motionBlur, setMotionBlur] = useState(30); // Motion blur amount 0-100
   const [coreBrightening, setCoreBrightening] = useState(false); // Core brightening effect - off by default
   const [reverseDirection, setReverseDirection] = useState(false); // Reverse animation direction
+  const [keyframeAmount, setKeyframeAmount] = useState(12); // Number of keyframes 2-60
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -127,6 +128,13 @@ export const MotionAnimationCanvas = ({
       animationEngineRef.current.setReverseDirection(reverseDirection);
     }
   }, [reverseDirection]);
+
+  // When keyframe amount changes, update the engine parameter
+  useEffect(() => {
+    if (animationEngineRef.current) {
+      animationEngineRef.current.setNumKeyframes(keyframeAmount);
+    }
+  }, [keyframeAmount]);
 
   // When the animation speed changes while playing, update it dynamically
   useEffect(() => {
@@ -794,6 +802,18 @@ export const MotionAnimationCanvas = ({
               <Switch
                 checked={reverseDirection}
                 onCheckedChange={setReverseDirection}
+              />
+            </div>
+
+            <div>
+              <Label>{t("Keyframe Amount", "关键帧数量")}: {keyframeAmount}</Label>
+              <Slider
+                value={[keyframeAmount]}
+                onValueChange={([value]) => setKeyframeAmount(value)}
+                min={2}
+                max={60}
+                step={1}
+                className="mt-2"
               />
             </div>
           </TabsContent>
