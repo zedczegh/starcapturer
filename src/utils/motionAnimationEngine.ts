@@ -550,7 +550,8 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Render loop with single continuous cycle for smooth directional movement
+   * Render loop with overlapping cycles for seamless infinite loop
+   * Shows only nearest keyframe (no interpolation) to eliminate static appearance
    */
   private renderLoop(timestamp: number) {
     if (!this.isAnimating) return;
@@ -564,51 +565,99 @@ export class MotionAnimationEngine {
     const progress = (timestamp % this.animationDuration) / this.animationDuration;
     const numFrames = this.keyframes.length;
     
-    // Single continuous cycle
-    const framePosition = progress * numFrames;
-    const currentFrameIndex = Math.floor(framePosition) % numFrames;
-    const nextFrameIndex = (currentFrameIndex + 1) % numFrames;
-    const blendFactor = framePosition - Math.floor(framePosition);
+    // Calculate two animation cycles offset by 50%
+    const cycle1Progress = progress;
+    const cycle2Progress = (progress + 0.5) % 1.0;
     
-    // Render interpolated frame
-    this.renderInterpolatedFrame(currentFrameIndex, nextFrameIndex, blendFactor);
+    // Calculate alpha for each cycle (0-1 fade in/out)
+    const calculateCycleAlpha = (cycleProgress: number) => {
+      if (cycleProgress < 0.7) {
+        return cycleProgress / 0.7;
+      } else {
+        const fadeProgress = (cycleProgress - 0.7) / 0.3;
+        return 1 - fadeProgress;
+      }
+    };
+    
+    const cycle1Alpha = calculateCycleAlpha(cycle1Progress);
+    const cycle2Alpha = calculateCycleAlpha(cycle2Progress);
+    
+    // Get nearest frame for each cycle (no interpolation)
+    const framePosition1 = cycle1Progress * (numFrames - 1);
+    const frame1Index = Math.round(framePosition1);
+    
+    const framePosition2 = cycle2Progress * (numFrames - 1);
+    const frame2Index = Math.round(framePosition2);
+    
+    // Render both cycles and composite them
+    this.blendDualCycles(frame1Index, cycle1Alpha, frame2Index, cycle2Alpha);
 
     this.animationFrame = requestAnimationFrame((t) => this.renderLoop(t));
   }
 
   /**
-   * Render interpolated frame between two keyframes for smooth continuous movement
+   * Blend dual animation cycles for seamless overlap
+   * Uses only nearest keyframes (no interpolation) to eliminate static appearance
    */
-  private renderInterpolatedFrame(currentIndex: number, nextIndex: number, blend: number) {
-    const currentFrame = this.keyframes[currentIndex].imageData;
-    const nextFrame = this.keyframes[nextIndex].imageData;
+  private blendDualCycles(
+    frame1Index: number, alpha1: number,
+    frame2Index: number, alpha2: number
+  ) {
+    const frame1 = this.keyframes[frame1Index].imageData;
+    const frame2 = this.keyframes[frame2Index].imageData;
+    const originalFrame = this.originalImageData;
     
     const blendedImageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
-    const length = currentFrame.data.length;
+    const length = frame1.data.length;
 
+    // Process in batches for better performance with large images
     for (let i = 0; i < length; i += 4) {
-      // Interpolate between current and next displaced frame
-      const r1 = currentFrame.data[i];
-      const g1 = currentFrame.data[i + 1];
-      const b1 = currentFrame.data[i + 2];
+      // Get colors from each cycle's nearest keyframe
+      const r1 = frame1.data[i];
+      const g1 = frame1.data[i + 1];
+      const b1 = frame1.data[i + 2];
       
-      const r2 = nextFrame.data[i];
-      const g2 = nextFrame.data[i + 1];
-      const b2 = nextFrame.data[i + 2];
+      const r2 = frame2.data[i];
+      const g2 = frame2.data[i + 1];
+      const b2 = frame2.data[i + 2];
       
-      // Smooth interpolation between frames
-      let r = r1 * (1 - blend) + r2 * blend;
-      let g = g1 * (1 - blend) + g2 * blend;
-      let b = b1 * (1 - blend) + b2 * blend;
+      let r, g, b;
+      
+      if (this.coreBrightening) {
+        // Brightening on: reduce blur factor to keep animated regions more visible with pulsing
+        const totalAlpha = Math.min(1, alpha1 + alpha2);
+        const rCycles = totalAlpha > 0 ? (r1 * alpha1 + r2 * alpha2) / totalAlpha : r1;
+        const gCycles = totalAlpha > 0 ? (g1 * alpha1 + g2 * alpha2) / totalAlpha : g1;
+        const bCycles = totalAlpha > 0 ? (b1 * alpha1 + b2 * alpha2) / totalAlpha : b1;
+        
+        const blurFactor = 0.3;
+        r = rCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i] * blurFactor * (1 - totalAlpha);
+        g = gCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 1] * blurFactor * (1 - totalAlpha);
+        b = bCycles * (1 - blurFactor * (1 - totalAlpha)) + originalFrame.data[i + 2] * blurFactor * (1 - totalAlpha);
+      } else {
+        // Brightening off: maintain constant visibility without pulsing
+        // Pure cycle crossfade - no alpha-based fading to original image
+        const safeAlpha1 = Math.max(0.0001, alpha1);
+        const safeAlpha2 = Math.max(0.0001, alpha2);
+        const weight1 = safeAlpha1 / (safeAlpha1 + safeAlpha2);
+        const weight2 = safeAlpha2 / (safeAlpha1 + safeAlpha2);
 
-      // Apply motion blur if set
-      if (this.motionBlurAmount > 0.01) {
-        const orig = this.originalImageData;
-        r = r * (1 - this.motionBlurAmount) + orig.data[i] * this.motionBlurAmount;
-        g = g * (1 - this.motionBlurAmount) + orig.data[i + 1] * this.motionBlurAmount;
-        b = b * (1 - this.motionBlurAmount) + orig.data[i + 2] * this.motionBlurAmount;
+        const rCycles = r1 * weight1 + r2 * weight2;
+        const gCycles = g1 * weight1 + g2 * weight2;
+        const bCycles = b1 * weight1 + b2 * weight2;
+        
+        // Apply motion blur only if set (doesn't affect pulsing)
+        if (this.motionBlurAmount > 0.01) {
+          r = rCycles * (1 - this.motionBlurAmount) + originalFrame.data[i] * this.motionBlurAmount;
+          g = gCycles * (1 - this.motionBlurAmount) + originalFrame.data[i + 1] * this.motionBlurAmount;
+          b = bCycles * (1 - this.motionBlurAmount) + originalFrame.data[i + 2] * this.motionBlurAmount;
+        } else {
+          r = rCycles;
+          g = gCycles;
+          b = bCycles;
+        }
       }
-
+      
       blendedImageData.data[i] = Math.round(r);
       blendedImageData.data[i + 1] = Math.round(g);
       blendedImageData.data[i + 2] = Math.round(b);
