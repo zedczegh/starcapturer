@@ -454,8 +454,9 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Generate 12 keyframes for continuous one-directional loop
-   * Optimized for large images with memory management
+   * Generate keyframes for continuous one-directional loop
+   * Uses progressive displacement intensity from the ORIGINAL frame
+   * so previous positions immediately revert instead of leaving trails
    */
   private generateKeyframes() {
     if (this.motionVectors.length === 0) {
@@ -463,28 +464,23 @@ export class MotionAnimationEngine {
       return;
     }
 
-    console.log('Generating keyframes for continuous loop...');
-    
+    console.log("Generating keyframes for continuous loop...");
+
     // Clear old keyframes to free memory
     this.keyframes = [];
     const numFrames = this.numKeyframes;
 
-    // Start from the original image
-    let sourceFrame = this.originalImageData;
-
     // First keyframe: original image (clone to avoid reference issues)
-    this.keyframes.push({ imageData: this.cloneImageData(sourceFrame) });
+    this.keyframes.push({ imageData: this.cloneImageData(this.originalImageData) });
 
-    // Generate subsequent keyframes with progressive displacement
-    // For large images, generate frames one at a time and allow GC
+    // Subsequent keyframes: always displace from ORIGINAL image with increasing intensity
     for (let i = 1; i < numFrames; i++) {
-      const displaced = this.createDisplacedFrame(sourceFrame);
+      const t = i / (numFrames - 1); // 0 → 1 progression across keyframes
+      const displaced = this.createDisplacedFrame(this.originalImageData, t);
       this.keyframes.push({ imageData: displaced });
-      sourceFrame = displaced;
-      
+
       // For very large images, yield to browser occasionally
-      if (i % 4 === 0 && this.canvas.width * this.canvas.height > 1000000) {
-        // Allow browser to process other tasks
+      if (i % 4 === 0 && this.canvas.width * this.canvas.height > 1_000_000) {
         void Promise.resolve();
       }
     }
@@ -493,10 +489,10 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * CRITICAL FIX: Selection-aware displacement with boundary constraints
-   * Reduces displacement near edges and only pulls from solidly selected areas
+   * Selection-aware displacement with boundary constraints
+   * `intensity` controls how far along the path each keyframe pushes pixels
    */
-  private createDisplacedFrame(sourceData: ImageData): ImageData {
+  private createDisplacedFrame(sourceData: ImageData, intensity: number = 1): ImageData {
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
     const width = this.canvas.width;
     const height = this.canvas.height;
@@ -545,8 +541,8 @@ export class MotionAnimationEngine {
         const destDensity = getSelectionDensity(x, y, 3);
         const isEdgePixel = destDensity < 0.95;
         
-        // Calculate displacement
-        const displacement = this.calculateDisplacement(x, y, 1);
+        // Calculate displacement scaled by keyframe intensity
+        const displacement = this.calculateDisplacement(x, y, intensity);
         
         // Reduce displacement near edges to prevent boundary crossing
         const displacementScale = isEdgePixel ? 0.25 : 1.0;
