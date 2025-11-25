@@ -551,7 +551,7 @@ export class MotionAnimationEngine {
 
   /**
    * Render loop with overlapping cycles for seamless infinite loop
-   * Optimized for smooth playback with large images
+   * Shows only nearest keyframe (no interpolation) to eliminate static appearance
    */
   private renderLoop(timestamp: number) {
     if (!this.isAnimating) return;
@@ -582,39 +582,29 @@ export class MotionAnimationEngine {
     const cycle1Alpha = calculateCycleAlpha(cycle1Progress);
     const cycle2Alpha = calculateCycleAlpha(cycle2Progress);
     
-    // Get frames for cycle 1
+    // Get nearest frame for each cycle (no interpolation)
     const framePosition1 = cycle1Progress * (numFrames - 1);
-    const frame1Index = Math.floor(framePosition1);
-    const frame2Index = Math.min(frame1Index + 1, numFrames - 1);
-    const blendFactor1 = framePosition1 - frame1Index;
+    const frame1Index = Math.round(framePosition1);
     
-    // Get frames for cycle 2
     const framePosition2 = cycle2Progress * (numFrames - 1);
-    const frame3Index = Math.floor(framePosition2);
-    const frame4Index = Math.min(frame3Index + 1, numFrames - 1);
-    const blendFactor2 = framePosition2 - frame3Index;
+    const frame2Index = Math.round(framePosition2);
     
     // Render both cycles and composite them
-    this.blendDualCycles(
-      frame1Index, frame2Index, blendFactor1, cycle1Alpha,
-      frame3Index, frame4Index, blendFactor2, cycle2Alpha
-    );
+    this.blendDualCycles(frame1Index, cycle1Alpha, frame2Index, cycle2Alpha);
 
     this.animationFrame = requestAnimationFrame((t) => this.renderLoop(t));
   }
 
   /**
    * Blend dual animation cycles for seamless overlap
-   * Optimized for large images with efficient compositing
+   * Uses only nearest keyframes (no interpolation) to eliminate static appearance
    */
   private blendDualCycles(
-    frame1Index: number, frame2Index: number, blend1: number, alpha1: number,
-    frame3Index: number, frame4Index: number, blend2: number, alpha2: number
+    frame1Index: number, alpha1: number,
+    frame2Index: number, alpha2: number
   ) {
     const frame1 = this.keyframes[frame1Index].imageData;
     const frame2 = this.keyframes[frame2Index].imageData;
-    const frame3 = this.keyframes[frame3Index].imageData;
-    const frame4 = this.keyframes[frame4Index].imageData;
     const originalFrame = this.originalImageData;
     
     const blendedImageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
@@ -622,23 +612,20 @@ export class MotionAnimationEngine {
 
     // Process in batches for better performance with large images
     for (let i = 0; i < length; i += 4) {
-      // Blend cycle 1 frames
-      const r1 = frame1.data[i] * (1 - blend1) + frame2.data[i] * blend1;
-      const g1 = frame1.data[i + 1] * (1 - blend1) + frame2.data[i + 1] * blend1;
-      const b1 = frame1.data[i + 2] * (1 - blend1) + frame2.data[i + 2] * blend1;
+      // Get colors from each cycle's nearest keyframe
+      const r1 = frame1.data[i];
+      const g1 = frame1.data[i + 1];
+      const b1 = frame1.data[i + 2];
       
-      // Blend cycle 2 frames
-      const r2 = frame3.data[i] * (1 - blend2) + frame4.data[i] * blend2;
-      const g2 = frame3.data[i + 1] * (1 - blend2) + frame4.data[i + 1] * blend2;
-      const b2 = frame3.data[i + 2] * (1 - blend2) + frame4.data[i + 2] * blend2;
-      
-      // Composite both cycles together
-      const totalAlpha = Math.min(1, alpha1 + alpha2);
+      const r2 = frame2.data[i];
+      const g2 = frame2.data[i + 1];
+      const b2 = frame2.data[i + 2];
       
       let r, g, b;
       
       if (this.coreBrightening) {
         // Brightening on: reduce blur factor to keep animated regions more visible with pulsing
+        const totalAlpha = Math.min(1, alpha1 + alpha2);
         const rCycles = totalAlpha > 0 ? (r1 * alpha1 + r2 * alpha2) / totalAlpha : r1;
         const gCycles = totalAlpha > 0 ? (g1 * alpha1 + g2 * alpha2) / totalAlpha : g1;
         const bCycles = totalAlpha > 0 ? (b1 * alpha1 + b2 * alpha2) / totalAlpha : b1;
