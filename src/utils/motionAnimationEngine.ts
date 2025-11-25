@@ -493,9 +493,8 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * Create a single displaced frame using backward warping (pulling)
-   * CRITICAL FIX: Only displace pixels when BOTH destination AND source are selected
-   * This prevents dragging artifacts from pulling unselected pixels into selected regions
+   * CRITICAL FIX: Selection-aware displacement with boundary constraints
+   * Reduces displacement near edges and only pulls from solidly selected areas
    */
   private createDisplacedFrame(sourceData: ImageData): ImageData {
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
@@ -505,66 +504,91 @@ export class MotionAnimationEngine {
     const srcData = sourceData.data;
     const dstData = imageData.data;
     
-    // Backward warping: for each destination pixel, pull from its source position
-    // BUT only if both source and destination are in the selection mask
+    // Helper: Check if a pixel is selected with bounds check
+    const isSelected = (x: number, y: number): boolean => {
+      if (x < 0 || x >= width || y < 0 || y >= height) return false;
+      if (!this.selectionMask) return false;
+      return this.selectionMask[y * width + x] === 255;
+    };
+    
+    // Helper: Count selected neighbors in a radius (returns 0.0 to 1.0)
+    const getSelectionDensity = (x: number, y: number, radius: number = 2): number => {
+      let selected = 0;
+      let total = 0;
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+            total++;
+            if (isSelected(nx, ny)) selected++;
+          }
+        }
+      }
+      return total > 0 ? selected / total : 0;
+    };
+    
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const destIdx = (y * width + x) * 4;
-        const maskIdx = y * width + x;
         
-        // Check if destination pixel is selected
-        const isDestSelected = this.selectionMask && this.selectionMask[maskIdx] === 255;
-        
-        if (!isDestSelected) {
-          // Not selected - copy from original position (no displacement)
-          const srcIdx = destIdx;
-          dstData[destIdx] = srcData[srcIdx];
-          dstData[destIdx + 1] = srcData[srcIdx + 1];
-          dstData[destIdx + 2] = srcData[srcIdx + 2];
-          dstData[destIdx + 3] = srcData[srcIdx + 3];
+        if (!isSelected(x, y)) {
+          // Unselected pixel - copy original
+          dstData[destIdx] = srcData[destIdx];
+          dstData[destIdx + 1] = srcData[destIdx + 1];
+          dstData[destIdx + 2] = srcData[destIdx + 2];
+          dstData[destIdx + 3] = srcData[destIdx + 3];
           continue;
         }
         
-        // Calculate where this pixel should pull from (reverse displacement)
+        // Check selection density around this pixel
+        const destDensity = getSelectionDensity(x, y, 3);
+        const isEdgePixel = destDensity < 0.95;
+        
+        // Calculate displacement
         const displacement = this.calculateDisplacement(x, y, 1);
         
-        // Pull from the source position (backward warping)
-        let srcX = x - displacement.dx;
-        let srcY = y - displacement.dy;
+        // Reduce displacement near edges to prevent boundary crossing
+        const displacementScale = isEdgePixel ? 0.25 : 1.0;
         
-        // Clamp to image bounds (don't wrap - prevents pulling from wrong areas)
+        let srcX = x - displacement.dx * displacementScale;
+        let srcY = y - displacement.dy * displacementScale;
+        
+        // Clamp to bounds
         srcX = Math.max(0, Math.min(width - 1, srcX));
         srcY = Math.max(0, Math.min(height - 1, srcY));
         
-        // Use nearest neighbor sampling for crisp results
         const sourcePosX = Math.round(srcX);
         const sourcePosY = Math.round(srcY);
         
-        // Check if SOURCE pixel is also selected
-        const srcMaskIdx = sourcePosY * width + sourcePosX;
-        const isSrcSelected = this.selectionMask && this.selectionMask[srcMaskIdx] === 255;
-        
-        const srcIdx = (sourcePosY * width + sourcePosX) * 4;
-        
-        if (isSrcSelected) {
-          // Both source and destination selected - safe to displace
-          dstData[destIdx] = srcData[srcIdx];
-          dstData[destIdx + 1] = srcData[srcIdx + 1];
-          dstData[destIdx + 2] = srcData[srcIdx + 2];
-          dstData[destIdx + 3] = srcData[srcIdx + 3];
+        // Check source pixel selection and density
+        if (isSelected(sourcePosX, sourcePosY)) {
+          const srcDensity = getSelectionDensity(sourcePosX, sourcePosY, 2);
+          
+          // Only pull from solidly selected source areas (not edges)
+          if (srcDensity > 0.75) {
+            const srcIdx = (sourcePosY * width + sourcePosX) * 4;
+            dstData[destIdx] = srcData[srcIdx];
+            dstData[destIdx + 1] = srcData[srcIdx + 1];
+            dstData[destIdx + 2] = srcData[srcIdx + 2];
+            dstData[destIdx + 3] = srcData[srcIdx + 3];
+          } else {
+            // Source too close to edge - use original
+            dstData[destIdx] = srcData[destIdx];
+            dstData[destIdx + 1] = srcData[destIdx + 1];
+            dstData[destIdx + 2] = srcData[destIdx + 2];
+            dstData[destIdx + 3] = srcData[destIdx + 3];
+          }
         } else {
-          // Source is NOT selected - don't pull from unselected area
-          // Instead, copy from current position (no displacement)
-          // This prevents dragging unselected pixels into the animation
-          const fallbackIdx = destIdx;
-          dstData[destIdx] = srcData[fallbackIdx];
-          dstData[destIdx + 1] = srcData[fallbackIdx + 1];
-          dstData[destIdx + 2] = srcData[fallbackIdx + 2];
-          dstData[destIdx + 3] = srcData[fallbackIdx + 3];
+          // Source not selected - no displacement
+          dstData[destIdx] = srcData[destIdx];
+          dstData[destIdx + 1] = srcData[destIdx + 1];
+          dstData[destIdx + 2] = srcData[destIdx + 2];
+          dstData[destIdx + 3] = srcData[destIdx + 3];
         }
       }
     }
-
+    
     return imageData;
   }
 
