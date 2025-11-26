@@ -470,68 +470,25 @@ export class MotionAnimationEngine {
     this.keyframes = [];
     const numFrames = this.numKeyframes;
 
-    // Start from the original image
-    let sourceFrame = this.originalImageData;
-
-    // First keyframe: original image (clone to avoid reference issues)
-    const originalClone = this.cloneImageData(sourceFrame);
+    // First keyframe: pure original (clone to avoid reference issues)
+    const originalClone = this.cloneImageData(this.originalImageData);
     this.keyframes.push({ imageData: originalClone });
 
-    // Track the last frame that we actually pushed so we can
-    // skip visual duplicates that have almost no displacement
-    let lastPushedFrame = originalClone;
-
-    // Heuristic: minimum number of visibly changed pixels (sampled)
-    const minChangedSamples = 40;
-    const sampleStep = 16; // sample every Nth pixel for performance
-
-    const hasMeaningfulChange = (a: ImageData, b: ImageData): boolean => {
-      const dataA = a.data;
-      const dataB = b.data;
-      const totalPixels = dataA.length / 4;
-      let changed = 0;
-
-      for (let i = 0; i < totalPixels; i += sampleStep) {
-        const idx = i * 4;
-        const dr = Math.abs(dataA[idx] - dataB[idx]);
-        const dg = Math.abs(dataA[idx + 1] - dataB[idx + 1]);
-        const db = Math.abs(dataA[idx + 2] - dataB[idx + 2]);
-
-        // Treat any RGB change above a tiny epsilon as motion
-        if (dr + dg + db > 6) {
-          changed++;
-          if (changed >= minChangedSamples) return true;
-        }
-      }
-
-      return false;
-    };
-
-    // Generate subsequent keyframes with progressive displacement
-    // For large images, generate frames one at a time and allow GC
+    // Generate subsequent keyframes by displacing from the ORIGINAL image
+    // with a progressive intensity factor so motion increases smoothly
+    // from frame 1 to frame N-1. This guarantees that every animated
+    // frame has a different displacement amount and prevents long runs
+    // of static duplicates at the head of the trail.
     for (let i = 1; i < numFrames; i++) {
-      const displaced = this.createDisplacedFrame(sourceFrame);
+      const progress = i / (numFrames - 1); // 0..1
+      const displaced = this.createDisplacedFrame(this.originalImageData, progress);
+      this.keyframes.push({ imageData: displaced });
 
-      // Always advance the simulation so motion accumulates,
-      // but only keep frames that are meaningfully different
-      // from the last one we actually pushed.
-      if (hasMeaningfulChange(displaced, lastPushedFrame)) {
-        this.keyframes.push({ imageData: displaced });
-        lastPushedFrame = displaced;
-      }
-
-      sourceFrame = displaced;
-      
       // For very large images, yield to browser occasionally
       if (i % 4 === 0 && this.canvas.width * this.canvas.height > 1000000) {
         // Allow browser to process other tasks
         void Promise.resolve();
       }
-    }
-
-    // Safety: ensure we always have at least two frames
-    if (this.keyframes.length < 2) {
-      this.keyframes.push({ imageData: this.createDisplacedFrame(sourceFrame) });
     }
 
     console.log(`Generated ${this.keyframes.length} keyframes for continuous one-directional loop`);
@@ -541,7 +498,7 @@ export class MotionAnimationEngine {
    * CRITICAL FIX: Selection-aware displacement with proper fade-out trails
    * Creates smooth transition from displaced pixels to original at boundaries
    */
-  private createDisplacedFrame(sourceData: ImageData): ImageData {
+  private createDisplacedFrame(sourceData: ImageData, intensity: number = 1): ImageData {
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
     const width = this.canvas.width;
     const height = this.canvas.height;
@@ -602,8 +559,9 @@ export class MotionAnimationEngine {
           continue;
         }
         
-        // Calculate displacement
-        const displacement = this.calculateDisplacement(x, y, 1);
+        // Calculate displacement scaled by per-frame intensity so
+        // early keyframes move less and later ones move more.
+        const displacement = this.calculateDisplacement(x, y, intensity);
         
         let srcX = x - displacement.dx;
         let srcY = y - displacement.dy;
