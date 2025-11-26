@@ -469,19 +469,17 @@ export class MotionAnimationEngine {
     this.keyframes = [];
     const numFrames = this.numKeyframes;
 
-    // Start from the original image
-    let sourceFrame = this.originalImageData;
+    // Generate keyframes directly from the original image so there is
+    // NEVER a stack of old positions being carried forward. Each frame
+    // is a fresh displaced version of the original at a different
+    // progress along the trail.
+    const baseFrame = this.originalImageData;
 
-    // First keyframe: original image (clone to avoid reference issues)
-    this.keyframes.push({ imageData: this.cloneImageData(sourceFrame) });
-
-    // Generate subsequent keyframes with progressive displacement
-    // For large images, generate frames one at a time and allow GC
-    for (let i = 1; i < numFrames; i++) {
-      const displaced = this.createDisplacedFrame(sourceFrame);
+    for (let i = 0; i < numFrames; i++) {
+      const progress = numFrames <= 1 ? 0 : i / (numFrames - 1);
+      const displaced = this.createDisplacedFrame(baseFrame, progress);
       this.keyframes.push({ imageData: displaced });
-      sourceFrame = displaced;
-      
+
       // For very large images, yield to browser occasionally
       if (i % 4 === 0 && this.canvas.width * this.canvas.height > 1000000) {
         // Allow browser to process other tasks
@@ -493,15 +491,17 @@ export class MotionAnimationEngine {
   }
 
   /**
-   * CRITICAL FIX: Selection-aware displacement with proper fade-out trails
-   * Creates smooth transition from displaced pixels to original at boundaries
+   * Selection-aware displacement with progress-based motion
+   * `progress` controls how far along the trail this frame is (0→1)
    */
-  private createDisplacedFrame(sourceData: ImageData): ImageData {
+  private createDisplacedFrame(sourceData: ImageData, progress: number = 1): ImageData {
     const imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
     const width = this.canvas.width;
     const height = this.canvas.height;
     
-    const srcData = sourceData.data;
+    // Always use the ORIGINAL as the sampling source so each frame
+    // shows a single clean position instead of accumulating old ones.
+    const srcData = this.originalImageData.data;
     const dstData = imageData.data;
     const originalData = this.originalImageData.data;
     
@@ -546,9 +546,7 @@ export class MotionAnimationEngine {
         const destDensity = getSelectionDensity(x, y, 3);
 
         // HARD EDGE GUARD: very low density = keep pure original pixel
-        // This "hides" the first few duplicate trail samples so the fade
-        // only starts once the brush-covered area is strong enough.
-        const edgeThreshold = 0.35; // tuned to match 2nd→3rd star behavior
+        const edgeThreshold = 0.35;
         if (destDensity < edgeThreshold) {
           dstData[destIdx] = originalData[destIdx];
           dstData[destIdx + 1] = originalData[destIdx + 1];
@@ -557,8 +555,8 @@ export class MotionAnimationEngine {
           continue;
         }
         
-        // Calculate displacement
-        const displacement = this.calculateDisplacement(x, y, 1);
+        // Calculate displacement scaled by progress (0→1)
+        const displacement = this.calculateDisplacement(x, y, progress);
         
         let srcX = x - displacement.dx;
         let srcY = y - displacement.dy;
@@ -570,7 +568,7 @@ export class MotionAnimationEngine {
         const sourcePosX = Math.round(srcX);
         const sourcePosY = Math.round(srcY);
         
-        // Get displaced pixel
+        // Get displaced pixel from ORIGINAL image
         const srcIdx = (sourcePosY * width + sourcePosX) * 4;
         
         // Fade effect: blend displaced pixels with original based on edge proximity
