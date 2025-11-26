@@ -62,7 +62,7 @@ export const MotionAnimationCanvas = ({
   const activeLayer = layers.find(l => l.id === activeLayerId) || layers[0];
   const { settings } = activeLayer;
 
-  // Initialize canvas and animation engine
+  // Initialize canvas and animation engines (run once per image)
   useEffect(() => {
     const canvas = canvasRef.current;
     const overlayCanvas = overlayCanvasRef.current;
@@ -87,25 +87,28 @@ export const MotionAnimationCanvas = ({
     // Draw image
     ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
 
-    // Initialize engines for all layers
-    layerEnginesRef.current.clear();
-    layerVisibilityRef.current.clear();
-    layers.forEach(layer => {
-      const engine = new MotionAnimationEngine(
-        canvas, 
-        imageElement, 
-        layer.settings.displacementAmount, 
-        layer.settings.motionBlur, 
-        layer.settings.coreBrightening
-      );
-      engine.setReverseDirection(layer.settings.reverseDirection);
-      engine.setNumKeyframes(layer.settings.keyframeAmount);
-      layerEnginesRef.current.set(layer.id, engine);
-      layerVisibilityRef.current.set(layer.id, layer.visible);
-    });
-    
-    // Set active engine ref for backward compatibility
-    animationEngineRef.current = layerEnginesRef.current.get(activeLayerId) || null;
+    // Initialize engines for current layers only once here.
+    // Per-layer updates (settings, visibility, add/remove) are handled elsewhere.
+    if (layerEnginesRef.current.size === 0) {
+      layerVisibilityRef.current.clear();
+      layers.forEach(layer => {
+        const engine = new MotionAnimationEngine(
+          canvas,
+          imageElement,
+          layer.settings.displacementAmount,
+          layer.settings.motionBlur,
+          layer.settings.coreBrightening
+        );
+        engine.setReverseDirection(layer.settings.reverseDirection);
+        engine.setNumKeyframes(layer.settings.keyframeAmount);
+        layerEnginesRef.current.set(layer.id, engine);
+        layerVisibilityRef.current.set(layer.id, layer.visible);
+      });
+
+      // Set active engine ref for backward compatibility
+      const activeEngine = layerEnginesRef.current.get(activeLayerId) || null;
+      animationEngineRef.current = activeEngine;
+    }
  
     // Show overlay initially so users can see their strokes
     overlayCanvas.style.opacity = "1";
@@ -119,7 +122,7 @@ export const MotionAnimationCanvas = ({
         cancelAnimationFrame(rafIdRef.current);
       }
     };
-  }, [imageElement, layers]);
+  }, [imageElement]);
 
   // Update active layer's engine when settings change
   useEffect(() => {
