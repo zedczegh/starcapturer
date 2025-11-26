@@ -666,6 +666,7 @@ export class MotionAnimationEngine {
   /**
    * Render loop with overlapping cycles for seamless infinite loop
    * Shows only nearest keyframe (no interpolation) to eliminate static appearance
+   * Skips a configurable number of leading keyframes to hide initial duplicates.
    */
   private renderLoop(timestamp: number) {
     if (!this.isAnimating) return;
@@ -678,11 +679,23 @@ export class MotionAnimationEngine {
 
     const progress = (timestamp % this.animationDuration) / this.animationDuration;
     const numFrames = this.keyframes.length;
-    
+
+    // Hide the first N keyframes (used only for building the trail) from playback
+    const leadingKeyframesToSkip = 12; // hides the 12 duplicated frames the user sees at the start
+    const skip = Math.min(leadingKeyframesToSkip, Math.max(0, numFrames - 2));
+    const effectiveFrames = numFrames - skip;
+
+    // If we don't have enough frames after skipping, just show the original image
+    if (effectiveFrames < 2) {
+      this.ctx.putImageData(this.originalImageData, 0, 0);
+      this.animationFrame = requestAnimationFrame((t) => this.renderLoop(t));
+      return;
+    }
+
     // Calculate two animation cycles offset by 50%
     const cycle1Progress = progress;
     const cycle2Progress = (progress + 0.5) % 1.0;
-    
+
     // Calculate alpha for each cycle (0-1 fade in/out)
     const calculateCycleAlpha = (cycleProgress: number) => {
       if (cycleProgress < 0.7) {
@@ -692,17 +705,17 @@ export class MotionAnimationEngine {
         return 1 - fadeProgress;
       }
     };
-    
+
     const cycle1Alpha = calculateCycleAlpha(cycle1Progress);
     const cycle2Alpha = calculateCycleAlpha(cycle2Progress);
-    
-    // Get nearest frame for each cycle (no interpolation)
-    const framePosition1 = cycle1Progress * (numFrames - 1);
+
+    // Get nearest frame for each cycle (no interpolation), offset by skipped leading frames
+    const framePosition1 = cycle1Progress * (effectiveFrames - 1) + skip;
     const frame1Index = Math.round(framePosition1);
-    
-    const framePosition2 = cycle2Progress * (numFrames - 1);
+
+    const framePosition2 = cycle2Progress * (effectiveFrames - 1) + skip;
     const frame2Index = Math.round(framePosition2);
-    
+
     // Render both cycles and composite them
     this.blendDualCycles(frame1Index, cycle1Alpha, frame2Index, cycle2Alpha);
 
