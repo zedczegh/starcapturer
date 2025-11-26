@@ -461,10 +461,13 @@ export const MotionAnimationCanvas = ({
 
   const handlePlayPause = () => {
     const overlayCanvas = overlayCanvasRef.current;
-    if (!animationEngineRef.current || !overlayCanvas) return;
+    if (!overlayCanvas) return;
 
     if (isPlaying) {
-      animationEngineRef.current.stop();
+      // Stop all layer engines
+      layerEnginesRef.current.forEach(engine => {
+        engine.stop();
+      });
       // Show overlay with drawn elements when paused
       redrawOverlay();
       overlayCanvas.style.opacity = "1";
@@ -472,9 +475,21 @@ export const MotionAnimationCanvas = ({
       // Show loading notification
       toast.info(t("Preparing preview...", "准备预览中..."));
       
-      // Generate keyframes on demand when starting playback to avoid blocking during drawing
-      animationEngineRef.current.updateKeyframes();
-      animationEngineRef.current.play(settings.animationSpeed / 100);
+      // Generate keyframes and play all visible layer engines
+      layerEnginesRef.current.forEach((engine, layerId) => {
+        const isVisible = layerVisibilityRef.current.get(layerId) !== false;
+        engine.setVisible(isVisible);
+        
+        if (isVisible) {
+          engine.updateKeyframes();
+        }
+      });
+      
+      // Start all engines (they check visibility internally during render)
+      layerEnginesRef.current.forEach(engine => {
+        engine.play(settings.animationSpeed / 100);
+      });
+      
       // Hide overlay when playing to show animation
       overlayCanvas.style.opacity = "0";
       
@@ -605,18 +620,23 @@ export const MotionAnimationCanvas = ({
   const handleClear = () => {
     const canvas = canvasRef.current;
     const overlayCanvas = overlayCanvasRef.current;
-    if (!animationEngineRef.current || !canvas || !overlayCanvas) return;
+    if (!canvas || !overlayCanvas) return;
     
-    // Stop animation if playing
+    // Stop all engines if playing
     if (isPlaying) {
-      animationEngineRef.current.stop();
+      layerEnginesRef.current.forEach(engine => {
+        engine.stop();
+      });
       setIsPlaying(false);
     }
     
-    // Clear the animation engine (motion vectors, trails, range points)
-    animationEngineRef.current.clear();
+    // Clear the active layer's animation engine
+    const engine = layerEnginesRef.current.get(activeLayerId);
+    if (engine) {
+      engine.clear();
+    }
     
-    // Clear history
+    // Clear history for active layer
     setLayers(prev => prev.map(layer => {
       if (layer.id !== activeLayerId) return layer;
       return { ...layer, history: [], historyIndex: -1 };
@@ -636,20 +656,13 @@ export const MotionAnimationCanvas = ({
       ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
     }
     
-    // Clear overlay canvas completely
-    const overlayCtx = overlayCanvas.getContext("2d");
-    if (overlayCtx) {
-      overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-    }
-    
-    // Remove any dataset flags
-    delete canvas.dataset.drawing;
-    delete overlayCanvas.dataset.drawing;
+    // Redraw overlay (will show other layers if any)
+    redrawOverlay();
     
     // Keep overlay visible so strokes remain visible
     overlayCanvas.style.opacity = "1";
     
-    toast.success(t("Reset complete - all animations cleared", "重置完成 - 所有动画已清除"));
+    toast.success(t("Layer cleared", "图层已清除"));
   };
 
   return (
@@ -802,6 +815,13 @@ export const MotionAnimationCanvas = ({
             if (layer.id === id) {
               const newVisible = !layer.visible;
               layerVisibilityRef.current.set(id, newVisible);
+              
+              // Update engine visibility for animation rendering
+              const engine = layerEnginesRef.current.get(id);
+              if (engine) {
+                engine.setVisible(newVisible);
+              }
+              
               return { ...layer, visible: newVisible };
             }
             return layer;

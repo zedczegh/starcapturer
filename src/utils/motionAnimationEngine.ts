@@ -43,6 +43,7 @@ export class MotionAnimationEngine {
   private selectionMask: Uint8Array | null = null; // Unified selection mask (0-255 per pixel)
   private animationFrame: number | null = null;
   private isAnimating: boolean = false;
+  private isVisible: boolean = true; // Visibility state for rendering
   private maxDisplacement: number = 100; // Configurable max displacement in pixels
   private motionBlurAmount: number = 0.3; // 0 = no blur (always show original), 1 = max blur
   private coreBrightening: boolean = true; // Enable core brightening effect
@@ -183,6 +184,15 @@ export class MotionAnimationEngine {
   public setColors(rangeColor: string, motionColor: string) {
     this.rangeColor = rangeColor;
     this.motionColor = motionColor;
+  }
+
+  // Allow external control of visibility for rendering
+  public setVisible(visible: boolean) {
+    this.isVisible = visible;
+  }
+
+  public getVisible(): boolean {
+    return this.isVisible;
   }
 
   // Utility: convert hex color to RGB for translucent strokes
@@ -699,9 +709,16 @@ export class MotionAnimationEngine {
   /**
    * Render loop with overlapping cycles for seamless infinite loop
    * Shows only nearest keyframe (no interpolation) to eliminate static appearance
+   * Respects visibility flag - invisible layers don't render
    */
   private renderLoop(timestamp: number) {
     if (!this.isAnimating) return;
+
+    // Skip rendering if this layer is invisible
+    if (!this.isVisible) {
+      this.animationFrame = requestAnimationFrame((t) => this.renderLoop(t));
+      return;
+    }
 
     // First frame after play(): show pure original image so the
     // fade-in starts from maximum saturation, then let the
