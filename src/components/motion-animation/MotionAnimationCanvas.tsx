@@ -224,11 +224,17 @@ export const MotionAnimationCanvas = ({
       
       const canvas = overlayCanvasRef.current;
       const ctx = canvas?.getContext("2d");
-      if (!ctx || !canvas || !animationEngineRef.current) return;
+      if (!ctx || !canvas) return;
 
-      // Clear and redraw overlay
+      // Clear and redraw all visible layers' overlays
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      animationEngineRef.current.drawOverlay(ctx);
+      layers.forEach(layer => {
+        if (!layer.visible) return;
+        const engine = layerEnginesRef.current.get(layer.id);
+        if (engine) {
+          engine.drawOverlay(ctx);
+        }
+      });
 
       // Draw current drawing in real-time
       if (activeTool === "motion" && motionTrailPointsRef.current.length > 1) {
@@ -436,10 +442,18 @@ export const MotionAnimationCanvas = ({
   const redrawOverlay = () => {
     const canvas = overlayCanvasRef.current;
     const ctx = canvas?.getContext("2d");
-    if (!ctx || !canvas || !animationEngineRef.current) return;
+    if (!ctx || !canvas) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    animationEngineRef.current.drawOverlay(ctx);
+    
+    // Draw all visible layers' overlays
+    layers.forEach(layer => {
+      if (!layer.visible) return;
+      const engine = layerEnginesRef.current.get(layer.id);
+      if (engine) {
+        engine.drawOverlay(ctx);
+      }
+    });
   };
 
   const handlePlayPause = () => {
