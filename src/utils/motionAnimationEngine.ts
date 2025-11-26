@@ -544,6 +544,18 @@ export class MotionAnimationEngine {
         
         // Calculate density-based fade factor
         const destDensity = getSelectionDensity(x, y, 3);
+
+        // HARD EDGE GUARD: very low density = keep pure original pixel
+        // This "hides" the first few duplicate trail samples so the fade
+        // only starts once the brush-covered area is strong enough.
+        const edgeThreshold = 0.35; // tuned to match 2nd→3rd star behavior
+        if (destDensity < edgeThreshold) {
+          dstData[destIdx] = originalData[destIdx];
+          dstData[destIdx + 1] = originalData[destIdx + 1];
+          dstData[destIdx + 2] = originalData[destIdx + 2];
+          dstData[destIdx + 3] = originalData[destIdx + 3];
+          continue;
+        }
         
         // Calculate displacement
         const displacement = this.calculateDisplacement(x, y, 1);
@@ -563,8 +575,9 @@ export class MotionAnimationEngine {
         
         // Fade effect: blend displaced pixels with original based on edge proximity
         // Core area (high density) = pure displacement
-        // Edge area (low density) = gradual fade to original for smooth trails
-        const fadeStrength = Math.pow(destDensity, 0.6); // Smooth fade curve
+        // Edge area (near threshold) = gradual fade to original for smooth trails
+        const normalizedDensity = (destDensity - edgeThreshold) / (1 - edgeThreshold);
+        const fadeStrength = Math.pow(normalizedDensity, 0.6); // Smooth fade curve
         
         dstData[destIdx] = Math.round(srcData[srcIdx] * fadeStrength + originalData[destIdx] * (1 - fadeStrength));
         dstData[destIdx + 1] = Math.round(srcData[srcIdx + 1] * fadeStrength + originalData[destIdx + 1] * (1 - fadeStrength));
