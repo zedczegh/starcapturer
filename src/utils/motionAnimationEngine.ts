@@ -796,21 +796,30 @@ export class MotionAnimationEngine {
 
     // Per-frame opacity curve: early frames fade in, late frames remain strong
     // This prevents barely-displaced early keyframes from appearing as static duplicates
-      const getFrameOpacity = (frameIndex: number): number => {
-        if (frameIndex === 0) return 0; // Original never shown in cycles
-        const numAnimatedFrames = this.keyframes.length - 1;
-        const normalizedFrame = (frameIndex - 1) / Math.max(1, numAnimatedFrames - 1); // 0..1
-        // Much shorter fade-in: first 15% ramp from 0.25 → 1 so
-        // early displaced frames are clearly visible and not static.
-        if (normalizedFrame < 0.15) {
-          const local = normalizedFrame / 0.15; // 0..1
-          return 0.25 + 0.75 * local;
-        }
-        return 1.0;
-      };
+    const getFrameOpacity = (frameIndex: number): number => {
+      if (frameIndex === 0) return 0; // Original never shown in cycles
+      const numAnimatedFrames = this.keyframes.length - 1;
+      const normalizedFrame = (frameIndex - 1) / Math.max(1, numAnimatedFrames - 1); // 0..1
+      // Much shorter fade-in: first 15% ramp from 0.25 → 1 so
+      // early displaced frames are clearly visible and not static.
+      if (normalizedFrame < 0.15) {
+        const local = normalizedFrame / 0.15; // 0..1
+        return 0.25 + 0.75 * local;
+      }
+      return 1.0;
+    };
 
     const frame1Opacity = getFrameOpacity(frame1Index);
     const frame2Opacity = getFrameOpacity(frame2Index);
+
+    const width = this.canvas.width;
+    const height = this.canvas.height;
+
+    // Helper to test selection with bounds check
+    const isSelected = (pixelIndex: number): boolean => {
+      if (!this.selectionMask) return true; // if no mask, treat as fully selected
+      return this.selectionMask[pixelIndex / 4] === 255;
+    };
 
     // Process in batches for better performance with large images
     for (let i = 0; i < length; i += 4) {
@@ -827,7 +836,7 @@ export class MotionAnimationEngine {
       const origG = originalFrame.data[i + 1];
       const origB = originalFrame.data[i + 2];
       
-      let r, g, b;
+      let r: number, g: number, b: number, a: number = 255;
       
       if (this.coreBrightening) {
         // Brightening on: reduce blur factor to keep animated regions more visible with pulsing
@@ -855,7 +864,7 @@ export class MotionAnimationEngine {
         
         const weight1 = adjustedTotal > 0 ? adjustedAlpha1 / adjustedTotal : 0.5;
         const weight2 = adjustedTotal > 0 ? adjustedAlpha2 / adjustedTotal : 0.5;
-
+  
         // Blend the two displaced cycles first
         const rCycles = r1 * weight1 + r2 * weight2;
         const gCycles = g1 * weight1 + g2 * weight2;
@@ -873,10 +882,16 @@ export class MotionAnimationEngine {
         b = bCycles * fadeFactor + origB * (1 - fadeFactor);
       }
       
+      // Make non-selected pixels transparent so compositing with the
+      // base image and other layers works correctly.
+      if (!isSelected(i)) {
+        a = 0;
+      }
+      
       blendedImageData.data[i] = Math.round(r);
       blendedImageData.data[i + 1] = Math.round(g);
       blendedImageData.data[i + 2] = Math.round(b);
-      blendedImageData.data[i + 3] = 255;
+      blendedImageData.data[i + 3] = a;
     }
 
     this.ctx.putImageData(blendedImageData, 0, 0);
