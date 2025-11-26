@@ -101,6 +101,7 @@ export const MotionAnimationCanvas = ({
         );
         engine.setReverseDirection(layer.settings.reverseDirection);
         engine.setNumKeyframes(layer.settings.keyframeAmount);
+        engine.setColors(layer.rangeColor, layer.motionColor);
         layerEnginesRef.current.set(layer.id, engine);
         layerVisibilityRef.current.set(layer.id, layer.visible);
       });
@@ -769,7 +770,9 @@ export const MotionAnimationCanvas = ({
             );
             engine.setReverseDirection(newLayer.settings.reverseDirection);
             engine.setNumKeyframes(newLayer.settings.keyframeAmount);
+            engine.setColors(newLayer.rangeColor, newLayer.motionColor);
             layerEnginesRef.current.set(newLayer.id, engine);
+            layerVisibilityRef.current.set(newLayer.id, newLayer.visible);
           }
           
           toast.success(t("Layer added", "图层已添加"));

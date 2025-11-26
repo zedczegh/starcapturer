@@ -50,6 +50,10 @@ export class MotionAnimationEngine {
   private numKeyframes: number = 12; // Number of keyframes to generate
   private hasShownInitialOriginal: boolean = false; // Ensures first frame shows pure original
   
+  // Overlay styling (per-engine so each layer can have its own colors)
+  private rangeColor: string = "#22c55e"; // default green
+  private motionColor: string = "#3b82f6"; // default blue
+  
   // Keyframe-based animation
   private keyframes: Keyframe[] = [];
   private currentTime: number = 0;
@@ -175,6 +179,31 @@ export class MotionAnimationEngine {
     this.stop();
   }
 
+  // Allow external callers (per-layer) to customize overlay colors
+  public setColors(rangeColor: string, motionColor: string) {
+    this.rangeColor = rangeColor;
+    this.motionColor = motionColor;
+  }
+
+  // Utility: convert hex color to RGB for translucent strokes
+  private hexToRgb(hex: string): { r: number; g: number; b: number } {
+    const cleaned = hex.replace("#", "");
+    const bigint = parseInt(cleaned, 16);
+    if (Number.isNaN(bigint) || (cleaned.length !== 6 && cleaned.length !== 3)) {
+      // Fallback to default green
+      return { r: 34, g: 197, b: 94 };
+    }
+    if (cleaned.length === 3) {
+      const r = (bigint >> 8) & 0xf;
+      const g = (bigint >> 4) & 0xf;
+      const b = bigint & 0xf;
+      return { r: r * 17, g: g * 17, b: b * 17 };
+    }
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return { r, g, b };
+  }
   /**
    * Rebuild the unified selection mask - MATHEMATICAL APPROACH
    * Build mask by calculating distance to stroke points instead of canvas rendering
@@ -378,7 +407,11 @@ export class MotionAnimationEngine {
   }
 
   drawOverlay(overlayCtx: CanvasRenderingContext2D) {
-    overlayCtx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    // Important: do NOT clear here in multi-layer mode; the caller
+    // is responsible for clearing once, then drawing all engines.
+
+    const rangeRgb = this.hexToRgb(this.rangeColor);
+    const motionColor = this.motionColor;
 
     // Draw range strokes as continuous filled paths
     this.rangeStrokes.forEach(stroke => {
@@ -387,9 +420,9 @@ export class MotionAnimationEngine {
       if (stroke.points.length === 1) {
         // Single point - draw as circle
         overlayCtx.arc(stroke.points[0].x, stroke.points[0].y, stroke.radius, 0, Math.PI * 2);
-        overlayCtx.fillStyle = "rgba(34, 197, 94, 0.3)";
+        overlayCtx.fillStyle = `rgba(${rangeRgb.r}, ${rangeRgb.g}, ${rangeRgb.b}, 0.3)`;
         overlayCtx.fill();
-        overlayCtx.strokeStyle = "rgba(34, 197, 94, 0.6)";
+        overlayCtx.strokeStyle = `rgba(${rangeRgb.r}, ${rangeRgb.g}, ${rangeRgb.b}, 0.6)`;
         overlayCtx.lineWidth = 2;
         overlayCtx.stroke();
       } else {
@@ -407,7 +440,7 @@ export class MotionAnimationEngine {
         overlayCtx.lineWidth = stroke.radius * 2;
         overlayCtx.lineCap = "round";
         overlayCtx.lineJoin = "round";
-        overlayCtx.strokeStyle = "rgba(34, 197, 94, 0.6)";
+        overlayCtx.strokeStyle = `rgba(${rangeRgb.r}, ${rangeRgb.g}, ${rangeRgb.b}, 0.6)`;
         overlayCtx.stroke();
       }
     });
@@ -416,11 +449,11 @@ export class MotionAnimationEngine {
     this.motionTrails.forEach(trail => {
       if (trail.points.length < 2) return;
 
-      overlayCtx.strokeStyle = "#3b82f6";
+      overlayCtx.strokeStyle = motionColor;
       overlayCtx.lineWidth = 4;
       overlayCtx.lineCap = "round";
       overlayCtx.lineJoin = "round";
-      overlayCtx.shadowColor = "#3b82f6";
+      overlayCtx.shadowColor = motionColor;
       overlayCtx.shadowBlur = 10;
 
       overlayCtx.beginPath();
@@ -438,7 +471,7 @@ export class MotionAnimationEngine {
       const headLength = 15;
 
       overlayCtx.shadowBlur = 0;
-      overlayCtx.fillStyle = "#3b82f6";
+      overlayCtx.fillStyle = motionColor;
       overlayCtx.beginPath();
       overlayCtx.moveTo(last.x, last.y);
       overlayCtx.lineTo(
