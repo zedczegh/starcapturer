@@ -195,6 +195,10 @@ export class MotionAnimationEngine {
     return this.isVisible;
   }
 
+  public getCanvas(): HTMLCanvasElement {
+    return this.canvas;
+  }
+
   // Utility: convert hex color to RGB for translucent strokes
   private hexToRgb(hex: string): { r: number; g: number; b: number } {
     const cleaned = hex.replace("#", "");
@@ -709,16 +713,10 @@ export class MotionAnimationEngine {
   /**
    * Render loop with overlapping cycles for seamless infinite loop
    * Shows only nearest keyframe (no interpolation) to eliminate static appearance
-   * Respects visibility flag - invisible layers don't render
+   * Now renders to own canvas without checking visibility (compositor handles that)
    */
   private renderLoop(timestamp: number) {
     if (!this.isAnimating) return;
-
-    // Skip rendering if this layer is invisible
-    if (!this.isVisible) {
-      this.animationFrame = requestAnimationFrame((t) => this.renderLoop(t));
-      return;
-    }
 
     // First frame after play(): show pure original image so the
     // fade-in starts from maximum saturation, then let the

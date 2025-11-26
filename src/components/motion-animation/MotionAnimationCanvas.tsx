@@ -47,6 +47,8 @@ export const MotionAnimationCanvas = ({
   // Layer management
   const [layers, setLayers] = useState<MotionAnimationLayer[]>([createNewLayer(0)]);
   const [activeLayerId, setActiveLayerId] = useState<string>(layers[0].id);
+  const compositingRafRef = useRef<number | null>(null);
+  const isCompositingRef = useRef<boolean>(false);
   
   // Use refs for drawing state to avoid closure issues and enable immediate updates
   const motionArrowStartRef = useRef<{x: number, y: number} | null>(null);
@@ -92,8 +94,13 @@ export const MotionAnimationCanvas = ({
     if (layerEnginesRef.current.size === 0) {
       layerVisibilityRef.current.clear();
       layers.forEach(layer => {
+        // Create an offscreen canvas for this layer
+        const offscreenCanvas = document.createElement('canvas');
+        offscreenCanvas.width = canvas.width;
+        offscreenCanvas.height = canvas.height;
+        
         const engine = new MotionAnimationEngine(
-          canvas,
+          offscreenCanvas,
           imageElement,
           layer.settings.displacementAmount,
           layer.settings.motionBlur,
@@ -122,6 +129,10 @@ export const MotionAnimationCanvas = ({
       if (rafIdRef.current) {
         cancelAnimationFrame(rafIdRef.current);
       }
+      if (compositingRafRef.current) {
+        cancelAnimationFrame(compositingRafRef.current);
+      }
+      isCompositingRef.current = false;
     };
   }, [imageElement]);
 
@@ -461,13 +472,22 @@ export const MotionAnimationCanvas = ({
 
   const handlePlayPause = () => {
     const overlayCanvas = overlayCanvasRef.current;
-    if (!overlayCanvas) return;
+    const mainCanvas = canvasRef.current;
+    if (!overlayCanvas || !mainCanvas) return;
 
     if (isPlaying) {
+      // Stop compositing loop
+      if (compositingRafRef.current !== null) {
+        cancelAnimationFrame(compositingRafRef.current);
+        compositingRafRef.current = null;
+      }
+      isCompositingRef.current = false;
+      
       // Stop all layer engines
       layerEnginesRef.current.forEach(engine => {
         engine.stop();
       });
+      
       // Show overlay with drawn elements when paused
       redrawOverlay();
       overlayCanvas.style.opacity = "1";
@@ -485,10 +505,15 @@ export const MotionAnimationCanvas = ({
         }
       });
       
-      // Start all engines (they check visibility internally during render)
+      // Start all engines
+      const speed = settings.animationSpeed / 100;
       layerEnginesRef.current.forEach(engine => {
-        engine.play(settings.animationSpeed / 100);
+        engine.play(speed);
       });
+      
+      // Start compositing loop
+      isCompositingRef.current = true;
+      startCompositing(mainCanvas);
       
       // Hide overlay when playing to show animation
       overlayCanvas.style.opacity = "0";
@@ -499,6 +524,34 @@ export const MotionAnimationCanvas = ({
       }, 500);
     }
     setIsPlaying(!isPlaying);
+  };
+
+  const startCompositing = (mainCanvas: HTMLCanvasElement) => {
+    const ctx = mainCanvas.getContext("2d");
+    if (!ctx) return;
+
+    const compositeFrame = () => {
+      if (!isCompositingRef.current) return;
+
+      // Clear main canvas
+      ctx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+      
+      // Draw original image as base
+      ctx.drawImage(imageElement, 0, 0, mainCanvas.width, mainCanvas.height);
+      
+      // Composite all visible layer animations on top
+      layerEnginesRef.current.forEach((engine, layerId) => {
+        const isVisible = layerVisibilityRef.current.get(layerId) !== false;
+        if (isVisible && engine.getVisible()) {
+          const layerCanvas = engine.getCanvas();
+          ctx.drawImage(layerCanvas, 0, 0);
+        }
+      });
+
+      compositingRafRef.current = requestAnimationFrame(compositeFrame);
+    };
+
+    compositeFrame();
   };
 
   const handleExport = async () => {
@@ -771,11 +824,15 @@ export const MotionAnimationCanvas = ({
           setLayers([...layers, newLayer]);
           setActiveLayerId(newLayer.id);
           
-          // Initialize engine for new layer
+          // Initialize engine for new layer with offscreen canvas
           const canvas = canvasRef.current;
           if (canvas && imageElement) {
+            const offscreenCanvas = document.createElement('canvas');
+            offscreenCanvas.width = canvas.width;
+            offscreenCanvas.height = canvas.height;
+            
             const engine = new MotionAnimationEngine(
-              canvas, 
+              offscreenCanvas, 
               imageElement, 
               newLayer.settings.displacementAmount, 
               newLayer.settings.motionBlur, 
