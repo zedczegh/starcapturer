@@ -761,11 +761,10 @@ export class MotionAnimationEngine {
         g = gCycles * (1 - blurFactor * (1 - totalAlpha)) + origG * blurFactor * (1 - totalAlpha);
         b = bCycles * (1 - blurFactor * (1 - totalAlpha)) + origB * blurFactor * (1 - totalAlpha);
       } else {
-        // Smooth dual-cycle crossfade - NEVER show original during cycle blending
-        // This prevents duplicate appearance at all animation phases
-        const totalAlpha = alpha1 + alpha2;
+        // Smooth dual-cycle crossfade with global fade to/from original
+        const totalAlpha = Math.min(1, alpha1 + alpha2);
         
-        // Gentler power curve for more balanced blending at edges
+        // Gentler power curve for more balanced blending between cycles
         const adjustedAlpha1 = Math.pow(alpha1, 0.85);
         const adjustedAlpha2 = Math.pow(alpha2, 0.85);
         const adjustedTotal = adjustedAlpha1 + adjustedAlpha2;
@@ -773,20 +772,17 @@ export class MotionAnimationEngine {
         const weight1 = adjustedTotal > 0 ? adjustedAlpha1 / adjustedTotal : 0.5;
         const weight2 = adjustedTotal > 0 ? adjustedAlpha2 / adjustedTotal : 0.5;
 
+        // Blend the two displaced cycles first
         const rCycles = r1 * weight1 + r2 * weight2;
         const gCycles = g1 * weight1 + g2 * weight2;
         const bCycles = b1 * weight1 + b2 * weight2;
         
-        // Apply motion blur only if set (doesn't affect pulsing)
-        if (this.motionBlurAmount > 0.01) {
-          r = rCycles * (1 - this.motionBlurAmount) + origR * this.motionBlurAmount;
-          g = gCycles * (1 - this.motionBlurAmount) + origG * this.motionBlurAmount;
-          b = bCycles * (1 - this.motionBlurAmount) + origB * this.motionBlurAmount;
-        } else {
-          r = rCycles;
-          g = gCycles;
-          b = bCycles;
-        }
+        // Then fade cycles in/out against the original image based on totalAlpha
+        // When totalAlpha≈0 we see pure original; when ≈1 we see full animation.
+        const fadeFactor = totalAlpha;
+        r = rCycles * fadeFactor + origR * (1 - fadeFactor);
+        g = gCycles * fadeFactor + origG * (1 - fadeFactor);
+        b = bCycles * fadeFactor + origB * (1 - fadeFactor);
       }
       
       blendedImageData.data[i] = Math.round(r);
