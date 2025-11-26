@@ -19,6 +19,8 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { MotionAnimationEngine } from "@/utils/motionAnimationEngine";
+import { LayerPanel } from "./LayerPanel";
+import { MotionAnimationLayer, createNewLayer } from "@/types/motionAnimationLayer";
 
 interface MotionAnimationCanvasProps {
   imageDataUrl: string;
@@ -39,26 +41,25 @@ export const MotionAnimationCanvas = ({
   const animationEngineRef = useRef<MotionAnimationEngine | null>(null);
   
   const [activeTool, setActiveTool] = useState<Tool>("motion");
-  const [brushSize, setBrushSize] = useState(30);
-  const [motionStrength, setMotionStrength] = useState(50);
-  const [displacementAmount, setDisplacementAmount] = useState(10); // Max displacement in pixels
-  const [animationSpeed, setAnimationSpeed] = useState(60); // 60% speed by default (relative to base 100)
-  const [motionBlur, setMotionBlur] = useState(30); // Motion blur amount 0-100
-  const [coreBrightening, setCoreBrightening] = useState(false); // Core brightening effect - off by default
-  const [reverseDirection, setReverseDirection] = useState(false); // Reverse animation direction
-  const [keyframeAmount, setKeyframeAmount] = useState(12); // Number of keyframes 2-60
   const [isPlaying, setIsPlaying] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [historyIndex, setHistoryIndex] = useState(-1);
+  
+  // Layer management
+  const [layers, setLayers] = useState<MotionAnimationLayer[]>([createNewLayer(0)]);
+  const [activeLayerId, setActiveLayerId] = useState<string>(layers[0].id);
   
   // Use refs for drawing state to avoid closure issues and enable immediate updates
   const motionArrowStartRef = useRef<{x: number, y: number} | null>(null);
   const motionTrailPointsRef = useRef<{x: number, y: number}[]>([]);
   const rangeStrokePointsRef = useRef<{x: number, y: number}[]>([]);
   const lastBrushPointRef = useRef<{x: number, y: number} | null>(null);
-  const historyRef = useRef<Array<{ type: 'motion' | 'range' | 'erase', data: any }>>([]);
   const rafIdRef = useRef<number | null>(null);
   const keyframeDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const layerEnginesRef = useRef<Map<string, MotionAnimationEngine>>(new Map());
+  
+  // Get active layer
+  const activeLayer = layers.find(l => l.id === activeLayerId) || layers[0];
+  const { settings } = activeLayer;
 
   // Initialize canvas and animation engine
   useEffect(() => {
@@ -85,7 +86,23 @@ export const MotionAnimationCanvas = ({
     // Draw image
     ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
 
-    animationEngineRef.current = new MotionAnimationEngine(canvas, imageElement, displacementAmount, motionBlur, coreBrightening);
+    // Initialize engines for all layers
+    layerEnginesRef.current.clear();
+    layers.forEach(layer => {
+      const engine = new MotionAnimationEngine(
+        canvas, 
+        imageElement, 
+        layer.settings.displacementAmount, 
+        layer.settings.motionBlur, 
+        layer.settings.coreBrightening
+      );
+      engine.setReverseDirection(layer.settings.reverseDirection);
+      engine.setNumKeyframes(layer.settings.keyframeAmount);
+      layerEnginesRef.current.set(layer.id, engine);
+    });
+    
+    // Set active engine ref for backward compatibility
+    animationEngineRef.current = layerEnginesRef.current.get(activeLayerId) || null;
  
     // Show overlay initially so users can see their strokes
     overlayCanvas.style.opacity = "1";
@@ -99,50 +116,26 @@ export const MotionAnimationCanvas = ({
         cancelAnimationFrame(rafIdRef.current);
       }
     };
-  }, [imageElement]);
+  }, [imageElement, layers]);
 
-  // When displacement amount changes, just update the engine parameter
+  // Update active layer's engine when settings change
   useEffect(() => {
-    if (animationEngineRef.current) {
-      animationEngineRef.current.setMaxDisplacement(displacementAmount);
+    const engine = layerEnginesRef.current.get(activeLayerId);
+    if (!engine) return;
+    
+    engine.setMaxDisplacement(settings.displacementAmount);
+    engine.setMotionBlur(settings.motionBlur);
+    engine.setCoreBrightening(settings.coreBrightening);
+    engine.setReverseDirection(settings.reverseDirection);
+    engine.setNumKeyframes(settings.keyframeAmount);
+    
+    if (isPlaying) {
+      engine.updateSpeed(settings.animationSpeed / 100);
     }
-  }, [displacementAmount]);
-
-  // When motion blur changes, update the engine parameter
-  useEffect(() => {
-    if (animationEngineRef.current) {
-      animationEngineRef.current.setMotionBlur(motionBlur);
-    }
-  }, [motionBlur]);
-
-  // When core brightening changes, update the engine parameter
-  useEffect(() => {
-    if (animationEngineRef.current) {
-      animationEngineRef.current.setCoreBrightening(coreBrightening);
-    }
-  }, [coreBrightening]);
-
-  // When reverse direction changes, update the engine parameter
-  useEffect(() => {
-    if (animationEngineRef.current) {
-      animationEngineRef.current.setReverseDirection(reverseDirection);
-    }
-  }, [reverseDirection]);
-
-  // When keyframe amount changes, update the engine parameter
-  useEffect(() => {
-    if (animationEngineRef.current) {
-      animationEngineRef.current.setNumKeyframes(keyframeAmount);
-    }
-  }, [keyframeAmount]);
-
-  // When the animation speed changes while playing, update it dynamically
-  useEffect(() => {
-    const engine = animationEngineRef.current;
-    if (!engine || !isPlaying) return;
-
-    engine.updateSpeed(animationSpeed / 100);
-  }, [animationSpeed, isPlaying]);
+    
+    // Update main ref for backward compatibility
+    animationEngineRef.current = engine;
+  }, [activeLayerId, settings, isPlaying]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = overlayCanvasRef.current;
@@ -194,7 +187,7 @@ export const MotionAnimationCanvas = ({
         );
         
         // Only add point if moved at least 1/3 of brush size
-        if (dist >= brushSize / 3) {
+        if (dist >= settings.brushSize / 3) {
           rangeStrokePointsRef.current.push({ x, y });
           lastBrushPointRef.current = { x, y };
           
@@ -241,16 +234,25 @@ export const MotionAnimationCanvas = ({
       if (activeTool === "motion" && motionTrailPointsRef.current.length > 1) {
         drawMotionTrail(motionTrailPointsRef.current);
       } else if ((activeTool === "range" || activeTool === "erase") && rangeStrokePointsRef.current.length > 0) {
-        drawContinuousBrushStroke(rangeStrokePointsRef.current, brushSize, activeTool === "erase");
+        drawContinuousBrushStroke(rangeStrokePointsRef.current, settings.brushSize, activeTool === "erase");
       }
     });
   };
 
   const addToHistory = (type: 'motion' | 'range' | 'erase', data: any) => {
-    // Remove any redo history when adding new action
-    historyRef.current = historyRef.current.slice(0, historyIndex + 1);
-    historyRef.current.push({ type, data });
-    setHistoryIndex(historyRef.current.length - 1);
+    setLayers(prev => prev.map(layer => {
+      if (layer.id !== activeLayerId) return layer;
+      
+      // Remove any redo history when adding new action
+      const newHistory = layer.history.slice(0, layer.historyIndex + 1);
+      newHistory.push({ type, data });
+      
+      return {
+        ...layer,
+        history: newHistory,
+        historyIndex: newHistory.length - 1
+      };
+    }));
   };
 
   const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -260,7 +262,7 @@ export const MotionAnimationCanvas = ({
     if (activeTool === "motion" && motionArrowStartRef.current && motionTrailPointsRef.current.length > 1) {
       // Store entire motion trail as one action in history
       const trailData = [...motionTrailPointsRef.current];
-      addToHistory('motion', { points: trailData, strength: motionStrength / 100 });
+      addToHistory('motion', { points: trailData, strength: settings.motionStrength / 100 });
 
       // Add motion vectors along the trail (for animation calculation)
       for (let i = 0; i < trailData.length - 1; i++) {
@@ -273,7 +275,7 @@ export const MotionAnimationCanvas = ({
           start.y,
           end.x,
           end.y,
-          motionStrength / 100,
+          settings.motionStrength / 100,
           true
         );
       }
@@ -290,13 +292,13 @@ export const MotionAnimationCanvas = ({
       // Store the entire stroke as one history action
       const strokeData = {
         points: [...rangeStrokePointsRef.current],
-        radius: brushSize
+        radius: settings.brushSize
       };
       
       if (activeTool === "range") {
         addToHistory('range', strokeData);
         // Add the stroke for visualization
-        animationEngineRef.current.addRangeStroke(rangeStrokePointsRef.current, brushSize);
+        animationEngineRef.current.addRangeStroke(rangeStrokePointsRef.current, settings.brushSize);
       } else {
         addToHistory('erase', strokeData);
       }
@@ -317,12 +319,15 @@ export const MotionAnimationCanvas = ({
     const ctx = canvas?.getContext("2d");
     if (!ctx || points.length < 2) return;
 
+    // Use active layer motion color
+    const motionColor = activeLayer.motionColor;
+    
     // Draw smooth trail line
-    ctx.strokeStyle = "#3b82f6";
+    ctx.strokeStyle = motionColor;
     ctx.lineWidth = 4;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.shadowColor = "#3b82f6";
+    ctx.shadowColor = motionColor;
     ctx.shadowBlur = 10;
 
     ctx.beginPath();
@@ -341,7 +346,7 @@ export const MotionAnimationCanvas = ({
       const headLength = 15;
 
       ctx.shadowBlur = 0;
-      ctx.fillStyle = "#3b82f6";
+      ctx.fillStyle = motionColor;
       ctx.beginPath();
       ctx.moveTo(last.x, last.y);
       ctx.lineTo(
@@ -363,9 +368,9 @@ export const MotionAnimationCanvas = ({
     // Don't draw individual points - we'll draw the entire stroke at once
     // Just add to the engine silently
     if (activeTool === "range") {
-      animationEngineRef.current.addRangePoint(x, y, brushSize, true);
+      animationEngineRef.current.addRangePoint(x, y, settings.brushSize, true);
     } else if (activeTool === "erase") {
-      animationEngineRef.current.removeAtPoint(x, y, brushSize, true);
+      animationEngineRef.current.removeAtPoint(x, y, settings.brushSize, true);
     }
   };
 
@@ -374,6 +379,9 @@ export const MotionAnimationCanvas = ({
     const ctx = canvas?.getContext("2d");
     if (!ctx || points.length === 0) return;
 
+    // Use active layer range color
+    const rangeColor = activeLayer.rangeColor;
+    
     // Draw smooth continuous stroke
     ctx.beginPath();
     
@@ -403,8 +411,10 @@ export const MotionAnimationCanvas = ({
       ctx.strokeStyle = "rgba(239, 68, 68, 0.3)";
       ctx.fillStyle = "rgba(239, 68, 68, 0.1)";
     } else {
-      ctx.strokeStyle = "rgba(34, 197, 94, 0.6)";
-      ctx.fillStyle = "rgba(34, 197, 94, 0.3)";
+      // Use layer color with transparency
+      const rgb = hexToRgb(rangeColor);
+      ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`;
+      ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)`;
     }
     
     if (points.length === 1) {
@@ -412,6 +422,15 @@ export const MotionAnimationCanvas = ({
     } else {
       ctx.stroke();
     }
+  };
+
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : { r: 34, g: 197, b: 94 };
   };
 
   const redrawOverlay = () => {
@@ -438,7 +457,7 @@ export const MotionAnimationCanvas = ({
       
       // Generate keyframes on demand when starting playback to avoid blocking during drawing
       animationEngineRef.current.updateKeyframes();
-      animationEngineRef.current.play(animationSpeed / 100);
+      animationEngineRef.current.play(settings.animationSpeed / 100);
       // Hide overlay when playing to show animation
       overlayCanvas.style.opacity = "0";
       
@@ -472,24 +491,32 @@ export const MotionAnimationCanvas = ({
   };
 
   const handleUndo = () => {
-    if (historyIndex < 0) {
+    if (activeLayer.historyIndex < 0) {
       toast.info(t("Nothing to undo", "没有可撤销的操作"));
       return;
     }
 
-    setHistoryIndex(historyIndex - 1);
-    rebuildFromHistory(historyIndex - 1);
+    setLayers(prev => prev.map(layer => {
+      if (layer.id !== activeLayerId) return layer;
+      return { ...layer, historyIndex: layer.historyIndex - 1 };
+    }));
+    
+    rebuildFromHistory(activeLayer.historyIndex - 1);
     toast.success(t("Undo successful", "撤销成功"));
   };
 
   const handleRedo = () => {
-    if (historyIndex >= historyRef.current.length - 1) {
+    if (activeLayer.historyIndex >= activeLayer.history.length - 1) {
       toast.info(t("Nothing to redo", "没有可重做的操作"));
       return;
     }
 
-    setHistoryIndex(historyIndex + 1);
-    rebuildFromHistory(historyIndex + 1);
+    setLayers(prev => prev.map(layer => {
+      if (layer.id !== activeLayerId) return layer;
+      return { ...layer, historyIndex: layer.historyIndex + 1 };
+    }));
+    
+    rebuildFromHistory(activeLayer.historyIndex + 1);
     toast.success(t("Redo successful", "重做成功"));
   };
 
@@ -501,7 +528,8 @@ export const MotionAnimationCanvas = ({
 
     // Rebuild from history up to targetIndex
     for (let i = 0; i <= targetIndex; i++) {
-      const action = historyRef.current[i];
+      const action = activeLayer.history[i];
+      if (!action) continue;
       
       if (action.type === 'motion') {
         const { points, strength } = action.data;
@@ -572,8 +600,10 @@ export const MotionAnimationCanvas = ({
     animationEngineRef.current.clear();
     
     // Clear history
-    historyRef.current = [];
-    setHistoryIndex(-1);
+    setLayers(prev => prev.map(layer => {
+      if (layer.id !== activeLayerId) return layer;
+      return { ...layer, history: [], historyIndex: -1 };
+    }));
     
     // Reset all drawing state
     motionArrowStartRef.current = null;
@@ -642,7 +672,7 @@ export const MotionAnimationCanvas = ({
               variant="outline"
               size="sm"
               onClick={handleUndo}
-              disabled={historyIndex < 0}
+              disabled={activeLayer.historyIndex < 0}
               title={t("Undo", "撤销")}
             >
               <Undo2 className="w-4 h-4 sm:mr-2" />
@@ -652,7 +682,7 @@ export const MotionAnimationCanvas = ({
               variant="outline"
               size="sm"
               onClick={handleRedo}
-              disabled={historyIndex >= historyRef.current.length - 1}
+              disabled={activeLayer.historyIndex >= activeLayer.history.length - 1}
               title={t("Redo", "重做")}
             >
               <Redo2 className="w-4 h-4 sm:mr-2" />
@@ -696,6 +726,71 @@ export const MotionAnimationCanvas = ({
         </div>
       </Card>
 
+      {/* Layer Panel */}
+      <LayerPanel
+        layers={layers}
+        activeLayerId={activeLayerId}
+        onSelectLayer={(id) => {
+          const layer = layers.find(l => l.id === id);
+          if (layer && !layer.locked) {
+            setActiveLayerId(id);
+          }
+        }}
+        onAddLayer={() => {
+          const newLayer = createNewLayer(layers.length);
+          setLayers([...layers, newLayer]);
+          setActiveLayerId(newLayer.id);
+          
+          // Initialize engine for new layer
+          const canvas = canvasRef.current;
+          if (canvas && imageElement) {
+            const engine = new MotionAnimationEngine(
+              canvas, 
+              imageElement, 
+              newLayer.settings.displacementAmount, 
+              newLayer.settings.motionBlur, 
+              newLayer.settings.coreBrightening
+            );
+            engine.setReverseDirection(newLayer.settings.reverseDirection);
+            engine.setNumKeyframes(newLayer.settings.keyframeAmount);
+            layerEnginesRef.current.set(newLayer.id, engine);
+          }
+          
+          toast.success(t("Layer added", "图层已添加"));
+        }}
+        onDeleteLayer={(id) => {
+          if (layers.length === 1) {
+            toast.error(t("Cannot delete the last layer", "无法删除最后一个图层"));
+            return;
+          }
+          
+          // Remove layer engine
+          layerEnginesRef.current.delete(id);
+          
+          // Remove layer
+          const newLayers = layers.filter(l => l.id !== id);
+          setLayers(newLayers);
+          
+          // Select another layer if active was deleted
+          if (id === activeLayerId) {
+            setActiveLayerId(newLayers[0].id);
+          }
+          
+          toast.success(t("Layer deleted", "图层已删除"));
+        }}
+        onToggleVisibility={(id) => {
+          setLayers(prev => prev.map(layer => 
+            layer.id === id ? { ...layer, visible: !layer.visible } : layer
+          ));
+          redrawOverlay();
+        }}
+        onToggleLock={(id) => {
+          setLayers(prev => prev.map(layer => 
+            layer.id === id ? { ...layer, locked: !layer.locked } : layer
+          ));
+        }}
+      />
+
       {/* Canvas Area */}
       <Card className="bg-cosmic-800/40 border-primary/20 backdrop-blur-xl overflow-hidden mx-0 sm:mx-0 rounded-none sm:rounded-lg border-l-0 border-r-0 sm:border-l sm:border-r">
         <div className="relative w-full" style={{ aspectRatio: `${imageElement.width}/${imageElement.height}` }}>
@@ -731,10 +826,16 @@ export const MotionAnimationCanvas = ({
           <TabsContent value="tool" className="space-y-6 mt-4">
             {(activeTool === "range" || activeTool === "erase") && (
               <div>
-                <Label>{t("Brush Size", "画笔大小")}: {brushSize}px</Label>
+                <Label>{t("Brush Size", "画笔大小")}: {settings.brushSize}px</Label>
                 <Slider
-                  value={[brushSize]}
-                  onValueChange={([value]) => setBrushSize(value)}
+                  value={[settings.brushSize]}
+                  onValueChange={([value]) => {
+                    setLayers(prev => prev.map(layer =>
+                      layer.id === activeLayerId 
+                        ? { ...layer, settings: { ...layer.settings, brushSize: value } }
+                        : layer
+                    ));
+                  }}
                   min={10}
                   max={100}
                   step={5}
@@ -745,10 +846,16 @@ export const MotionAnimationCanvas = ({
 
             {activeTool === "motion" && (
               <div>
-                <Label>{t("Motion Strength", "运动强度")}: {motionStrength}%</Label>
+                <Label>{t("Motion Strength", "运动强度")}: {settings.motionStrength}%</Label>
                 <Slider
-                  value={[motionStrength]}
-                  onValueChange={([value]) => setMotionStrength(value)}
+                  value={[settings.motionStrength]}
+                  onValueChange={([value]) => {
+                    setLayers(prev => prev.map(layer =>
+                      layer.id === activeLayerId 
+                        ? { ...layer, settings: { ...layer.settings, motionStrength: value } }
+                        : layer
+                    ));
+                  }}
                   min={1}
                   max={100}
                   step={1}
@@ -760,10 +867,16 @@ export const MotionAnimationCanvas = ({
 
           <TabsContent value="animation" className="space-y-6 mt-4">
             <div>
-              <Label>{t("Displacement Amount", "位移量")}: {displacementAmount}px</Label>
+              <Label>{t("Displacement Amount", "位移量")}: {settings.displacementAmount}px</Label>
               <Slider
-                value={[displacementAmount]}
-                onValueChange={([value]) => setDisplacementAmount(value)}
+                value={[settings.displacementAmount]}
+                onValueChange={([value]) => {
+                  setLayers(prev => prev.map(layer =>
+                    layer.id === activeLayerId 
+                      ? { ...layer, settings: { ...layer.settings, displacementAmount: value } }
+                      : layer
+                  ));
+                }}
                 min={0}
                 max={200}
                 step={1}
@@ -772,10 +885,16 @@ export const MotionAnimationCanvas = ({
             </div>
             
             <div>
-              <Label>{t("Animation Speed", "动画速度")}: {animationSpeed}%</Label>
+              <Label>{t("Animation Speed", "动画速度")}: {settings.animationSpeed}%</Label>
               <Slider
-                value={[animationSpeed]}
-                onValueChange={([value]) => setAnimationSpeed(value)}
+                value={[settings.animationSpeed]}
+                onValueChange={([value]) => {
+                  setLayers(prev => prev.map(layer =>
+                    layer.id === activeLayerId 
+                      ? { ...layer, settings: { ...layer.settings, animationSpeed: value } }
+                      : layer
+                  ));
+                }}
                 min={10}
                 max={200}
                 step={10}
@@ -784,10 +903,16 @@ export const MotionAnimationCanvas = ({
             </div>
             
             <div>
-              <Label>{t("Motion Blur", "运动模糊")}: {motionBlur}%</Label>
+              <Label>{t("Motion Blur", "运动模糊")}: {settings.motionBlur}%</Label>
               <Slider
-                value={[motionBlur]}
-                onValueChange={([value]) => setMotionBlur(value)}
+                value={[settings.motionBlur]}
+                onValueChange={([value]) => {
+                  setLayers(prev => prev.map(layer =>
+                    layer.id === activeLayerId 
+                      ? { ...layer, settings: { ...layer.settings, motionBlur: value } }
+                      : layer
+                  ));
+                }}
                 min={0}
                 max={100}
                 step={5}
@@ -798,24 +923,42 @@ export const MotionAnimationCanvas = ({
             <div className="flex items-center justify-between">
               <Label>{t("Core Brightening", "核心增亮")}</Label>
               <Switch
-                checked={coreBrightening}
-                onCheckedChange={setCoreBrightening}
+                checked={settings.coreBrightening}
+                onCheckedChange={(checked) => {
+                  setLayers(prev => prev.map(layer =>
+                    layer.id === activeLayerId 
+                      ? { ...layer, settings: { ...layer.settings, coreBrightening: checked } }
+                      : layer
+                  ));
+                }}
               />
             </div>
             
             <div className="flex items-center justify-between">
               <Label>{t("Opposite Direction", "反向运动")}</Label>
               <Switch
-                checked={reverseDirection}
-                onCheckedChange={setReverseDirection}
+                checked={settings.reverseDirection}
+                onCheckedChange={(checked) => {
+                  setLayers(prev => prev.map(layer =>
+                    layer.id === activeLayerId 
+                      ? { ...layer, settings: { ...layer.settings, reverseDirection: checked } }
+                      : layer
+                  ));
+                }}
               />
             </div>
 
             <div>
-              <Label>{t("Keyframe Amount", "关键帧数量")}: {keyframeAmount}</Label>
+              <Label>{t("Keyframe Amount", "关键帧数量")}: {settings.keyframeAmount}</Label>
               <Slider
-                value={[keyframeAmount]}
-                onValueChange={([value]) => setKeyframeAmount(value)}
+                value={[settings.keyframeAmount]}
+                onValueChange={([value]) => {
+                  setLayers(prev => prev.map(layer =>
+                    layer.id === activeLayerId 
+                      ? { ...layer, settings: { ...layer.settings, keyframeAmount: value } }
+                      : layer
+                  ));
+                }}
                 min={2}
                 max={60}
                 step={1}
