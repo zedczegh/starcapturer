@@ -56,6 +56,7 @@ export const MotionAnimationCanvas = ({
   const rafIdRef = useRef<number | null>(null);
   const keyframeDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const layerEnginesRef = useRef<Map<string, MotionAnimationEngine>>(new Map());
+  const layerVisibilityRef = useRef<Map<string, boolean>>(new Map());
   
   // Get active layer
   const activeLayer = layers.find(l => l.id === activeLayerId) || layers[0];
@@ -88,6 +89,7 @@ export const MotionAnimationCanvas = ({
 
     // Initialize engines for all layers
     layerEnginesRef.current.clear();
+    layerVisibilityRef.current.clear();
     layers.forEach(layer => {
       const engine = new MotionAnimationEngine(
         canvas, 
@@ -99,6 +101,7 @@ export const MotionAnimationCanvas = ({
       engine.setReverseDirection(layer.settings.reverseDirection);
       engine.setNumKeyframes(layer.settings.keyframeAmount);
       layerEnginesRef.current.set(layer.id, engine);
+      layerVisibilityRef.current.set(layer.id, layer.visible);
     });
     
     // Set active engine ref for backward compatibility
@@ -228,10 +231,8 @@ export const MotionAnimationCanvas = ({
 
       // Clear and redraw all visible layers' overlays
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      layers.forEach(layer => {
-        if (!layer.visible) return;
-        const engine = layerEnginesRef.current.get(layer.id);
-        if (engine) {
+      layerEnginesRef.current.forEach((engine, layerId) => {
+        if (layerVisibilityRef.current.get(layerId) !== false) {
           engine.drawOverlay(ctx);
         }
       });
@@ -447,10 +448,8 @@ export const MotionAnimationCanvas = ({
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // Draw all visible layers' overlays
-    layers.forEach(layer => {
-      if (!layer.visible) return;
-      const engine = layerEnginesRef.current.get(layer.id);
-      if (engine) {
+    layerEnginesRef.current.forEach((engine, layerId) => {
+      if (layerVisibilityRef.current.get(layerId) !== false) {
         engine.drawOverlay(ctx);
       }
     });
@@ -793,9 +792,14 @@ export const MotionAnimationCanvas = ({
           toast.success(t("Layer deleted", "图层已删除"));
         }}
         onToggleVisibility={(id) => {
-          setLayers(prev => prev.map(layer => 
-            layer.id === id ? { ...layer, visible: !layer.visible } : layer
-          ));
+          setLayers(prev => prev.map(layer => {
+            if (layer.id === id) {
+              const newVisible = !layer.visible;
+              layerVisibilityRef.current.set(id, newVisible);
+              return { ...layer, visible: newVisible };
+            }
+            return layer;
+          }));
           redrawOverlay();
         }}
         onToggleLock={(id) => {
