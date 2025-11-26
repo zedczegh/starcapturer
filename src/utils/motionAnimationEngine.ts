@@ -48,6 +48,7 @@ export class MotionAnimationEngine {
   private coreBrightening: boolean = true; // Enable core brightening effect
   private reverseDirection: boolean = false; // Reverse animation direction
   private numKeyframes: number = 12; // Number of keyframes to generate
+  private hasShownInitialOriginal: boolean = false; // Ensures first frame shows pure original
   
   // Keyframe-based animation
   private keyframes: Keyframe[] = [];
@@ -453,8 +454,8 @@ export class MotionAnimationEngine {
     });
   }
 
-  /**
-   * Generate 12 keyframes for continuous one-directional loop
+/**
+   * Generate keyframes for continuous one-directional loop
    * Optimized for large images with memory management
    */
   private generateKeyframes() {
@@ -473,13 +474,52 @@ export class MotionAnimationEngine {
     let sourceFrame = this.originalImageData;
 
     // First keyframe: original image (clone to avoid reference issues)
-    this.keyframes.push({ imageData: this.cloneImageData(sourceFrame) });
+    const originalClone = this.cloneImageData(sourceFrame);
+    this.keyframes.push({ imageData: originalClone });
+
+    // Track the last frame that we actually pushed so we can
+    // skip visual duplicates that have almost no displacement
+    let lastPushedFrame = originalClone;
+
+    // Heuristic: minimum number of visibly changed pixels (sampled)
+    const minChangedSamples = 40;
+    const sampleStep = 16; // sample every Nth pixel for performance
+
+    const hasMeaningfulChange = (a: ImageData, b: ImageData): boolean => {
+      const dataA = a.data;
+      const dataB = b.data;
+      const totalPixels = dataA.length / 4;
+      let changed = 0;
+
+      for (let i = 0; i < totalPixels; i += sampleStep) {
+        const idx = i * 4;
+        const dr = Math.abs(dataA[idx] - dataB[idx]);
+        const dg = Math.abs(dataA[idx + 1] - dataB[idx + 1]);
+        const db = Math.abs(dataA[idx + 2] - dataB[idx + 2]);
+
+        // Treat any RGB change above a tiny epsilon as motion
+        if (dr + dg + db > 6) {
+          changed++;
+          if (changed >= minChangedSamples) return true;
+        }
+      }
+
+      return false;
+    };
 
     // Generate subsequent keyframes with progressive displacement
     // For large images, generate frames one at a time and allow GC
     for (let i = 1; i < numFrames; i++) {
       const displaced = this.createDisplacedFrame(sourceFrame);
-      this.keyframes.push({ imageData: displaced });
+
+      // Always advance the simulation so motion accumulates,
+      // but only keep frames that are meaningfully different
+      // from the last one we actually pushed.
+      if (hasMeaningfulChange(displaced, lastPushedFrame)) {
+        this.keyframes.push({ imageData: displaced });
+        lastPushedFrame = displaced;
+      }
+
       sourceFrame = displaced;
       
       // For very large images, yield to browser occasionally
@@ -489,7 +529,12 @@ export class MotionAnimationEngine {
       }
     }
 
-    console.log(`Generated ${numFrames} keyframes for continuous one-directional loop`);
+    // Safety: ensure we always have at least two frames
+    if (this.keyframes.length < 2) {
+      this.keyframes.push({ imageData: this.createDisplacedFrame(sourceFrame) });
+    }
+
+    console.log(`Generated ${this.keyframes.length} keyframes for continuous one-directional loop`);
   }
 
   /**
@@ -669,6 +714,16 @@ export class MotionAnimationEngine {
    */
   private renderLoop(timestamp: number) {
     if (!this.isAnimating) return;
+
+    // First frame after play(): show pure original image so the
+    // fade-in starts from maximum saturation, then let the
+    // dual-cycle system take over.
+    if (!this.hasShownInitialOriginal) {
+      this.ctx.putImageData(this.originalImageData, 0, 0);
+      this.hasShownInitialOriginal = true;
+      this.animationFrame = requestAnimationFrame((t) => this.renderLoop(t));
+      return;
+    }
 
     if (this.keyframes.length < 2) {
       this.ctx.putImageData(this.originalImageData, 0, 0);
@@ -908,6 +963,7 @@ export class MotionAnimationEngine {
     }
     
     this.isAnimating = true;
+    this.hasShownInitialOriginal = false;
     this.currentTime = performance.now();
     this.animationFrame = requestAnimationFrame((t) => this.renderLoop(t));
   }
