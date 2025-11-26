@@ -814,8 +814,12 @@ export class MotionAnimationEngine {
         const bCycles = b1 * weight1 + b2 * weight2;
         
         // Then fade cycles in/out against the original image based on totalAlpha
-        // When totalAlpha≈0 we see pure original; when ≈1 we see full animation.
-        const fadeFactor = totalAlpha;
+        // We enforce a minimum animation contribution so after the very first
+        // pure-original frame, subsequent frames never look static again.
+        let fadeFactor = totalAlpha;
+        if (fadeFactor > 0 && fadeFactor < 0.35) {
+          fadeFactor = 0.35 + 0.65 * fadeFactor; // keep some curve but avoid near-0
+        }
         r = rCycles * fadeFactor + origR * (1 - fadeFactor);
         g = gCycles * fadeFactor + origG * (1 - fadeFactor);
         b = bCycles * fadeFactor + origB * (1 - fadeFactor);
