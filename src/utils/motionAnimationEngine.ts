@@ -679,6 +679,14 @@ export class MotionAnimationEngine {
     const progress = (timestamp % this.animationDuration) / this.animationDuration;
     const numFrames = this.keyframes.length;
     
+    // We always reserve keyframe 0 as the static original reference
+    // and ONLY animate over displaced frames [1 .. numFrames-1].
+    // This hides the initial "duplicate" original keyframes so the
+    // loop starts already displaced and fades just like the end.
+    const firstAnimatedIndex = 1;
+    const lastAnimatedIndex = numFrames - 1;
+    const animatedSpan = Math.max(1, lastAnimatedIndex - firstAnimatedIndex);
+    
     // Calculate two animation cycles offset by 50%
     const cycle1Progress = progress;
     const cycle2Progress = (progress + 0.5) % 1.0;
@@ -696,11 +704,11 @@ export class MotionAnimationEngine {
     const cycle1Alpha = calculateCycleAlpha(cycle1Progress);
     const cycle2Alpha = calculateCycleAlpha(cycle2Progress);
     
-    // Get nearest frame for each cycle (no interpolation)
-    const framePosition1 = cycle1Progress * (numFrames - 1);
+    // Get nearest displaced frame for each cycle (skip original frame 0)
+    const framePosition1 = firstAnimatedIndex + cycle1Progress * animatedSpan;
     const frame1Index = Math.round(framePosition1);
     
-    const framePosition2 = cycle2Progress * (numFrames - 1);
+    const framePosition2 = firstAnimatedIndex + cycle2Progress * animatedSpan;
     const frame2Index = Math.round(framePosition2);
     
     // Render both cycles and composite them
