@@ -455,7 +455,7 @@ export class MotionAnimationEngine {
   }
 
 /**
-   * Generate keyframes for continuous one-directional loop
+   * Generate keyframes for continuous one-directional loop with cumulative displacement
    * Optimized for large images with memory management
    */
   private generateKeyframes() {
@@ -471,27 +471,24 @@ export class MotionAnimationEngine {
     const numFrames = this.numKeyframes;
 
     // First keyframe: pure original (clone to avoid reference issues)
-    const originalClone = this.cloneImageData(this.originalImageData);
-    this.keyframes.push({ imageData: originalClone });
+    this.keyframes.push({ imageData: this.cloneImageData(this.originalImageData) });
 
-    // Generate subsequent keyframes by displacing from the ORIGINAL image
-    // with a progressive intensity factor so motion increases smoothly
-    // from frame 1 to frame N-1. This guarantees that every animated
-    // frame has a different displacement amount and prevents long runs
-    // of static duplicates at the head of the trail.
+    // Generate subsequent keyframes with CUMULATIVE displacement
+    // Each frame displaces the previous one, creating flowing motion trails
+    let sourceFrame = this.originalImageData;
+    
     for (let i = 1; i < numFrames; i++) {
-      const progress = i / (numFrames - 1); // 0..1
-      const displaced = this.createDisplacedFrame(this.originalImageData, progress);
+      const displaced = this.createDisplacedFrame(sourceFrame, 1.0);
       this.keyframes.push({ imageData: displaced });
-
+      sourceFrame = displaced; // Next frame builds on this one
+      
       // For very large images, yield to browser occasionally
       if (i % 4 === 0 && this.canvas.width * this.canvas.height > 1000000) {
-        // Allow browser to process other tasks
         void Promise.resolve();
       }
     }
 
-    console.log(`Generated ${this.keyframes.length} keyframes for continuous one-directional loop`);
+    console.log(`Generated ${numFrames} keyframes for continuous one-directional loop`);
   }
 
   /**
@@ -730,9 +727,9 @@ export class MotionAnimationEngine {
     this.animationFrame = requestAnimationFrame((t) => this.renderLoop(t));
   }
 
-  /**
+/**
    * Blend dual animation cycles for seamless overlap
-   * Enhanced to prevent duplicate appearance at selection edges
+   * Enhanced with per-frame opacity curve to eliminate static duplicates at cycle start
    */
   private blendDualCycles(
     frame1Index: number, alpha1: number,
@@ -744,6 +741,22 @@ export class MotionAnimationEngine {
     
     const blendedImageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
     const length = frame1.data.length;
+
+    // Per-frame opacity curve: early frames fade in, late frames remain strong
+    // This prevents barely-displaced early keyframes from appearing as static duplicates
+    const getFrameOpacity = (frameIndex: number): number => {
+      if (frameIndex === 0) return 0; // Original never shown in cycles
+      const numAnimatedFrames = this.keyframes.length - 1;
+      const normalizedFrame = (frameIndex - 1) / Math.max(1, numAnimatedFrames - 1); // 0..1
+      // Smooth fade-in curve: first 30% of frames fade from 0→1
+      if (normalizedFrame < 0.3) {
+        return normalizedFrame / 0.3;
+      }
+      return 1.0;
+    };
+
+    const frame1Opacity = getFrameOpacity(frame1Index);
+    const frame2Opacity = getFrameOpacity(frame2Index);
 
     // Process in batches for better performance with large images
     for (let i = 0; i < length; i += 4) {
@@ -764,22 +777,26 @@ export class MotionAnimationEngine {
       
       if (this.coreBrightening) {
         // Brightening on: reduce blur factor to keep animated regions more visible with pulsing
-        const totalAlpha = Math.min(1, alpha1 + alpha2);
-        const rCycles = totalAlpha > 0 ? (r1 * alpha1 + r2 * alpha2) / totalAlpha : r1;
-        const gCycles = totalAlpha > 0 ? (g1 * alpha1 + g2 * alpha2) / totalAlpha : g1;
-        const bCycles = totalAlpha > 0 ? (b1 * alpha1 + b2 * alpha2) / totalAlpha : b1;
+        const effectiveAlpha1 = alpha1 * frame1Opacity;
+        const effectiveAlpha2 = alpha2 * frame2Opacity;
+        const totalAlpha = Math.min(1, effectiveAlpha1 + effectiveAlpha2);
+        const rCycles = totalAlpha > 0 ? (r1 * effectiveAlpha1 + r2 * effectiveAlpha2) / totalAlpha : r1;
+        const gCycles = totalAlpha > 0 ? (g1 * effectiveAlpha1 + g2 * effectiveAlpha2) / totalAlpha : g1;
+        const bCycles = totalAlpha > 0 ? (b1 * effectiveAlpha1 + b2 * effectiveAlpha2) / totalAlpha : b1;
         
         const blurFactor = 0.3;
         r = rCycles * (1 - blurFactor * (1 - totalAlpha)) + origR * blurFactor * (1 - totalAlpha);
         g = gCycles * (1 - blurFactor * (1 - totalAlpha)) + origG * blurFactor * (1 - totalAlpha);
         b = bCycles * (1 - blurFactor * (1 - totalAlpha)) + origB * blurFactor * (1 - totalAlpha);
       } else {
-        // Smooth dual-cycle crossfade with global fade to/from original
-        const totalAlpha = Math.min(1, alpha1 + alpha2);
+        // Apply per-frame opacity to cycle alphas for smooth fade-in
+        const effectiveAlpha1 = alpha1 * frame1Opacity;
+        const effectiveAlpha2 = alpha2 * frame2Opacity;
+        const totalAlpha = Math.min(1, effectiveAlpha1 + effectiveAlpha2);
         
         // Gentler power curve for more balanced blending between cycles
-        const adjustedAlpha1 = Math.pow(alpha1, 0.85);
-        const adjustedAlpha2 = Math.pow(alpha2, 0.85);
+        const adjustedAlpha1 = Math.pow(effectiveAlpha1, 0.85);
+        const adjustedAlpha2 = Math.pow(effectiveAlpha2, 0.85);
         const adjustedTotal = adjustedAlpha1 + adjustedAlpha2;
         
         const weight1 = adjustedTotal > 0 ? adjustedAlpha1 / adjustedTotal : 0.5;
