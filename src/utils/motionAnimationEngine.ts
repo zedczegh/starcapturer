@@ -702,14 +702,18 @@ export class MotionAnimationEngine {
     const cycle2Progress = (progress + 0.5) % 1.0;
     
     // Calculate alpha for each cycle (0-1 fade in/out)
-    const calculateCycleAlpha = (cycleProgress: number) => {
-      if (cycleProgress < 0.7) {
-        return cycleProgress / 0.7;
-      } else {
-        const fadeProgress = (cycleProgress - 0.7) / 0.3;
-        return 1 - fadeProgress;
-      }
-    };
+      const calculateCycleAlpha = (cycleProgress: number) => {
+        // Faster ramp-up at the start so motion becomes visible earlier,
+        // still fading out over the last 30% of the cycle.
+        if (cycleProgress < 0.5) {
+          const ramp = cycleProgress / 0.5; // 0..1 over first half
+          // Ease-out curve so we reach strong opacity quickly
+          return Math.pow(ramp, 0.6);
+        } else {
+          const fadeProgress = (cycleProgress - 0.5) / 0.5; // last half
+          return 1 - Math.pow(fadeProgress, 0.9);
+        }
+      };
     
     const cycle1Alpha = calculateCycleAlpha(cycle1Progress);
     const cycle2Alpha = calculateCycleAlpha(cycle2Progress);
@@ -744,16 +748,18 @@ export class MotionAnimationEngine {
 
     // Per-frame opacity curve: early frames fade in, late frames remain strong
     // This prevents barely-displaced early keyframes from appearing as static duplicates
-    const getFrameOpacity = (frameIndex: number): number => {
-      if (frameIndex === 0) return 0; // Original never shown in cycles
-      const numAnimatedFrames = this.keyframes.length - 1;
-      const normalizedFrame = (frameIndex - 1) / Math.max(1, numAnimatedFrames - 1); // 0..1
-      // Smooth fade-in curve: first 30% of frames fade from 0→1
-      if (normalizedFrame < 0.3) {
-        return normalizedFrame / 0.3;
-      }
-      return 1.0;
-    };
+      const getFrameOpacity = (frameIndex: number): number => {
+        if (frameIndex === 0) return 0; // Original never shown in cycles
+        const numAnimatedFrames = this.keyframes.length - 1;
+        const normalizedFrame = (frameIndex - 1) / Math.max(1, numAnimatedFrames - 1); // 0..1
+        // Much shorter fade-in: first 15% ramp from 0.25 → 1 so
+        // early displaced frames are clearly visible and not static.
+        if (normalizedFrame < 0.15) {
+          const local = normalizedFrame / 0.15; // 0..1
+          return 0.25 + 0.75 * local;
+        }
+        return 1.0;
+      };
 
     const frame1Opacity = getFrameOpacity(frame1Index);
     const frame2Opacity = getFrameOpacity(frame2Index);
