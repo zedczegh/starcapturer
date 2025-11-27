@@ -182,21 +182,31 @@ export class TraditionalMorphProcessor {
 
   /**
    * PERFORMANCE OPTIMIZED: Calculate optimal size considering memory constraints
+   * Supports very large images (10000px+) with intelligent scaling
    */
   private getOptimalProcessingSize(metadata: any, profile: any): number {
-    const baseSize = 2048;
+    // Significantly increased base size for high-res astrophotography
+    const baseSize = 6000; // Increased from 2048 to support larger images
     
-    // Less aggressive memory constraints to preserve quality
+    // Check available memory and adjust accordingly
     const memoryParams = MemoryManager.getOptimalProcessingParams(baseSize, baseSize);
-    let memorySizeLimit = Math.sqrt(memoryParams.chunkSize * 1.5); // Increase memory allowance
+    
+    // More generous memory allowance for large files
+    let memorySizeLimit = Math.sqrt(memoryParams.chunkSize * 4); // Increased multiplier
+    
+    // If device has good memory, allow even larger processing
+    const memoryStats = MemoryManager.getMemoryStats();
+    if (memoryStats && memoryStats.percentage < 50) {
+      memorySizeLimit = Math.max(memorySizeLimit, 8000); // Allow up to 8000px if memory is good
+    }
     
     // Be more conservative with complexity-based reduction
     let multiplier = 1;
     switch (metadata.complexity) {
       case 'Simple': multiplier = 1.2; break;    // Allow higher quality for simple images
       case 'Moderate': multiplier = 1.0; break; // Keep full resolution
-      case 'Complex': multiplier = 0.9; break;  // Minor reduction only
-      case 'Extreme': multiplier = 0.8; break;  // Less aggressive reduction
+      case 'Complex': multiplier = 0.85; break;  // Minor reduction only
+      case 'Extreme': multiplier = 0.7; break;  // Less aggressive reduction
     }
     
     // Be less aggressive with star count reduction - preserve nebula detail
@@ -206,10 +216,10 @@ export class TraditionalMorphProcessor {
     const idealSize = Math.round(baseSize * multiplier);
     const memoryConstrainedSize = Math.min(idealSize, memorySizeLimit);
     
-    // Ensure minimum quality preservation - never go below 75% of base size
-    const qualityPreservedSize = Math.max(memoryConstrainedSize, Math.round(baseSize * 0.75));
+    // Ensure minimum quality preservation - never go below 60% of base size
+    const qualityPreservedSize = Math.max(memoryConstrainedSize, Math.round(baseSize * 0.6));
     
-    console.log(`🧠 Quality-preserving sizing: base=${baseSize}, ideal=${idealSize}, memory-limited=${memorySizeLimit}, final=${qualityPreservedSize}`);
+    console.log(`🧠 Large file sizing: base=${baseSize}, ideal=${idealSize}, memory-limited=${memorySizeLimit}, final=${qualityPreservedSize}`);
     
     return qualityPreservedSize;
   }

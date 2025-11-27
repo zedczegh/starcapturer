@@ -117,6 +117,7 @@ export class MemoryManager {
 
   /**
    * Get optimal processing parameters based on available memory
+   * Optimized for large astrophotography images (up to 10000px+)
    */
   static getOptimalProcessingParams(imageWidth: number, imageHeight: number): {
     chunkSize: number;
@@ -133,22 +134,30 @@ export class MemoryManager {
     let shouldDownscale = false;
     let recommendedScale = 1.0;
     
-    if (stats.percentage > this.MEMORY_WARNING_THRESHOLD || estimatedImageMemory > stats.limit * 0.3) {
-      // High memory usage, optimize aggressively
-      chunkSize = Math.min(totalPixels, 512 * 512); // 512x512 chunks
+    // More generous memory thresholds for astrophotography
+    const availableMemory = stats.limit - stats.current;
+    const memoryPerImage = estimatedImageMemory * 4; // Account for multiple copies during processing
+    
+    if (stats.percentage > this.MEMORY_CRITICAL_THRESHOLD || memoryPerImage > availableMemory * 0.8) {
+      // Critical memory - aggressive optimization
+      chunkSize = Math.min(totalPixels, 512 * 512);
       maxConcurrentOperations = 1;
       
-      if (estimatedImageMemory > stats.limit * 0.5) {
+      if (memoryPerImage > availableMemory) {
         shouldDownscale = true;
-        recommendedScale = Math.sqrt((stats.limit * 0.3) / estimatedImageMemory);
+        recommendedScale = Math.sqrt(availableMemory * 0.6 / estimatedImageMemory);
       }
+    } else if (stats.percentage > this.MEMORY_WARNING_THRESHOLD || memoryPerImage > availableMemory * 0.5) {
+      // High memory usage, moderate optimization
+      chunkSize = Math.min(totalPixels, 1024 * 1024);
+      maxConcurrentOperations = 1;
     } else if (stats.percentage > 0.5) {
-      // Moderate memory usage, moderate optimization
-      chunkSize = Math.min(totalPixels, 1024 * 1024); // 1024x1024 chunks
+      // Moderate memory usage - larger chunks for better performance
+      chunkSize = Math.min(totalPixels, 2048 * 2048);
       maxConcurrentOperations = 2;
     } else {
-      // Low memory usage, minimal optimization
-      chunkSize = Math.min(totalPixels, 2048 * 2048); // 2048x2048 chunks
+      // Low memory usage, can handle large images well
+      chunkSize = Math.min(totalPixels, 4096 * 4096);
       maxConcurrentOperations = 3;
     }
     

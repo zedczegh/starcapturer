@@ -604,6 +604,10 @@ const StereoscopeProcessor: React.FC = () => {
     const maxShift = customDisplacement !== undefined ? customDisplacement : params.maxShift;
     const directionMultiplier = invertDirection ? -1 : 1;
 
+    // Process in chunks for large images to prevent UI freeze
+    const CHUNK_HEIGHT = 256; // Process 256 rows at a time
+    const totalPixels = width * height;
+    
     // SIMPLE INVERSE MAPPING - Pull pixels from source (prevents gaps and black lines)
     // For each destination pixel, look back to the source and copy the pixel
     for (let y = 0; y < height; y++) {
@@ -693,26 +697,47 @@ const StereoscopeProcessor: React.FC = () => {
         });
       }
 
-      const width = starsImg ? Math.max(starlessImg.width, starsImg.width) : starlessImg.width;
-      const height = starsImg ? Math.max(starlessImg.height, starsImg.height) : starlessImg.height;
+      const originalWidth = starsImg ? Math.max(starlessImg.width, starsImg.width) : starlessImg.width;
+      const originalHeight = starsImg ? Math.max(starlessImg.height, starsImg.height) : starlessImg.height;
       
-      // Create canvases
+      // Handle very large images with intelligent scaling
+      // Max dimension of 8000px should handle most astrophotography while preventing crashes
+      const MAX_PROCESSING_DIM = 8000;
+      let width = originalWidth;
+      let height = originalHeight;
+      let scaleFactor = 1;
+      
+      if (originalWidth > MAX_PROCESSING_DIM || originalHeight > MAX_PROCESSING_DIM) {
+        scaleFactor = MAX_PROCESSING_DIM / Math.max(originalWidth, originalHeight);
+        width = Math.round(originalWidth * scaleFactor);
+        height = Math.round(originalHeight * scaleFactor);
+        console.log(`🚀 Scaling large image: ${originalWidth}x${originalHeight} -> ${width}x${height} (${(scaleFactor * 100).toFixed(1)}%)`);
+        setProgressText(t(`Scaling ${originalWidth}x${originalHeight} image for processing...`, `缩放 ${originalWidth}x${originalHeight} 图像以供处理...`));
+      }
+      
+      // Create canvases with willReadFrequently for better performance
       const starlessCanvas = document.createElement('canvas');
-      const starlessCtx = starlessCanvas.getContext('2d')!;
+      const starlessCtx = starlessCanvas.getContext('2d', { willReadFrequently: true })!;
       starlessCanvas.width = width;
       starlessCanvas.height = height;
       starlessCtx.drawImage(starlessImg, 0, 0, width, height);
+      
+      // Yield to UI to prevent freeze on large images
+      await new Promise(resolve => setTimeout(resolve, 0));
       
       // Create stars canvas if stars image provided
       let starsCanvas: HTMLCanvasElement | null = null;
       let starsCtx: CanvasRenderingContext2D | null = null;
       if (starsImg) {
         starsCanvas = document.createElement('canvas');
-        starsCtx = starsCanvas.getContext('2d')!;
+        starsCtx = starsCanvas.getContext('2d', { willReadFrequently: true })!;
         starsCanvas.width = width;
         starsCanvas.height = height;
         starsCtx.drawImage(starsImg, 0, 0, width, height);
       }
+      
+      // Yield to UI
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // STEP 1: Generate depth map from starless (Fast Mode approach)
       setProgressText(t('Generating depth map...', '生成深度图...'));
@@ -923,12 +948,19 @@ const StereoscopeProcessor: React.FC = () => {
     }
   };
 
+  // Helper to generate descriptive filename with parameters
+  const getBaseFilename = () => {
+    const starlessName = starlessImage?.name?.replace(/\.[^/.]+$/, '') || 'image';
+    const direction = displacementDirection === 'left' ? 'L' : 'R';
+    return `${starlessName}_d${displacementAmount}_${direction}`;
+  };
+
   const downloadResult = () => {
     if (!resultUrl) return;
     
     const link = document.createElement('a');
     link.href = resultUrl;
-    link.download = `stereoscope-result.png`;
+    link.download = `${getBaseFilename()}_stereo-pair.png`;
     link.click();
   };
 
@@ -937,7 +969,7 @@ const StereoscopeProcessor: React.FC = () => {
     
     const link = document.createElement('a');
     link.href = leftImageUrl;
-    link.download = `stereoscope-left.png`;
+    link.download = `${getBaseFilename()}_left.png`;
     link.click();
   };
 
@@ -946,7 +978,7 @@ const StereoscopeProcessor: React.FC = () => {
     
     const link = document.createElement('a');
     link.href = rightImageUrl;
-    link.download = `stereoscope-right.png`;
+    link.download = `${getBaseFilename()}_right.png`;
     link.click();
   };
 
@@ -955,7 +987,7 @@ const StereoscopeProcessor: React.FC = () => {
     
     const link = document.createElement('a');
     link.href = starlessDepthMapUrl;
-    link.download = `depth-map-starless.png`;
+    link.download = `${getBaseFilename()}_depth-starless.png`;
     link.click();
   };
 
@@ -964,7 +996,7 @@ const StereoscopeProcessor: React.FC = () => {
     
     const link = document.createElement('a');
     link.href = starsDepthMapUrl;
-    link.download = `depth-map-stars.png`;
+    link.download = `${getBaseFilename()}_depth-stars.png`;
     link.click();
   };
 
@@ -973,12 +1005,13 @@ const StereoscopeProcessor: React.FC = () => {
     
     const link = document.createElement('a');
     link.href = anaglyphImageUrl;
-    link.download = `stereoscope-anaglyph.png`;
+    link.download = `${getBaseFilename()}_anaglyph.png`;
     link.click();
   };
 
   const downloadAllFiles = async () => {
     const zip = new JSZip();
+    const baseName = getBaseFilename();
     
     // Helper function to convert data URL to blob
     const dataURLtoBlob = (dataurl: string): Blob => {
@@ -995,38 +1028,38 @@ const StereoscopeProcessor: React.FC = () => {
     
     // Add stereo pair
     if (resultUrl) {
-      zip.file('stereoscope-pair.png', dataURLtoBlob(resultUrl));
+      zip.file(`${baseName}_stereo-pair.png`, dataURLtoBlob(resultUrl));
     }
     
     // Add left image
     if (leftImageUrl) {
-      zip.file('stereoscope-left.png', dataURLtoBlob(leftImageUrl));
+      zip.file(`${baseName}_left.png`, dataURLtoBlob(leftImageUrl));
     }
     
     // Add right image
     if (rightImageUrl) {
-      zip.file('stereoscope-right.png', dataURLtoBlob(rightImageUrl));
+      zip.file(`${baseName}_right.png`, dataURLtoBlob(rightImageUrl));
     }
     
     // Add depth maps
     if (starlessDepthMapUrl) {
-      zip.file('depth-map.png', dataURLtoBlob(starlessDepthMapUrl));
+      zip.file(`${baseName}_depth-starless.png`, dataURLtoBlob(starlessDepthMapUrl));
     }
     
     if (starsDepthMapUrl) {
-      zip.file('depth-map-stars.png', dataURLtoBlob(starsDepthMapUrl));
+      zip.file(`${baseName}_depth-stars.png`, dataURLtoBlob(starsDepthMapUrl));
     }
     
     // Add anaglyph image
     if (anaglyphImageUrl) {
-      zip.file('stereoscope-anaglyph.png', dataURLtoBlob(anaglyphImageUrl));
+      zip.file(`${baseName}_anaglyph.png`, dataURLtoBlob(anaglyphImageUrl));
     }
     
     // Generate and download zip
     const blob = await zip.generateAsync({ type: 'blob' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `stereoscope-results.zip`;
+    link.download = `${baseName}_all-results.zip`;
     link.click();
     URL.revokeObjectURL(link.href);
   };
