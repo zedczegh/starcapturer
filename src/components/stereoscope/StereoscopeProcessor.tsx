@@ -141,28 +141,76 @@ const StereoscopeProcessor: React.FC = () => {
   const convertTiffToDataURL = async (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
           const buffer = e.target?.result as ArrayBuffer;
           const ifds = UTIF.decode(buffer);
           UTIF.decodeImage(buffer, ifds[0]);
           const rgba = UTIF.toRGBA8(ifds[0]);
           
-          // Create canvas and draw the TIFF image
-          const canvas = document.createElement('canvas');
-          canvas.width = ifds[0].width;
-          canvas.height = ifds[0].height;
-          const ctx = canvas.getContext('2d')!;
+          let targetWidth = ifds[0].width;
+          let targetHeight = ifds[0].height;
+          
+          // For very large TIFF images, downscale during loading to prevent browser crashes
+          // Browser canvas limits are typically around 16384x16384 or ~268M pixels total
+          const MAX_PREVIEW_DIM = 6000; // More conservative for preview generation
+          const totalPixels = targetWidth * targetHeight;
+          const MAX_PIXELS = 36000000; // 36M pixels max (6000x6000)
+          
+          let scaleFactor = 1;
+          if (targetWidth > MAX_PREVIEW_DIM || targetHeight > MAX_PREVIEW_DIM || totalPixels > MAX_PIXELS) {
+            const dimScale = MAX_PREVIEW_DIM / Math.max(targetWidth, targetHeight);
+            const pixelScale = Math.sqrt(MAX_PIXELS / totalPixels);
+            scaleFactor = Math.min(dimScale, pixelScale);
+            console.log(`📐 Large TIFF detected: ${targetWidth}x${targetHeight} (${(totalPixels/1000000).toFixed(1)}M pixels), scaling to ${(scaleFactor * 100).toFixed(1)}%`);
+          }
+          
+          // Create source canvas with original dimensions
+          const sourceCanvas = document.createElement('canvas');
+          sourceCanvas.width = ifds[0].width;
+          sourceCanvas.height = ifds[0].height;
+          const sourceCtx = sourceCanvas.getContext('2d', { willReadFrequently: true });
+          
+          if (!sourceCtx) {
+            throw new Error(`Canvas context creation failed for ${ifds[0].width}x${ifds[0].height} TIFF`);
+          }
           
           const imageData = new ImageData(new Uint8ClampedArray(rgba), ifds[0].width, ifds[0].height);
-          ctx.putImageData(imageData, 0, 0);
+          sourceCtx.putImageData(imageData, 0, 0);
           
-          resolve(canvas.toDataURL());
+          // If scaling needed, create smaller output canvas
+          if (scaleFactor < 1) {
+            const scaledWidth = Math.round(ifds[0].width * scaleFactor);
+            const scaledHeight = Math.round(ifds[0].height * scaleFactor);
+            
+            const scaledCanvas = document.createElement('canvas');
+            scaledCanvas.width = scaledWidth;
+            scaledCanvas.height = scaledHeight;
+            const scaledCtx = scaledCanvas.getContext('2d');
+            
+            if (!scaledCtx) {
+              throw new Error(`Scaled canvas context creation failed`);
+            }
+            
+            scaledCtx.drawImage(sourceCanvas, 0, 0, scaledWidth, scaledHeight);
+            
+            // Free source canvas memory
+            sourceCanvas.width = 0;
+            sourceCanvas.height = 0;
+            
+            resolve(scaledCanvas.toDataURL('image/jpeg', 0.92)); // Use JPEG for smaller size
+          } else {
+            resolve(sourceCanvas.toDataURL());
+          }
         } catch (error) {
+          console.error('TIFF conversion error:', error);
           reject(error);
         }
       };
-      reader.onerror = reject;
+      reader.onerror = (error) => {
+        console.error('FileReader error:', error);
+        reject(error);
+      };
       reader.readAsArrayBuffer(file);
     });
   };
@@ -171,7 +219,66 @@ const StereoscopeProcessor: React.FC = () => {
     if (isTiffFile(file)) {
       return await convertTiffToDataURL(file);
     }
+    
+    // For large non-TIFF images, use URL.createObjectURL but we'll handle
+    // scaling during the actual processing step
     return URL.createObjectURL(file);
+  };
+
+  // Helper function to scale large standard images during loading
+  const loadAndScaleImage = async (file: File, url: string): Promise<{ img: HTMLImageElement; scaledUrl: string }> => {
+    const img = new Image();
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('Image load failed'));
+      img.src = url;
+    });
+    
+    const MAX_PREVIEW_DIM = 6000;
+    const MAX_PIXELS = 36000000;
+    const totalPixels = img.width * img.height;
+    
+    // Check if scaling is needed
+    if (img.width <= MAX_PREVIEW_DIM && img.height <= MAX_PREVIEW_DIM && totalPixels <= MAX_PIXELS) {
+      return { img, scaledUrl: url };
+    }
+    
+    // Scale down large images
+    const dimScale = MAX_PREVIEW_DIM / Math.max(img.width, img.height);
+    const pixelScale = Math.sqrt(MAX_PIXELS / totalPixels);
+    const scaleFactor = Math.min(dimScale, pixelScale);
+    
+    const scaledWidth = Math.round(img.width * scaleFactor);
+    const scaledHeight = Math.round(img.height * scaleFactor);
+    
+    console.log(`📐 Large image detected: ${img.width}x${img.height} (${(totalPixels/1000000).toFixed(1)}M pixels), scaling to ${scaledWidth}x${scaledHeight}`);
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = scaledWidth;
+    canvas.height = scaledHeight;
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) {
+      throw new Error('Canvas context creation failed for scaling');
+    }
+    
+    ctx.drawImage(img, 0, 0, scaledWidth, scaledHeight);
+    const scaledUrl = canvas.toDataURL('image/jpeg', 0.92);
+    
+    // Create new image element with scaled data
+    const scaledImg = new Image();
+    await new Promise<void>((resolve, reject) => {
+      scaledImg.onload = () => resolve();
+      scaledImg.onerror = () => reject(new Error('Scaled image load failed'));
+      scaledImg.src = scaledUrl;
+    });
+    
+    // Free original URL if it was a blob URL
+    if (url.startsWith('blob:')) {
+      URL.revokeObjectURL(url);
+    }
+    
+    return { img: scaledImg, scaledUrl };
   };
 
   const handleStarlessImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,20 +304,17 @@ const StereoscopeProcessor: React.FC = () => {
           ...prev,
           starless: { 
             ...prev.starless, 
-            progress: Math.min(prev.starless.progress + 20, 90) 
+            progress: Math.min(prev.starless.progress + 15, 85) 
           }
         }));
-      }, 100);
+      }, 200);
 
+      setProgressText(t('Loading large image, please wait...', '加载大图像，请稍候...'));
+      
       const url = await createPreviewUrl(file);
       
-      // Create image element
-      const img = new Image();
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = url;
-      });
+      // Scale if needed (handles very large images)
+      const { img, scaledUrl } = await loadAndScaleImage(file, url);
 
       clearInterval(progressInterval);
       
@@ -221,7 +325,7 @@ const StereoscopeProcessor: React.FC = () => {
       }));
 
       setStarlessImage(file);
-      setStarlessPreview(url);
+      setStarlessPreview(scaledUrl);
       setStarlessElement(img);
       setResultUrl(null);
       setLeftImageUrl(null);
@@ -235,13 +339,15 @@ const StereoscopeProcessor: React.FC = () => {
           ...prev,
           starless: { show: false, progress: 0, fileName: '' }
         }));
+        setProgressText('');
       }, 1000);
     } catch (error) {
-      console.error('Error processing TIFF file:', error);
+      console.error('Error processing image file:', error);
       setUploadProgress(prev => ({
         ...prev,
         starless: { show: false, progress: 0, fileName: '' }
       }));
+      setProgressText('');
       if (starlessInputRef.current) starlessInputRef.current.value = '';
     }
   };
@@ -269,20 +375,17 @@ const StereoscopeProcessor: React.FC = () => {
           ...prev,
           stars: { 
             ...prev.stars, 
-            progress: Math.min(prev.stars.progress + 20, 90) 
+            progress: Math.min(prev.stars.progress + 15, 85) 
           }
         }));
-      }, 100);
+      }, 200);
 
+      setProgressText(t('Loading large image, please wait...', '加载大图像，请稍候...'));
+      
       const url = await createPreviewUrl(file);
       
-      // Create image element
-      const img = new Image();
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = url;
-      });
+      // Scale if needed (handles very large images)
+      const { img, scaledUrl } = await loadAndScaleImage(file, url);
 
       clearInterval(progressInterval);
       
@@ -293,7 +396,7 @@ const StereoscopeProcessor: React.FC = () => {
       }));
 
       setStarsImage(file);
-      setStarsPreview(url);
+      setStarsPreview(scaledUrl);
       setStarsElement(img);
       setResultUrl(null);
       setLeftImageUrl(null);
@@ -307,13 +410,15 @@ const StereoscopeProcessor: React.FC = () => {
           ...prev,
           stars: { show: false, progress: 0, fileName: '' }
         }));
+        setProgressText('');
       }, 1000);
     } catch (error) {
-      console.error('Error processing TIFF file:', error);
+      console.error('Error processing image file:', error);
       setUploadProgress(prev => ({
         ...prev,
         stars: { show: false, progress: 0, fileName: '' }
       }));
+      setProgressText('');
       if (starsInputRef.current) starsInputRef.current.value = '';
     }
   };
