@@ -9,7 +9,8 @@ import {
   TrendingUp, 
   RefreshCw,
   Filter,
-  ArrowUpDown
+  ArrowUpDown,
+  BarChart3
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSiqsAdminData } from '@/hooks/admin/useSiqsAdminData';
@@ -17,6 +18,7 @@ import { useCountyGroupedSiqs } from '@/hooks/admin/useCountyGroupedSiqs';
 import CountyGroupCard from './CountyGroupCard';
 import MapProviderToggle from './MapProviderToggle';
 import AMapKeyConfig from './AMapKeyConfig';
+import SiqsTimeAnalytics from './SiqsTimeAnalytics';
 import { motion } from 'framer-motion';
 
 const SiqsAdminDashboard: React.FC = () => {
@@ -173,8 +175,12 @@ const SiqsAdminDashboard: React.FC = () => {
       </div>
 
       {/* Locations Tabs */}
-      <Tabs defaultValue="ranked" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-cosmic-800/40">
+      <Tabs defaultValue="time-analytics" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 bg-cosmic-800/40">
+          <TabsTrigger value="time-analytics" className="text-xs">
+            <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+            {t('Time Analytics', '时间分析')}
+          </TabsTrigger>
           <TabsTrigger value="ranked" className="text-xs">
             <TrendingUp className="h-3.5 w-3.5 mr-1.5" />
             {t('Top Ranked', '排名最高')}
@@ -188,6 +194,11 @@ const SiqsAdminDashboard: React.FC = () => {
             {t('Community', '社区')}
           </TabsTrigger>
         </TabsList>
+
+        {/* Time Analytics Tab */}
+        <TabsContent value="time-analytics" className="mt-4">
+          <SiqsTimeAnalytics />
+        </TabsContent>
 
         {/* Top Ranked Tab */}
         <TabsContent value="ranked" className="space-y-4 mt-4">

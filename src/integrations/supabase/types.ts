@@ -1163,6 +1163,19 @@ export type Database = {
           username: string
         }[]
       }
+      get_siqs_time_aggregated_stats: {
+        Args: { p_limit?: number; p_period?: string; p_source?: string }
+        Returns: {
+          avg_siqs: number
+          calculation_count: number
+          max_siqs: number
+          min_siqs: number
+          period_label: string
+          period_start: string
+          source: string
+          unique_locations: number
+        }[]
+      }
       get_spot_type_color: { Args: { type_name: string }; Returns: string }
       get_top_ranked_siqs_locations: {
         Args: { p_limit?: number; p_min_calculations?: number }
