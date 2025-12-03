@@ -67,7 +67,10 @@ const StereoscopeProcessor: React.FC = () => {
   const starsInputRef = useRef<HTMLInputElement>(null);
   
   // Output format selection
-  const [outputFormat, setOutputFormat] = useState<'stereo' | 'anaglyph' | 'both'>('stereo');
+  const [outputFormat, setOutputFormat] = useState<'stereo' | 'anaglyph' | 'lenticular' | 'reald3d' | 'both'>('stereo');
+  const [lenticularImageUrl, setLenticularImageUrl] = useState<string | null>(null);
+  const [reald3dImageUrl, setReald3dImageUrl] = useState<string | null>(null);
+  const [lenticularLPI, setLenticularLPI] = useState<number>(60); // Lines Per Inch for lenticular
   
   const [params, setParams] = useState<ProcessingParams>({
     maxShift: 30,
@@ -136,6 +139,52 @@ const StereoscopeProcessor: React.FC = () => {
     }
     
     return anaglyphData;
+  };
+
+  // Generate lenticular interlaced image from left and right stereo views
+  const generateLenticularImage = (leftData: ImageData, rightData: ImageData, lpi: number): ImageData => {
+    const width = leftData.width;
+    const height = leftData.height;
+    const lenticularData = new ImageData(width, height);
+    
+    // Calculate stripe width based on LPI (assuming 300 DPI output)
+    const dpi = 300;
+    const stripeWidth = Math.max(1, Math.round(dpi / lpi));
+    
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = (y * width + x) * 4;
+        // Alternate between left and right based on vertical stripes
+        const stripeIndex = Math.floor(x / stripeWidth);
+        const sourceData = (stripeIndex % 2 === 0) ? leftData : rightData;
+        
+        lenticularData.data[idx] = sourceData.data[idx];
+        lenticularData.data[idx + 1] = sourceData.data[idx + 1];
+        lenticularData.data[idx + 2] = sourceData.data[idx + 2];
+        lenticularData.data[idx + 3] = 255;
+      }
+    }
+    
+    return lenticularData;
+  };
+
+  // Generate RealD 3D (half side-by-side) format for polarized 3D displays
+  const generateRealD3DImage = (leftCanvas: HTMLCanvasElement, rightCanvas: HTMLCanvasElement): HTMLCanvasElement => {
+    const width = leftCanvas.width;
+    const height = leftCanvas.height;
+    
+    // RealD format: half-width side-by-side (each eye squeezed to half width)
+    const resultCanvas = document.createElement('canvas');
+    resultCanvas.width = width; // Total width same as original
+    resultCanvas.height = height;
+    const ctx = resultCanvas.getContext('2d')!;
+    
+    // Draw left eye squeezed to left half
+    ctx.drawImage(leftCanvas, 0, 0, width, height, 0, 0, width / 2, height);
+    // Draw right eye squeezed to right half
+    ctx.drawImage(rightCanvas, 0, 0, width, height, width / 2, 0, width / 2, height);
+    
+    return resultCanvas;
   };
 
   const convertTiffToDataURL = async (file: File): Promise<string> => {
@@ -971,7 +1020,7 @@ const StereoscopeProcessor: React.FC = () => {
       // STEP 7: Generate anaglyph if requested
       if (outputFormat === 'anaglyph' || outputFormat === 'both') {
         setProgressText(t('Generating anaglyph image...', '生成红蓝立体图像...'));
-        setProgress(94);
+        setProgress(92);
         
         const anaglyphData = generateAnaglyphImage(compositeLeft, compositeRight);
         const anaglyphCanvas = document.createElement('canvas');
@@ -982,7 +1031,40 @@ const StereoscopeProcessor: React.FC = () => {
         setAnaglyphImageUrl(anaglyphCanvas.toDataURL('image/png'));
       }
 
-      // STEP 8: Create final stereo pair if requested
+      // STEP 8: Generate lenticular if requested
+      if (outputFormat === 'lenticular' || outputFormat === 'both') {
+        setProgressText(t('Generating lenticular image...', '生成光栅立体图像...'));
+        setProgress(93);
+        
+        const lenticularData = generateLenticularImage(compositeLeft, compositeRight, lenticularLPI);
+        const lenticularCanvas = document.createElement('canvas');
+        const lenticularCtx = lenticularCanvas.getContext('2d')!;
+        lenticularCanvas.width = width;
+        lenticularCanvas.height = height;
+        lenticularCtx.putImageData(lenticularData, 0, 0);
+        setLenticularImageUrl(lenticularCanvas.toDataURL('image/png'));
+      }
+
+      // STEP 9: Generate RealD 3D (SBS Half) if requested
+      if (outputFormat === 'reald3d' || outputFormat === 'both') {
+        setProgressText(t('Generating RealD 3D image...', '生成RealD 3D图像...'));
+        setProgress(94);
+        
+        const leftCanvasTemp = document.createElement('canvas');
+        leftCanvasTemp.width = width;
+        leftCanvasTemp.height = height;
+        leftCanvasTemp.getContext('2d')!.putImageData(compositeLeft, 0, 0);
+        
+        const rightCanvasTemp = document.createElement('canvas');
+        rightCanvasTemp.width = width;
+        rightCanvasTemp.height = height;
+        rightCanvasTemp.getContext('2d')!.putImageData(compositeRight, 0, 0);
+        
+        const reald3dCanvas = generateRealD3DImage(leftCanvasTemp, rightCanvasTemp);
+        setReald3dImageUrl(reald3dCanvas.toDataURL('image/png'));
+      }
+
+      // STEP 10: Create final stereo pair if requested
       if (outputFormat === 'stereo' || outputFormat === 'both') {
         setProgressText(t('Creating final stereo pair...', '创建最终立体对...'));
         setProgress(95);
@@ -1007,7 +1089,7 @@ const StereoscopeProcessor: React.FC = () => {
         if (stereoSpacing > 20) {
           resultCtx.save();
           resultCtx.fillStyle = '#ffffff';
-          resultCtx.font = '10px Georgia, serif';
+          resultCtx.font = '18px Georgia, serif';
           resultCtx.textAlign = 'center';
           resultCtx.textBaseline = 'middle';
           const watermarkX = borderSize + width + (stereoSpacing / 2);
@@ -1031,7 +1113,7 @@ const StereoscopeProcessor: React.FC = () => {
         if (stereoSpacing > 20) {
           resultCtx.save();
           resultCtx.fillStyle = '#ffffff';
-          resultCtx.font = '10px Georgia, serif';
+          resultCtx.font = '18px Georgia, serif';
           resultCtx.textAlign = 'center';
           resultCtx.textBaseline = 'middle';
           const watermarkX = width + (stereoSpacing / 2);
@@ -1044,8 +1126,8 @@ const StereoscopeProcessor: React.FC = () => {
       }
 
       setResultUrl(resultCanvas.toDataURL('image/png'));
-      } else if (outputFormat === 'anaglyph') {
-        // For anaglyph-only mode, clear stereo pair
+      } else if (outputFormat === 'anaglyph' || outputFormat === 'lenticular' || outputFormat === 'reald3d') {
+        // For non-stereo modes, clear stereo pair
         setResultUrl(null);
       }
       
@@ -1144,6 +1226,24 @@ const StereoscopeProcessor: React.FC = () => {
     link.click();
   };
 
+  const downloadLenticularImage = () => {
+    if (!lenticularImageUrl) return;
+    
+    const link = document.createElement('a');
+    link.href = lenticularImageUrl;
+    link.download = `${getBaseFilename()}_lenticular_${lenticularLPI}lpi.png`;
+    link.click();
+  };
+
+  const downloadRealD3DImage = () => {
+    if (!reald3dImageUrl) return;
+    
+    const link = document.createElement('a');
+    link.href = reald3dImageUrl;
+    link.download = `${getBaseFilename()}_reald3d_sbs-half.png`;
+    link.click();
+  };
+
   const downloadAllFiles = async () => {
     const zip = new JSZip();
     const baseName = getBaseFilename();
@@ -1188,6 +1288,16 @@ const StereoscopeProcessor: React.FC = () => {
     // Add anaglyph image
     if (anaglyphImageUrl) {
       zip.file(`${baseName}_anaglyph.png`, dataURLtoBlob(anaglyphImageUrl));
+    }
+    
+    // Add lenticular image
+    if (lenticularImageUrl) {
+      zip.file(`${baseName}_lenticular_${lenticularLPI}lpi.png`, dataURLtoBlob(lenticularImageUrl));
+    }
+    
+    // Add RealD 3D image
+    if (reald3dImageUrl) {
+      zip.file(`${baseName}_reald3d_sbs-half.png`, dataURLtoBlob(reald3dImageUrl));
     }
     
     // Generate and download zip
@@ -1582,7 +1692,7 @@ const StereoscopeProcessor: React.FC = () => {
                 <Label className="text-cosmic-100">
                   {t('Output Format', '输出格式')}
                 </Label>
-                <Select value={outputFormat} onValueChange={(value: 'stereo' | 'anaglyph' | 'both') => setOutputFormat(value)}>
+                <Select value={outputFormat} onValueChange={(value: 'stereo' | 'anaglyph' | 'lenticular' | 'reald3d' | 'both') => setOutputFormat(value)}>
                   <SelectTrigger className="w-full bg-cosmic-800/50 border-cosmic-700 text-cosmic-100">
                     <SelectValue />
                   </SelectTrigger>
@@ -1593,12 +1703,38 @@ const StereoscopeProcessor: React.FC = () => {
                     <SelectItem value="anaglyph" className="text-cosmic-100">
                       {t('Red-Blue Anaglyph', '红蓝立体')}
                     </SelectItem>
+                    <SelectItem value="lenticular" className="text-cosmic-100">
+                      {t('Lenticular Print', '光栅立体打印')}
+                    </SelectItem>
+                    <SelectItem value="reald3d" className="text-cosmic-100">
+                      {t('RealD 3D (SBS Half)', 'RealD 3D (半宽并排)')}
+                    </SelectItem>
                     <SelectItem value="both" className="text-cosmic-100">
-                      {t('Both', '两者都要')}
+                      {t('All Formats', '全部格式')}
                     </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Lenticular LPI Setting */}
+              {(outputFormat === 'lenticular' || outputFormat === 'both') && (
+                <div className="space-y-2">
+                  <Label className="flex items-center justify-between text-cosmic-100">
+                    <span>{t('Lenticular LPI', '光栅线密度')}</span>
+                    <span className="text-amber-400 font-mono">{lenticularLPI} LPI</span>
+                  </Label>
+                  <Slider
+                    value={[lenticularLPI]}
+                    onValueChange={([value]) => setLenticularLPI(value)}
+                    min={20}
+                    max={100}
+                    step={5}
+                  />
+                  <p className="text-xs text-cosmic-400">
+                    {t('Lines Per Inch - match your lenticular lens sheet', '每英寸线数 - 匹配您的光栅镜片')}
+                  </p>
+                </div>
+              )}
 
               <Button
                 onClick={processUnifiedMode}
@@ -1684,6 +1820,33 @@ const StereoscopeProcessor: React.FC = () => {
                       {t('Stars Depth Map', '恒星深度图')}
                     </DropdownMenuItem>
                   )}
+                  {anaglyphImageUrl && (
+                    <DropdownMenuItem 
+                      onClick={downloadAnaglyphImage}
+                      className="cursor-pointer hover:bg-cosmic-800 focus:bg-cosmic-800 text-cosmic-100"
+                    >
+                      <Eye className="h-4 w-4 mr-2 text-red-400" />
+                      {t('Anaglyph', '红蓝立体')}
+                    </DropdownMenuItem>
+                  )}
+                  {lenticularImageUrl && (
+                    <DropdownMenuItem 
+                      onClick={downloadLenticularImage}
+                      className="cursor-pointer hover:bg-cosmic-800 focus:bg-cosmic-800 text-cosmic-100"
+                    >
+                      <Layers className="h-4 w-4 mr-2 text-emerald-400" />
+                      {t('Lenticular', '光栅立体')}
+                    </DropdownMenuItem>
+                  )}
+                  {reald3dImageUrl && (
+                    <DropdownMenuItem 
+                      onClick={downloadRealD3DImage}
+                      className="cursor-pointer hover:bg-cosmic-800 focus:bg-cosmic-800 text-cosmic-100"
+                    >
+                      <Eye className="h-4 w-4 mr-2 text-blue-400" />
+                      {t('RealD 3D', 'RealD 3D')}
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator className="bg-cosmic-700" />
                   <DropdownMenuItem 
                     onClick={downloadAllFiles}
@@ -1724,6 +1887,68 @@ const StereoscopeProcessor: React.FC = () => {
               >
                 <Download className="h-4 w-4 mr-2" />
                 {t('Download Anaglyph', '下载红蓝立体图')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Lenticular Result */}
+      {lenticularImageUrl && (
+        <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
+          <CardHeader>
+            <CardTitle className="text-2xl text-white flex items-center gap-3">
+              <Layers className="h-6 w-6 text-emerald-400" />
+              {t('Lenticular Print', '光栅立体打印')}
+            </CardTitle>
+            <CardDescription className="text-cosmic-300">
+              {t('Print with lenticular lens sheet for glasses-free 3D effect.', '使用光栅镜片打印，无需眼镜即可观看3D效果。')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <img
+                src={lenticularImageUrl}
+                alt="Lenticular Print"
+                className="w-full rounded-lg border border-cosmic-700"
+              />
+              <Button 
+                onClick={downloadLenticularImage}
+                className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {t('Download Lenticular', '下载光栅立体图')} ({lenticularLPI} LPI)
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* RealD 3D Result */}
+      {reald3dImageUrl && (
+        <Card className="bg-gradient-to-br from-cosmic-900/80 to-cosmic-800/80 border-cosmic-700/50 backdrop-blur-xl">
+          <CardHeader>
+            <CardTitle className="text-2xl text-white flex items-center gap-3">
+              <Eye className="h-6 w-6 text-blue-400" />
+              {t('RealD 3D (SBS Half)', 'RealD 3D（半宽并排）')}
+            </CardTitle>
+            <CardDescription className="text-cosmic-300">
+              {t('Side-by-side half format for 3D TVs and VR headsets with circular polarization.', '适用于3D电视和VR头显的半宽并排格式。')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <img
+                src={reald3dImageUrl}
+                alt="RealD 3D"
+                className="w-full rounded-lg border border-cosmic-700"
+              />
+              <Button 
+                onClick={downloadRealD3DImage}
+                className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {t('Download RealD 3D', '下载RealD 3D')}
               </Button>
             </div>
           </CardContent>
