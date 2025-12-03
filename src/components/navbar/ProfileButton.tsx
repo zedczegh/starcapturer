@@ -141,8 +141,9 @@ const ProfileButton = () => {
                         </AvatarFallback>
                       )}
                     </Avatar>
-                    <div className="absolute -top-1 -right-1">
-                      <AdminBadge size="sm" className="scale-75" />
+                    {/* Badge centered on top of avatar */}
+                    <div className="absolute -top-2 left-1/2 -translate-x-1/2">
+                      <AdminBadge size="sm" />
                     </div>
                   </div>
                 </Button>
