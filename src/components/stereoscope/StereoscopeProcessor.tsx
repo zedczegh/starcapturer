@@ -16,7 +16,7 @@ import { generateSimpleDepthMap, detectStars, type SimpleDepthParams } from '@/l
 import { TraditionalMorphProcessor, type TraditionalInputs, type TraditionalMorphParams } from '@/lib/traditionalMorphMode';
 import { NobelPrizeStereoscopeEngine } from '@/lib/advanced/NobelPrizeStereoscopeEngine';
 import { analyzeStarsWithAI, type StarAnalysisResult } from '@/services/aiStarAnalysis';
-import { plateSolveImage, formatRA, formatDec, type PlateSolveResult } from '@/services/plateSolve';
+import { plateSolveImage, formatRA, formatDec, identifyDeepSkyObject, calculateSuggestedDisplacement, type PlateSolveResult } from '@/services/plateSolve';
 import { toast } from 'sonner';
 import JSZip from 'jszip';
 // @ts-ignore
@@ -124,6 +124,7 @@ const StereoscopeProcessor: React.FC = () => {
   const [plateSolveEnabled, setPlateSolveEnabled] = useState(false);
   const [plateSolving, setPlateSolving] = useState(false);
   const [plateSolveResult, setPlateSolveResult] = useState<PlateSolveResult | null>(null);
+  const [identifiedObject, setIdentifiedObject] = useState<{ name: string; commonName?: string; distanceLY?: number; type: string } | null>(null);
 
   // Handle AI analysis
   const handleAiAnalysis = async () => {
@@ -186,11 +187,30 @@ const StereoscopeProcessor: React.FC = () => {
     }
 
     setPlateSolving(true);
+    setIdentifiedObject(null);
     try {
       const result = await plateSolveImage(imageUrl);
       setPlateSolveResult(result);
-      if (result.success) {
-        toast.success(t('Plate solve complete!', '星图解析完成！'));
+      if (result.success && result.calibration) {
+        // Try to identify the celestial object from coordinates
+        const identified = identifyDeepSkyObject(
+          result.calibration.ra, 
+          result.calibration.dec,
+          result.calibration.radius
+        );
+        if (identified) {
+          setIdentifiedObject(identified);
+          toast.success(t(`Identified: ${identified.commonName || identified.name}`, `已识别: ${identified.commonName || identified.name}`));
+        } else if (result.objectsInField && result.objectsInField.length > 0) {
+          // Use Astrometry.net's identified objects
+          setIdentifiedObject({
+            name: result.objectsInField[0],
+            type: 'unknown'
+          });
+          toast.success(t('Plate solve complete!', '星图解析完成！'));
+        } else {
+          toast.success(t('Plate solve complete!', '星图解析完成！'));
+        }
       } else {
         toast.error(result.error || t('Plate solve failed', '星图解析失败'));
       }
@@ -200,6 +220,31 @@ const StereoscopeProcessor: React.FC = () => {
     } finally {
       setPlateSolving(false);
     }
+  };
+
+  // Apply plate solve based displacement (uses distance for accurate parallax)
+  const applyPlateSolveDisplacement = () => {
+    if (!identifiedObject?.distanceLY) {
+      toast.error(t('No distance information available', '无距离信息'));
+      return;
+    }
+    
+    const suggested = calculateSuggestedDisplacement(identifiedObject.distanceLY);
+    setDisplacementAmount(suggested.starless);
+    setStarsDisplacementAmount(suggested.stars);
+    
+    // Also set object type based on identified object
+    if (identifiedObject.type === 'galaxy') {
+      setParams(prev => ({ ...prev, objectType: 'galaxy' }));
+    } else if (identifiedObject.type === 'planetary') {
+      setParams(prev => ({ ...prev, objectType: 'planetary' }));
+    } else if (identifiedObject.type === 'nebula' || identifiedObject.type === 'dark_nebula') {
+      setParams(prev => ({ ...prev, objectType: 'nebula' }));
+    } else {
+      setParams(prev => ({ ...prev, objectType: 'mixed' }));
+    }
+    
+    toast.success(t(`Displacement set based on ${identifiedObject.distanceLY.toLocaleString()} LY distance`, `已根据 ${identifiedObject.distanceLY.toLocaleString()} 光年距离设置位移`));
   };
 
   const validateImageFile = (file: File): boolean => {
@@ -2011,6 +2056,32 @@ const StereoscopeProcessor: React.FC = () => {
                         <div className="space-y-3">
                           {plateSolveResult.success ? (
                             <>
+                              {/* Identified Object - Prominent Display */}
+                              {identifiedObject && (
+                                <div className="p-3 rounded-lg bg-gradient-to-r from-emerald-950/50 to-teal-950/50 border border-emerald-500/40">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Sparkles className="w-5 h-5 text-emerald-400" />
+                                    <span className="text-lg font-bold text-emerald-300">
+                                      {identifiedObject.commonName || identifiedObject.name}
+                                    </span>
+                                  </div>
+                                  {identifiedObject.commonName && (
+                                    <p className="text-xs text-cosmic-400 mb-1">
+                                      {t('Catalog:', '目录名：')} {identifiedObject.name}
+                                    </p>
+                                  )}
+                                  {identifiedObject.distanceLY && (
+                                    <p className="text-sm text-teal-300">
+                                      {t('Distance:', '距离：')} {identifiedObject.distanceLY.toLocaleString()} {t('light years', '光年')}
+                                    </p>
+                                  )}
+                                  <span className="inline-block mt-2 px-2 py-0.5 text-[10px] rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 capitalize">
+                                    {identifiedObject.type.replace('_', ' ')}
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Coordinates */}
                               <div className="p-2 rounded bg-cosmic-800/50 border border-orange-500/20">
                                 {plateSolveResult.calibration && (
                                   <div className="text-xs text-cosmic-200 space-y-1">
@@ -2034,16 +2105,28 @@ const StereoscopeProcessor: React.FC = () => {
                                 )}
                               </div>
                               
+                              {/* Apply Distance-Based Displacement Button */}
+                              {identifiedObject?.distanceLY && (
+                                <Button
+                                  onClick={applyPlateSolveDisplacement}
+                                  className="w-full bg-emerald-600/80 hover:bg-emerald-500/80 text-white"
+                                  size="sm"
+                                >
+                                  <Check className="w-4 h-4 mr-2" />
+                                  {t('Apply Distance-Based Displacement', '应用基于距离的位移')}
+                                </Button>
+                              )}
+                              
                               {plateSolveResult.objectsInField.length > 0 && (
-                                <div className="p-2 rounded bg-emerald-950/30 border border-emerald-500/20">
-                                  <p className="text-xs text-emerald-400 font-medium mb-2">
-                                    {t('Objects Identified:', '已识别天体：')}
+                                <div className="p-2 rounded bg-cosmic-800/30 border border-cosmic-700/30">
+                                  <p className="text-xs text-cosmic-400 font-medium mb-2">
+                                    {t('Additional Objects:', '其他天体：')}
                                   </p>
                                   <div className="flex flex-wrap gap-1">
                                     {plateSolveResult.objectsInField.slice(0, 8).map((obj, i) => (
                                       <span 
                                         key={i}
-                                        className="px-2 py-0.5 text-[10px] rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                                        className="px-2 py-0.5 text-[10px] rounded-full bg-cosmic-700/30 text-cosmic-300 border border-cosmic-600/30"
                                       >
                                         {obj}
                                       </span>
@@ -2058,7 +2141,10 @@ const StereoscopeProcessor: React.FC = () => {
                               )}
                               
                               <Button
-                                onClick={() => setPlateSolveResult(null)}
+                                onClick={() => {
+                                  setPlateSolveResult(null);
+                                  setIdentifiedObject(null);
+                                }}
                                 variant="outline"
                                 size="sm"
                                 className="w-full text-xs"
@@ -2073,7 +2159,10 @@ const StereoscopeProcessor: React.FC = () => {
                                 {plateSolveResult.error || t('Plate solve failed', '星图解析失败')}
                               </p>
                               <Button
-                                onClick={() => setPlateSolveResult(null)}
+                                onClick={() => {
+                                  setPlateSolveResult(null);
+                                  setIdentifiedObject(null);
+                                }}
                                 variant="outline"
                                 size="sm"
                                 className="w-full mt-2 text-xs"
