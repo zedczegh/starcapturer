@@ -752,7 +752,8 @@ const StereoscopeProcessor: React.FC = () => {
     params: ProcessingParams,
     starMask: Uint8ClampedArray,
     customDisplacement?: number,
-    invertDirection?: boolean
+    invertDirection?: boolean,
+    isStarsLayer?: boolean // New parameter to handle stars specially
   ): { left: ImageData; right: ImageData } => {
     const originalData = ctx.getImageData(0, 0, width, height);
     const leftData = new ImageData(width, height);
@@ -762,18 +763,54 @@ const StereoscopeProcessor: React.FC = () => {
     const maxShift = customDisplacement !== undefined ? customDisplacement : params.maxShift;
     const directionMultiplier = invertDirection ? -1 : 1;
 
-    // Process in chunks for large images to prevent UI freeze
-    const CHUNK_HEIGHT = 256; // Process 256 rows at a time
-    const totalPixels = width * height;
-    
+    // For stars layer: pre-compute smoothed depth map to prevent star deformation
+    // This uses a simple uniform depth approach - all bright pixels get similar displacement
+    let smoothedDepth: Float32Array | null = null;
+    if (isStarsLayer) {
+      smoothedDepth = new Float32Array(width * height);
+      
+      // For stars, use the brightness of the pixel to determine a uniform shift
+      // Bright stars should shift uniformly, not be torn apart by depth variations
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const idx = y * width + x;
+          const pixelIdx = idx * 4;
+          
+          // Get pixel brightness
+          const r = originalData.data[pixelIdx];
+          const g = originalData.data[pixelIdx + 1];
+          const b = originalData.data[pixelIdx + 2];
+          const brightness = (r + g + b) / 3;
+          
+          if (brightness > 10) {
+            // For visible star pixels, use a uniform depth based on brightness
+            // Brighter stars appear "closer" (more displacement)
+            // This prevents depth map variations from tearing stars apart
+            const normalizedBrightness = Math.min(brightness / 255, 1);
+            // Apply a curve to make the displacement more uniform for bright stars
+            smoothedDepth[idx] = Math.pow(normalizedBrightness, 0.3); // Gentle curve
+          } else {
+            // Dark pixels: use original depth (or minimal displacement)
+            smoothedDepth[idx] = depthMap.data[pixelIdx] / 255.0 * 0.5;
+          }
+        }
+      }
+    }
+
     // SIMPLE INVERSE MAPPING - Pull pixels from source (prevents gaps and black lines)
     // For each destination pixel, look back to the source and copy the pixel
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const destIdx = (y * width + x) * 4;
+        const idx = y * width + x;
         
-        // Get depth value at current position
-        const depthValue = depthMap.data[destIdx] / 255.0;
+        // Get depth value - use smoothed depth for stars layer
+        let depthValue: number;
+        if (isStarsLayer && smoothedDepth) {
+          depthValue = smoothedDepth[idx];
+        } else {
+          depthValue = depthMap.data[destIdx] / 255.0;
+        }
         
         // Check if this is a star
         const isStar = params.preserveStarShapes && starMask[y * width + x] === 255;
@@ -973,7 +1010,8 @@ const StereoscopeProcessor: React.FC = () => {
           params, 
           new Uint8ClampedArray(width * height), // No star masking for stars layer
           starsDisplacementAmount, // Use custom stars displacement amount
-          invertStarsDisplacement // Use stars-specific direction
+          invertStarsDisplacement, // Use stars-specific direction
+          true // isStarsLayer - use brightness-based uniform displacement
         );
 
         // STEP 5: Composite starless + stars for each eye
