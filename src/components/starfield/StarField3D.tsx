@@ -1143,54 +1143,87 @@ const StarField3D: React.FC<StarField3DProps> = ({
       easedProgress = progressRatio;
     }
     
+    // Helper function to calculate scale with consistent perceived speed
+    // When effects are off, use exponential interpolation for consistent perceived speed
+    // Linear scale interpolation makes early frames appear faster because the change
+    // is a larger percentage of the current size. Exponential fixes this.
+    const calculateScale = (startScale: number, endScale: number, progress: number, useExponential: boolean): number => {
+      if (useExponential && startScale > 0 && endScale > 0) {
+        // Exponential interpolation: scale = start * (end/start)^progress
+        // This ensures constant relative rate of change (consistent perceived speed)
+        // Works for both zoom in (start < end) and zoom out (start > end)
+        return startScale * Math.pow(endScale / startScale, progress);
+      }
+      // Linear interpolation (for effects or when exponential doesn't apply)
+      return startScale + (endScale - startScale) * progress;
+    };
+    
+    // Use exponential interpolation only when no effects are enabled
+    const useExponentialScale = !spaceshipEffect && !warpdriveEffect;
+    
     // Only recalculate offsets if state changed
     if (stateChanged) {
       if (motionType === 'zoom_in') {
         // Zoom in: Background (starless) zooms directly by amplification factor
         // Stars use parallax multipliers for depth effect with eased progression
-        offsetsRef.current.background.scale = 1.0 + (easedProgress * ampFactor);
-        offsetsRef.current.layer12.scale = 1.0 + (easedProgress * ampFactor * 0.15 * parallaxMultipliers.layer12);
-        offsetsRef.current.layer11.scale = 1.0 + (easedProgress * ampFactor * 0.2 * parallaxMultipliers.layer11);
-        offsetsRef.current.layer10.scale = 1.0 + (easedProgress * ampFactor * 0.25 * parallaxMultipliers.layer10);
-        offsetsRef.current.layer9.scale = 1.0 + (easedProgress * ampFactor * 0.3 * parallaxMultipliers.layer9);
-        offsetsRef.current.layer8.scale = 1.0 + (easedProgress * ampFactor * 0.35 * parallaxMultipliers.layer8);
-        offsetsRef.current.layer7.scale = 1.0 + (easedProgress * ampFactor * 0.4 * parallaxMultipliers.layer7);
-        offsetsRef.current.layer6.scale = 1.0 + (easedProgress * ampFactor * 0.5 * parallaxMultipliers.layer6);
-        offsetsRef.current.layer5.scale = 1.0 + (easedProgress * ampFactor * 0.6 * parallaxMultipliers.layer5);
-        offsetsRef.current.layer4.scale = 1.0 + (easedProgress * ampFactor * 0.7 * parallaxMultipliers.layer4);
-        offsetsRef.current.layer3.scale = 1.0 + (easedProgress * ampFactor * 0.8 * parallaxMultipliers.layer3);
-        offsetsRef.current.layer2.scale = 1.0 + (easedProgress * ampFactor * 0.9 * parallaxMultipliers.layer2);
-        offsetsRef.current.layer1.scale = 1.0 + (easedProgress * ampFactor * 1.0 * parallaxMultipliers.layer1);
+        const bgEnd = 1.0 + ampFactor;
+        const l12End = 1.0 + (ampFactor * 0.15 * parallaxMultipliers.layer12);
+        const l11End = 1.0 + (ampFactor * 0.2 * parallaxMultipliers.layer11);
+        const l10End = 1.0 + (ampFactor * 0.25 * parallaxMultipliers.layer10);
+        const l9End = 1.0 + (ampFactor * 0.3 * parallaxMultipliers.layer9);
+        const l8End = 1.0 + (ampFactor * 0.35 * parallaxMultipliers.layer8);
+        const l7End = 1.0 + (ampFactor * 0.4 * parallaxMultipliers.layer7);
+        const l6End = 1.0 + (ampFactor * 0.5 * parallaxMultipliers.layer6);
+        const l5End = 1.0 + (ampFactor * 0.6 * parallaxMultipliers.layer5);
+        const l4End = 1.0 + (ampFactor * 0.7 * parallaxMultipliers.layer4);
+        const l3End = 1.0 + (ampFactor * 0.8 * parallaxMultipliers.layer3);
+        const l2End = 1.0 + (ampFactor * 0.9 * parallaxMultipliers.layer2);
+        const l1End = 1.0 + (ampFactor * 1.0 * parallaxMultipliers.layer1);
+        
+        offsetsRef.current.background.scale = calculateScale(1.0, bgEnd, easedProgress, useExponentialScale);
+        offsetsRef.current.layer12.scale = calculateScale(1.0, l12End, easedProgress, useExponentialScale);
+        offsetsRef.current.layer11.scale = calculateScale(1.0, l11End, easedProgress, useExponentialScale);
+        offsetsRef.current.layer10.scale = calculateScale(1.0, l10End, easedProgress, useExponentialScale);
+        offsetsRef.current.layer9.scale = calculateScale(1.0, l9End, easedProgress, useExponentialScale);
+        offsetsRef.current.layer8.scale = calculateScale(1.0, l8End, easedProgress, useExponentialScale);
+        offsetsRef.current.layer7.scale = calculateScale(1.0, l7End, easedProgress, useExponentialScale);
+        offsetsRef.current.layer6.scale = calculateScale(1.0, l6End, easedProgress, useExponentialScale);
+        offsetsRef.current.layer5.scale = calculateScale(1.0, l5End, easedProgress, useExponentialScale);
+        offsetsRef.current.layer4.scale = calculateScale(1.0, l4End, easedProgress, useExponentialScale);
+        offsetsRef.current.layer3.scale = calculateScale(1.0, l3End, easedProgress, useExponentialScale);
+        offsetsRef.current.layer2.scale = calculateScale(1.0, l2End, easedProgress, useExponentialScale);
+        offsetsRef.current.layer1.scale = calculateScale(1.0, l1End, easedProgress, useExponentialScale);
       } else if (motionType === 'zoom_out') {
         // Zoom out: Background (starless) shrinks from amplified size back to normal
         // Stars use parallax multipliers for depth effect with eased progression
         const bgMax = 1.0 + ampFactor;
-        const layer12Max = 1.0 + (ampFactor * 0.15 * parallaxMultipliers.layer12);
-        const layer11Max = 1.0 + (ampFactor * 0.2 * parallaxMultipliers.layer11);
-        const layer10Max = 1.0 + (ampFactor * 0.25 * parallaxMultipliers.layer10);
-        const layer9Max = 1.0 + (ampFactor * 0.3 * parallaxMultipliers.layer9);
-        const layer8Max = 1.0 + (ampFactor * 0.35 * parallaxMultipliers.layer8);
-        const layer7Max = 1.0 + (ampFactor * 0.4 * parallaxMultipliers.layer7);
-        const layer6Max = 1.0 + (ampFactor * 0.5 * parallaxMultipliers.layer6);
-        const layer5Max = 1.0 + (ampFactor * 0.6 * parallaxMultipliers.layer5);
-        const layer4Max = 1.0 + (ampFactor * 0.7 * parallaxMultipliers.layer4);
-        const layer3Max = 1.0 + (ampFactor * 0.8 * parallaxMultipliers.layer3);
-        const layer2Max = 1.0 + (ampFactor * 0.9 * parallaxMultipliers.layer2);
-        const layer1Max = 1.0 + (ampFactor * 1.0 * parallaxMultipliers.layer1);
+        const l12Max = 1.0 + (ampFactor * 0.15 * parallaxMultipliers.layer12);
+        const l11Max = 1.0 + (ampFactor * 0.2 * parallaxMultipliers.layer11);
+        const l10Max = 1.0 + (ampFactor * 0.25 * parallaxMultipliers.layer10);
+        const l9Max = 1.0 + (ampFactor * 0.3 * parallaxMultipliers.layer9);
+        const l8Max = 1.0 + (ampFactor * 0.35 * parallaxMultipliers.layer8);
+        const l7Max = 1.0 + (ampFactor * 0.4 * parallaxMultipliers.layer7);
+        const l6Max = 1.0 + (ampFactor * 0.5 * parallaxMultipliers.layer6);
+        const l5Max = 1.0 + (ampFactor * 0.6 * parallaxMultipliers.layer5);
+        const l4Max = 1.0 + (ampFactor * 0.7 * parallaxMultipliers.layer4);
+        const l3Max = 1.0 + (ampFactor * 0.8 * parallaxMultipliers.layer3);
+        const l2Max = 1.0 + (ampFactor * 0.9 * parallaxMultipliers.layer2);
+        const l1Max = 1.0 + (ampFactor * 1.0 * parallaxMultipliers.layer1);
         
-        offsetsRef.current.background.scale = bgMax - (easedProgress * ampFactor);
-        offsetsRef.current.layer12.scale = layer12Max - (easedProgress * ampFactor * 0.15 * parallaxMultipliers.layer12);
-        offsetsRef.current.layer11.scale = layer11Max - (easedProgress * ampFactor * 0.2 * parallaxMultipliers.layer11);
-        offsetsRef.current.layer10.scale = layer10Max - (easedProgress * ampFactor * 0.25 * parallaxMultipliers.layer10);
-        offsetsRef.current.layer9.scale = layer9Max - (easedProgress * ampFactor * 0.3 * parallaxMultipliers.layer9);
-        offsetsRef.current.layer8.scale = layer8Max - (easedProgress * ampFactor * 0.35 * parallaxMultipliers.layer8);
-        offsetsRef.current.layer7.scale = layer7Max - (easedProgress * ampFactor * 0.4 * parallaxMultipliers.layer7);
-        offsetsRef.current.layer6.scale = layer6Max - (easedProgress * ampFactor * 0.5 * parallaxMultipliers.layer6);
-        offsetsRef.current.layer5.scale = layer5Max - (easedProgress * ampFactor * 0.6 * parallaxMultipliers.layer5);
-        offsetsRef.current.layer4.scale = layer4Max - (easedProgress * ampFactor * 0.7 * parallaxMultipliers.layer4);
-        offsetsRef.current.layer3.scale = layer3Max - (easedProgress * ampFactor * 0.8 * parallaxMultipliers.layer3);
-        offsetsRef.current.layer2.scale = layer2Max - (easedProgress * ampFactor * 0.9 * parallaxMultipliers.layer2);
-        offsetsRef.current.layer1.scale = layer1Max - (easedProgress * ampFactor * 1.0 * parallaxMultipliers.layer1);
+        // Use exponential interpolation for consistent perceived speed
+        offsetsRef.current.background.scale = calculateScale(bgMax, 1.0, easedProgress, useExponentialScale);
+        offsetsRef.current.layer12.scale = calculateScale(l12Max, 1.0, easedProgress, useExponentialScale);
+        offsetsRef.current.layer11.scale = calculateScale(l11Max, 1.0, easedProgress, useExponentialScale);
+        offsetsRef.current.layer10.scale = calculateScale(l10Max, 1.0, easedProgress, useExponentialScale);
+        offsetsRef.current.layer9.scale = calculateScale(l9Max, 1.0, easedProgress, useExponentialScale);
+        offsetsRef.current.layer8.scale = calculateScale(l8Max, 1.0, easedProgress, useExponentialScale);
+        offsetsRef.current.layer7.scale = calculateScale(l7Max, 1.0, easedProgress, useExponentialScale);
+        offsetsRef.current.layer6.scale = calculateScale(l6Max, 1.0, easedProgress, useExponentialScale);
+        offsetsRef.current.layer5.scale = calculateScale(l5Max, 1.0, easedProgress, useExponentialScale);
+        offsetsRef.current.layer4.scale = calculateScale(l4Max, 1.0, easedProgress, useExponentialScale);
+        offsetsRef.current.layer3.scale = calculateScale(l3Max, 1.0, easedProgress, useExponentialScale);
+        offsetsRef.current.layer2.scale = calculateScale(l2Max, 1.0, easedProgress, useExponentialScale);
+        offsetsRef.current.layer1.scale = calculateScale(l1Max, 1.0, easedProgress, useExponentialScale);
       } else if (motionType === 'pan_left') {
         // Pan left: Apply constant zoom effect throughout, pan stars left and background right at half speed
         const panAmount = easedProgress * speed * 250;
