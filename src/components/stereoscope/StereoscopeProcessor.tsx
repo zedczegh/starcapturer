@@ -2349,10 +2349,87 @@ const StereoscopeProcessor: React.FC = () => {
                               </Button>
                             </>
                           ) : (
-                            <div className="p-2 rounded bg-red-950/30 border border-red-500/20">
-                              <p className="text-xs text-red-400">
-                                {plateSolveResult.error || t('Plate solve failed', '星图解析失败')}
-                              </p>
+                            <div className="space-y-3">
+                              <div className="p-2 rounded bg-red-950/30 border border-red-500/20">
+                                <p className="text-xs text-red-400">
+                                  {plateSolveResult.error || t('Plate solve failed', '星图解析失败')}
+                                </p>
+                              </div>
+                              
+                              {/* AI Analysis Fallback when plate solve fails */}
+                              <div className="p-3 rounded-lg bg-gradient-to-br from-violet-950/30 to-purple-950/30 border border-violet-500/30">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Wand2 className="w-4 h-4 text-violet-400" />
+                                  <span className="text-sm font-semibold text-violet-400">
+                                    {t('AI Analysis (Fallback)', 'AI分析（备选）')}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-cosmic-400 mb-3">
+                                  {t('Use AI to estimate displacement parameters from the image directly.', '使用AI直接从图像估算位移参数。')}
+                                </p>
+                                
+                                {!aiAnalysisResult && (
+                                  <Button
+                                    onClick={handleAiAnalysis}
+                                    disabled={aiAnalyzing || (!starlessPreview && !starsPreview)}
+                                    className="w-full bg-violet-600/80 hover:bg-violet-500/80 text-white"
+                                    size="sm"
+                                  >
+                                    {aiAnalyzing ? (
+                                      <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        {t('Analyzing...', '分析中...')}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Sparkles className="w-4 h-4 mr-2" />
+                                        {t('Analyze with AI', '使用AI分析')}
+                                      </>
+                                    )}
+                                  </Button>
+                                )}
+                                
+                                {aiAnalysisResult && (
+                                  <div className="space-y-3">
+                                    <div className="p-2 rounded bg-cosmic-800/50 border border-violet-500/20">
+                                      <p className="text-xs text-cosmic-200 mb-2">
+                                        <span className="text-violet-400 font-medium">{t('Analysis:', '分析：')}</span>{' '}
+                                        {aiAnalysisResult.summary.slice(0, 100)}...
+                                      </p>
+                                      <div className="flex flex-wrap gap-1">
+                                        {aiAnalysisResult.objectClassification.hasNebula && (
+                                          <span className="px-2 py-0.5 text-[10px] rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                                            {t('Nebula', '星云')}
+                                          </span>
+                                        )}
+                                        {aiAnalysisResult.objectClassification.hasGalaxy && (
+                                          <span className="px-2 py-0.5 text-[10px] rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                            {t('Galaxy', '星系')}
+                                          </span>
+                                        )}
+                                        {aiAnalysisResult.objectClassification.hasStarCluster && (
+                                          <span className="px-2 py-0.5 text-[10px] rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                            {t('Star Cluster', '星团')}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    <Button
+                                      onClick={applyAiRecommendations}
+                                      className="w-full bg-emerald-600/80 hover:bg-emerald-500/80 text-white"
+                                      size="sm"
+                                    >
+                                      <Check className="w-4 h-4 mr-2" />
+                                      {t('Apply AI Recommendations', '应用AI推荐参数')}
+                                      <span className="ml-2 text-xs opacity-75">
+                                        ({aiAnalysisResult.stereoscopicRecommendations.suggestedMaxShift}px)
+                                      </span>
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                              
                               <Button
                                 onClick={() => {
                                   setPlateSolveResult(null);
@@ -2362,9 +2439,10 @@ const StereoscopeProcessor: React.FC = () => {
                                 }}
                                 variant="outline"
                                 size="sm"
-                                className="w-full mt-2 text-xs"
+                                className="w-full text-xs"
                               >
-                                {t('Try Again', '重试')}
+                                <RotateCcw className="w-3 h-3 mr-2" />
+                                {t('Try Plate Solve Again', '重试星图解析')}
                               </Button>
                             </div>
                           )}

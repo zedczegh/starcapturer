@@ -53,23 +53,29 @@ async function login(apiKey: string): Promise<string> {
   return data.session;
 }
 
-async function submitImage(session: string, imageBase64: string): Promise<number> {
+async function submitImage(session: string, imageBase64: string, scaleHint?: { lower: number; upper: number }): Promise<number> {
   console.log("Submitting image to Astrometry.net...");
   
   // Extract base64 data from data URL
   const base64Data = imageBase64.split(",")[1] || imageBase64;
   
-  // Create form data for URL upload (more reliable than direct base64)
-  const requestData = {
+  // Optimized settings for faster solving
+  const requestData: Record<string, unknown> = {
     session: session,
     publicly_visible: "n",
     allow_modifications: "d",
     allow_commercial_use: "d",
-    // Use inline upload
+    // Downsample for faster solving (2 = half resolution)
+    downsample_factor: 2,
+    // Use scale hints for faster matching
     scale_units: "degwidth",
-    scale_lower: 0.1,
-    scale_upper: 180,
+    scale_lower: scaleHint?.lower || 0.1,
+    scale_upper: scaleHint?.upper || 30, // Most astro images are under 30 degrees
     scale_type: "ul",
+    // Enable parity detection (faster)
+    parity: 2,
+    // Tweak algorithm for speed
+    crpix_center: true,
   };
 
   // For direct upload, we need to use multipart form
@@ -111,7 +117,7 @@ async function submitImage(session: string, imageBase64: string): Promise<number
   return data.subid;
 }
 
-async function waitForJob(submissionId: number, maxWaitSeconds: number = 120): Promise<number | null> {
+async function waitForJob(submissionId: number, maxWaitSeconds: number = 90): Promise<number | null> {
   console.log(`Waiting for job from submission ${submissionId}...`);
   const startTime = Date.now();
   
@@ -128,14 +134,14 @@ async function waitForJob(submissionId: number, maxWaitSeconds: number = 120): P
       }
     }
     
-    // Wait 3 seconds before checking again
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // Faster polling - check every 2 seconds
+    await new Promise(resolve => setTimeout(resolve, 2000));
   }
   
   return null;
 }
 
-async function getJobResult(jobId: number, maxWaitSeconds: number = 120): Promise<JobResult | null> {
+async function getJobResult(jobId: number, maxWaitSeconds: number = 90): Promise<JobResult | null> {
   console.log(`Getting result for job ${jobId}...`);
   const startTime = Date.now();
   
@@ -151,8 +157,8 @@ async function getJobResult(jobId: number, maxWaitSeconds: number = 120): Promis
       return null;
     }
     
-    // Wait 3 seconds before checking again
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // Faster polling - check every 2 seconds
+    await new Promise(resolve => setTimeout(resolve, 2000));
   }
   
   return null;
