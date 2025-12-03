@@ -1649,11 +1649,11 @@ const StereoscopeProcessor: React.FC = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="right">
-                          {t('Right (Standard)', '右（标准）')}
-                        </SelectItem>
                         <SelectItem value="left">
-                          {t('Left (Inverted)', '左（反转）')}
+                          {t('Left (Standard)', '左（标准）')}
+                        </SelectItem>
+                        <SelectItem value="right">
+                          {t('Right (Inverted)', '右（反转）')}
                         </SelectItem>
                       </SelectContent>
                     </Select>
