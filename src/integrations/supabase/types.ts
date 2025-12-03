@@ -771,6 +771,42 @@ export type Database = {
           },
         ]
       }
+      user_account_status: {
+        Row: {
+          created_at: string | null
+          deactivated_at: string | null
+          deactivated_by: string | null
+          id: string
+          is_active: boolean
+          reactivated_at: string | null
+          reactivated_by: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          deactivated_at?: string | null
+          deactivated_by?: string | null
+          id?: string
+          is_active?: boolean
+          reactivated_at?: string | null
+          reactivated_by?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          deactivated_at?: string | null
+          deactivated_by?: string | null
+          id?: string
+          is_active?: boolean
+          reactivated_at?: string | null
+          reactivated_by?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_astro_spots: {
         Row: {
           bortlescale: number | null
@@ -1030,6 +1066,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_utility_permissions: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_enabled: boolean
+          updated_at: string | null
+          updated_by: string | null
+          user_id: string
+          utility_key: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean
+          updated_at?: string | null
+          updated_by?: string | null
+          user_id: string
+          utility_key: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean
+          updated_at?: string | null
+          updated_by?: string | null
+          user_id?: string
+          utility_key?: string
+        }
+        Relationships: []
+      }
       user_wallets: {
         Row: {
           balance: number
@@ -1122,6 +1188,10 @@ export type Database = {
     }
     Functions: {
       add_admin: { Args: { user_email: string }; Returns: Json }
+      can_use_utility: {
+        Args: { p_user_id: string; p_utility_key: string }
+        Returns: boolean
+      }
       delete_conversation: {
         Args: { current_user_id: string; partner_id: string }
         Returns: undefined
@@ -1143,6 +1213,18 @@ export type Database = {
       }
       get_follower_count: { Args: { p_user_id: string }; Returns: number }
       get_following_count: { Args: { p_user_id: string }; Returns: number }
+      get_manageable_users: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          created_at: string
+          email: string
+          is_active: boolean
+          role: string
+          user_id: string
+          username: string
+        }[]
+      }
       get_or_create_wallet: {
         Args: { p_currency?: string; p_user_id: string }
         Returns: string
@@ -1191,6 +1273,13 @@ export type Database = {
           spot_id: string
         }[]
       }
+      get_user_utility_permissions: {
+        Args: { p_user_id: string }
+        Returns: {
+          is_enabled: boolean
+          utility_key: string
+        }[]
+      }
       has_role: { Args: { required_role: string }; Returns: boolean }
       insert_astro_spot_reservation: {
         Args: { p_status?: string; p_timeslot_id: string; p_user_id: string }
@@ -1228,6 +1317,7 @@ export type Database = {
         Args: { p_follower_id: string; p_following_id: string }
         Returns: boolean
       }
+      is_owner_or_admin: { Args: never; Returns: boolean }
       is_username_available: {
         Args: { username_to_check: string }
         Returns: boolean
