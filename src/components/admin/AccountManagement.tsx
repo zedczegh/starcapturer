@@ -53,6 +53,23 @@ const AccountManagement: React.FC = () => {
   } = useAccountManagement();
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [processingUsers, setProcessingUsers] = useState<Set<string>>(new Set());
+  
+  // Filter states
+  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'user'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'deactivated'>('all');
+
+  // Filtered users
+  const filteredUsers = users.filter(user => {
+    // Role filter
+    if (roleFilter === 'admin' && user.role !== 'admin' && user.role !== 'owner') return false;
+    if (roleFilter === 'user' && (user.role === 'admin' || user.role === 'owner')) return false;
+    
+    // Status filter
+    if (statusFilter === 'active' && !user.is_active) return false;
+    if (statusFilter === 'deactivated' && user.is_active) return false;
+    
+    return true;
+  });
 
   const toggleExpanded = (userId: string) => {
     setExpandedUsers(prev => {
@@ -179,14 +196,88 @@ const AccountManagement: React.FC = () => {
             {t('Refresh', '刷新')}
           </Button>
         </div>
+        
+        {/* Filters */}
+        <div className="flex flex-wrap gap-2 mt-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-cosmic-400">{t('Role:', '角色:')}</span>
+            <div className="flex gap-1">
+              <Button
+                variant={roleFilter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                className={roleFilter === 'all' ? 'bg-cosmic-600' : 'border-cosmic-600'}
+                onClick={() => setRoleFilter('all')}
+              >
+                {t('All', '全部')}
+              </Button>
+              <Button
+                variant={roleFilter === 'admin' ? 'default' : 'outline'}
+                size="sm"
+                className={roleFilter === 'admin' ? 'bg-purple-600' : 'border-purple-500/30 text-purple-400'}
+                onClick={() => setRoleFilter('admin')}
+              >
+                <Shield className="h-3 w-3 mr-1" />
+                {t('Admins', '管理员')}
+              </Button>
+              <Button
+                variant={roleFilter === 'user' ? 'default' : 'outline'}
+                size="sm"
+                className={roleFilter === 'user' ? 'bg-cosmic-600' : 'border-cosmic-600'}
+                onClick={() => setRoleFilter('user')}
+              >
+                {t('Users', '用户')}
+              </Button>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 ml-4">
+            <span className="text-xs text-cosmic-400">{t('Status:', '状态:')}</span>
+            <div className="flex gap-1">
+              <Button
+                variant={statusFilter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                className={statusFilter === 'all' ? 'bg-cosmic-600' : 'border-cosmic-600'}
+                onClick={() => setStatusFilter('all')}
+              >
+                {t('All', '全部')}
+              </Button>
+              <Button
+                variant={statusFilter === 'active' ? 'default' : 'outline'}
+                size="sm"
+                className={statusFilter === 'active' ? 'bg-green-600' : 'border-green-500/30 text-green-400'}
+                onClick={() => setStatusFilter('active')}
+              >
+                <UserCheck className="h-3 w-3 mr-1" />
+                {t('Active', '活跃')}
+              </Button>
+              <Button
+                variant={statusFilter === 'deactivated' ? 'default' : 'outline'}
+                size="sm"
+                className={statusFilter === 'deactivated' ? 'bg-red-600' : 'border-red-500/30 text-red-400'}
+                onClick={() => setStatusFilter('deactivated')}
+              >
+                <UserX className="h-3 w-3 mr-1" />
+                {t('Deactivated', '已停用')}
+              </Button>
+            </div>
+          </div>
+        </div>
+        
+        {/* Results count */}
+        <div className="text-xs text-cosmic-400 mt-2">
+          {t(`Showing ${filteredUsers.length} of ${users.length} users`, `显示 ${filteredUsers.length} / ${users.length} 用户`)}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {users.length === 0 ? (
+        {filteredUsers.length === 0 ? (
           <div className="text-center py-8 text-cosmic-400">
-            {t('No users to manage', '没有可管理的用户')}
+            {users.length === 0 
+              ? t('No users to manage', '没有可管理的用户')
+              : t('No users match the current filters', '没有符合当前筛选条件的用户')
+            }
           </div>
         ) : (
-          users.map(user => {
+          filteredUsers.map(user => {
             const isExpanded = expandedUsers.has(user.user_id);
             const isProcessing = processingUsers.has(user.user_id);
 
