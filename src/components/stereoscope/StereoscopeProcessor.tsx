@@ -101,7 +101,7 @@ const StereoscopeProcessor: React.FC = () => {
   
   // Displacement controls for stars image
   const [starsDisplacementAmount, setStarsDisplacementAmount] = useState<number>(15); // 0-50 pixels
-  const [starsDisplacementDirection, setStarsDisplacementDirection] = useState<'left' | 'right' | 'double'>('left');
+  const [starsDisplacementDirection, setStarsDisplacementDirection] = useState<'left' | 'right'>('left');
   
   // Traditional mode parameters - enhanced for better 3D effect
   const [traditionalParams, setTraditionalParams] = useState<TraditionalMorphParams>({
@@ -753,8 +753,7 @@ const StereoscopeProcessor: React.FC = () => {
     starMask: Uint8ClampedArray,
     customDisplacement?: number,
     invertDirection?: boolean,
-    isStarsLayer?: boolean, // Parameter to handle stars specially
-    doubleDisplacementMode?: boolean // New: double displacement for stars based on brightness
+    isStarsLayer?: boolean // New parameter to handle stars specially
   ): { left: ImageData; right: ImageData } => {
     const originalData = ctx.getImageData(0, 0, width, height);
     const leftData = new ImageData(width, height);
@@ -767,38 +766,8 @@ const StereoscopeProcessor: React.FC = () => {
     // For stars layer: pre-compute smoothed depth map to prevent star deformation
     // This uses a simple uniform depth approach - all bright pixels get similar displacement
     let smoothedDepth: Float32Array | null = null;
-    let perPixelDirection: Int8Array | null = null; // For double displacement mode
-    
     if (isStarsLayer) {
       smoothedDepth = new Float32Array(width * height);
-      
-      // For double displacement mode: calculate mean brightness first
-      let totalBrightness = 0;
-      let brightPixelCount = 0;
-      
-      if (doubleDisplacementMode) {
-        perPixelDirection = new Int8Array(width * height);
-        
-        // First pass: calculate mean brightness of all visible star pixels
-        for (let y = 0; y < height; y++) {
-          for (let x = 0; x < width; x++) {
-            const idx = y * width + x;
-            const pixelIdx = idx * 4;
-            
-            const r = originalData.data[pixelIdx];
-            const g = originalData.data[pixelIdx + 1];
-            const b = originalData.data[pixelIdx + 2];
-            const brightness = (r + g + b) / 3;
-            
-            if (brightness > 10) {
-              totalBrightness += brightness;
-              brightPixelCount++;
-            }
-          }
-        }
-      }
-      
-      const meanBrightness = brightPixelCount > 0 ? totalBrightness / brightPixelCount : 128;
       
       // For stars, use the brightness of the pixel to determine a uniform shift
       // Bright stars should shift uniformly, not be torn apart by depth variations
@@ -820,18 +789,9 @@ const StereoscopeProcessor: React.FC = () => {
             const normalizedBrightness = Math.min(brightness / 255, 1);
             // Apply a curve to make the displacement more uniform for bright stars
             smoothedDepth[idx] = Math.pow(normalizedBrightness, 0.3); // Gentle curve
-            
-            // For double displacement mode: determine direction based on brightness vs mean
-            if (doubleDisplacementMode && perPixelDirection) {
-              // Brighter than mean → left (closer, -1), dimmer → right (farther, +1)
-              perPixelDirection[idx] = brightness >= meanBrightness ? -1 : 1;
-            }
           } else {
             // Dark pixels: use original depth (or minimal displacement)
             smoothedDepth[idx] = depthMap.data[pixelIdx] / 255.0 * 0.5;
-            if (perPixelDirection) {
-              perPixelDirection[idx] = 0; // No direction for dark pixels
-            }
           }
         }
       }
@@ -856,16 +816,8 @@ const StereoscopeProcessor: React.FC = () => {
         const isStar = params.preserveStarShapes && starMask[y * width + x] === 255;
         
         // Calculate shift amount based on depth
-        // For double displacement mode, use per-pixel direction
-        let effectiveDirectionMultiplier = directionMultiplier;
-        if (doubleDisplacementMode && perPixelDirection && isStarsLayer) {
-          // Use per-pixel direction for visible star pixels
-          if (perPixelDirection[idx] !== 0) {
-            effectiveDirectionMultiplier = perPixelDirection[idx];
-          }
-        }
-        
-        const shift = depthValue * maxShift * effectiveDirectionMultiplier;
+        // Simple approach: deeper objects shift less, closer objects shift more
+        const shift = depthValue * maxShift * directionMultiplier;
         
         // LEFT VIEW: Pull from right (shift source to left)
         // When looking at left eye, objects shift left based on depth
@@ -1049,8 +1001,6 @@ const StereoscopeProcessor: React.FC = () => {
         setProgress(70);
         
         const invertStarsDisplacement = starsDisplacementDirection === 'left';
-        const isDoubleDisplacement = starsDisplacementDirection === 'double';
-        
         const { left: starsLeft, right: starsRight } = createStereoViews(
           starsCanvas, 
           starsCtx, 
@@ -1060,9 +1010,8 @@ const StereoscopeProcessor: React.FC = () => {
           params, 
           new Uint8ClampedArray(width * height), // No star masking for stars layer
           starsDisplacementAmount, // Use custom stars displacement amount
-          invertStarsDisplacement, // Use stars-specific direction (ignored if double mode)
-          true, // isStarsLayer - use brightness-based uniform displacement
-          isDoubleDisplacement // doubleDisplacementMode - bright stars left, dim stars right
+          invertStarsDisplacement, // Use stars-specific direction
+          true // isStarsLayer - use brightness-based uniform displacement
         );
 
         // STEP 5: Composite starless + stars for each eye
@@ -1694,29 +1643,20 @@ const StereoscopeProcessor: React.FC = () => {
                     </Label>
                     <Select
                       value={starsDisplacementDirection}
-                      onValueChange={(value: 'left' | 'right' | 'double') => setStarsDisplacementDirection(value)}
+                      onValueChange={(value: 'left' | 'right') => setStarsDisplacementDirection(value)}
                     >
                       <SelectTrigger className="bg-cosmic-800/50 border-cyan-700/50">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="left">
-                          {t('Left (Standard)', '左（标准）')}
-                        </SelectItem>
                         <SelectItem value="right">
-                          {t('Right (Inverted)', '右（反转）')}
+                          {t('Right (Standard)', '右（标准）')}
                         </SelectItem>
-                        <SelectItem value="double">
-                          {t('Double (Bright→Left, Dim→Right)', '双向（亮→左，暗→右）')}
+                        <SelectItem value="left">
+                          {t('Left (Inverted)', '左（反转）')}
                         </SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-cosmic-400 mt-1">
-                      {starsDisplacementDirection === 'double' 
-                        ? t('Brighter stars displace left (closer), dimmer stars displace right (farther)', '较亮星点向左位移（较近），较暗星点向右位移（较远）')
-                        : t('Direction to displace stars for 3D effect', '星点的位移方向以产生3D效果')
-                      }
-                    </p>
                   </div>
                 </div>
 

@@ -98,7 +98,7 @@ const ParallelVideoGenerator: React.FC = () => {
   
   // Displacement controls for stars image (matching Stereoscope Processor)
   const [starsDisplacementAmount, setStarsDisplacementAmount] = useState<number>(15); // 0-50 pixels
-  const [starsDisplacementDirection, setStarsDisplacementDirection] = useState<'left' | 'right' | 'double'>('left');
+  const [starsDisplacementDirection, setStarsDisplacementDirection] = useState<'left' | 'right'>('left');
   
   // Internal processing parameters
   const horizontalDisplace = displacementAmount; // Use displacement amount from UI
@@ -876,8 +876,7 @@ const ParallelVideoGenerator: React.FC = () => {
     maxShift: number,
     starMask: Uint8ClampedArray,
     invertDirection?: boolean,
-    isStarsLayer?: boolean, // Parameter to handle stars specially
-    doubleDisplacementMode?: boolean // New: double displacement for stars based on brightness
+    isStarsLayer?: boolean // New parameter to handle stars specially
   ): { left: ImageData; right: ImageData } => {
     const originalData = ctx.getImageData(0, 0, width, height);
     const leftData = new ImageData(width, height);
@@ -888,38 +887,8 @@ const ParallelVideoGenerator: React.FC = () => {
     // For stars layer: pre-compute smoothed depth map to prevent star deformation
     // This uses a simple uniform depth approach - all bright pixels get similar displacement
     let smoothedDepth: Float32Array | null = null;
-    let perPixelDirection: Int8Array | null = null; // For double displacement mode
-    
     if (isStarsLayer) {
       smoothedDepth = new Float32Array(width * height);
-      
-      // For double displacement mode: calculate mean brightness first
-      let totalBrightness = 0;
-      let brightPixelCount = 0;
-      
-      if (doubleDisplacementMode) {
-        perPixelDirection = new Int8Array(width * height);
-        
-        // First pass: calculate mean brightness of all visible star pixels
-        for (let y = 0; y < height; y++) {
-          for (let x = 0; x < width; x++) {
-            const idx = y * width + x;
-            const pixelIdx = idx * 4;
-            
-            const r = originalData.data[pixelIdx];
-            const g = originalData.data[pixelIdx + 1];
-            const b = originalData.data[pixelIdx + 2];
-            const brightness = (r + g + b) / 3;
-            
-            if (brightness > 10) {
-              totalBrightness += brightness;
-              brightPixelCount++;
-            }
-          }
-        }
-      }
-      
-      const meanBrightness = brightPixelCount > 0 ? totalBrightness / brightPixelCount : 128;
       
       // For stars, use the brightness of the pixel to determine a uniform shift
       // Bright stars should shift uniformly, not be torn apart by depth variations
@@ -941,18 +910,9 @@ const ParallelVideoGenerator: React.FC = () => {
             const normalizedBrightness = Math.min(brightness / 255, 1);
             // Apply a curve to make the displacement more uniform for bright stars
             smoothedDepth[idx] = Math.pow(normalizedBrightness, 0.3); // Gentle curve
-            
-            // For double displacement mode: determine direction based on brightness vs mean
-            if (doubleDisplacementMode && perPixelDirection) {
-              // Brighter than mean → left (closer, -1), dimmer → right (farther, +1)
-              perPixelDirection[idx] = brightness >= meanBrightness ? -1 : 1;
-            }
           } else {
             // Dark pixels: use original depth (or minimal displacement)
             smoothedDepth[idx] = depthMap.data[pixelIdx] / 255.0 * 0.5;
-            if (perPixelDirection) {
-              perPixelDirection[idx] = 0; // No direction for dark pixels
-            }
           }
         }
       }
@@ -972,16 +932,7 @@ const ParallelVideoGenerator: React.FC = () => {
           depthValue = depthMap.data[destIdx] / 255.0;
         }
         
-        // For double displacement mode, use per-pixel direction
-        let effectiveDirectionMultiplier = directionMultiplier;
-        if (doubleDisplacementMode && perPixelDirection && isStarsLayer) {
-          // Use per-pixel direction for visible star pixels
-          if (perPixelDirection[idx] !== 0) {
-            effectiveDirectionMultiplier = perPixelDirection[idx];
-          }
-        }
-        
-        const shift = depthValue * maxShift * effectiveDirectionMultiplier;
+        const shift = depthValue * maxShift * directionMultiplier;
         
         // LEFT VIEW: Pull from right
         const leftSourceX = Math.round(x + shift);
@@ -1104,7 +1055,6 @@ const ParallelVideoGenerator: React.FC = () => {
       setProgress(65);
 
       const invertStarsDisplacement = starsDisplacementDirection === 'left';
-      const isDoubleDisplacement = starsDisplacementDirection === 'double';
       
       const { left: starsLeft, right: starsRight } = createStereoViews(
         starsCanvas,
@@ -1114,9 +1064,8 @@ const ParallelVideoGenerator: React.FC = () => {
         height,
         starsDisplacementAmount, // Use stars-specific displacement amount
         new Uint8ClampedArray(width * height),
-        invertStarsDisplacement, // Use stars-specific direction (ignored if double mode)
-        true, // isStarsLayer - use brightness-based uniform displacement
-        isDoubleDisplacement // doubleDisplacementMode - bright stars left, dim stars right
+        invertStarsDisplacement, // Use stars-specific direction
+        true // isStarsLayer - use brightness-based uniform displacement
       );
 
       // STEP 5: Composite starless + stars for each eye
@@ -2125,7 +2074,7 @@ const ParallelVideoGenerator: React.FC = () => {
                   </Label>
                   <Select
                     value={starsDisplacementDirection}
-                    onValueChange={(value: 'left' | 'right' | 'double') => setStarsDisplacementDirection(value)}
+                    onValueChange={(value: 'left' | 'right') => setStarsDisplacementDirection(value)}
                   >
                     <SelectTrigger className="bg-cosmic-800/50 border-cyan-500/30">
                       <SelectValue />
@@ -2137,16 +2086,10 @@ const ParallelVideoGenerator: React.FC = () => {
                       <SelectItem value="right">
                         {t('Right (Inverted)', '右（反转）')}
                       </SelectItem>
-                      <SelectItem value="double">
-                        {t('Double (Bright→Left, Dim→Right)', '双向（亮→左，暗→右）')}
-                      </SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-cosmic-400 mt-1">
-                    {starsDisplacementDirection === 'double' 
-                      ? t('Brighter stars displace left (closer), dimmer stars displace right (farther)', '较亮星点向左位移（较近），较暗星点向右位移（较远）')
-                      : t('Direction to displace stars for 3D effect (opposite to starless creates depth separation)', '星点的位移方向以产生3D效果（与无星方向相反以产生深度分离）')
-                    }
+                    {t('Direction to displace stars for 3D effect (opposite to starless creates depth separation)', '星点的位移方向以产生3D效果（与无星方向相反以产生深度分离）')}
                   </p>
                 </div>
               </div>
