@@ -116,7 +116,7 @@ function AppContent() {
           <LazyPhotoPointsNearby />
         </Suspense>
       } />
-      <Route path="/about" element={<About />} />
+      <Route path="/about" element={<Navigate to="/about/developer" replace />} />
       <Route path="/about/developer" element={<DeveloperPage />} />
       <Route path="/about/utilities" element={<UtilitiesPage />} />
       <Route path="/about/siqs" element={<SiqsPage />} />

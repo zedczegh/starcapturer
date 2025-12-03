@@ -11,7 +11,6 @@ import { useUserRole } from "@/hooks/useUserRole";
 
 import AboutHeader from "@/components/about/AboutHeader";
 import AboutFooter from "@/components/about/AboutFooter";
-import AboutNavbar from "@/components/about/AboutNavbar";
 
 const About = () => {
   const { t } = useLanguage();
@@ -100,9 +99,6 @@ const About = () => {
         
         {/* Main Page Header */}
         <AboutHeader />
-        
-        {/* Navigation Bar */}
-        <AboutNavbar />
         
         {/* Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
