@@ -101,7 +101,7 @@ const StereoscopeProcessor: React.FC = () => {
   
   // Displacement controls for stars image
   const [starsDisplacementAmount, setStarsDisplacementAmount] = useState<number>(15); // 0-50 pixels
-  const [starsDisplacementDirection, setStarsDisplacementDirection] = useState<'left' | 'right'>('right');
+  const [starsDisplacementDirection, setStarsDisplacementDirection] = useState<'left' | 'right'>('left');
   
   // Traditional mode parameters - enhanced for better 3D effect
   const [traditionalParams, setTraditionalParams] = useState<TraditionalMorphParams>({
@@ -1518,9 +1518,9 @@ const StereoscopeProcessor: React.FC = () => {
 
               <div className="space-y-4 p-4 rounded-lg bg-cosmic-900/40 border border-cosmic-700/30">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-amber-400">
+                  <div className="flex items-center gap-2 text-purple-400">
                     <Settings2 className="w-4 h-4" />
-                    <span className="text-sm font-semibold">{t('Starless Displacement Control', '无星图位移控制')}</span>
+                    <span className="text-sm font-semibold">{t('Displacement Control', '位移控制')}</span>
                   </div>
                   <Button
                     variant="outline"
@@ -1529,7 +1529,7 @@ const StereoscopeProcessor: React.FC = () => {
                       setDisplacementAmount(25);
                       setStarsDisplacementAmount(15);
                       setDisplacementDirection('right');
-                      setStarsDisplacementDirection('right');
+                      setStarsDisplacementDirection('left');
                     }}
                     className="h-8 gap-2 text-xs bg-cosmic-800/50 hover:bg-cosmic-700/50 border-cosmic-600"
                   >
@@ -1538,90 +1538,88 @@ const StereoscopeProcessor: React.FC = () => {
                   </Button>
                 </div>
                 
-                <div>
-                  <Label className="flex items-center justify-between">
-                    <span>{t('Starless Displacement', '无星位移')}</span>
-                    <span className="text-amber-400 font-mono text-lg">({displacementAmount}px)</span>
-                  </Label>
-                  <Slider
-                    value={[displacementAmount]}
-                    onValueChange={([value]) => setDisplacementAmount(value)}
-                    min={0}
-                    max={50}
-                    step={1}
-                    className="mt-2"
-                  />
-                  <p className="text-xs text-cosmic-400 mt-1">
-                    {t('Amount of horizontal displacement for starless/nebula image', '无星/星云图像的水平位移量')}
-                  </p>
+                {/* Starless Controls - Amber */}
+                <div className="space-y-3 p-3 rounded-md bg-amber-950/20 border border-amber-700/30">
+                  <div className="flex items-center gap-2 text-amber-400 text-xs font-medium">
+                    <span>{t('Starless Layer', '无星图层')}</span>
+                  </div>
+                  <div>
+                    <Label className="flex items-center justify-between">
+                      <span className="text-amber-300">{t('Displacement', '位移')}</span>
+                      <span className="text-amber-400 font-mono text-lg">({displacementAmount}px)</span>
+                    </Label>
+                    <Slider
+                      value={[displacementAmount]}
+                      onValueChange={([value]) => setDisplacementAmount(value)}
+                      min={0}
+                      max={50}
+                      step={1}
+                      className="mt-2"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-amber-300 mb-2 block text-sm">
+                      {t('Direction', '方向')}
+                    </Label>
+                    <Select
+                      value={displacementDirection}
+                      onValueChange={(value: 'left' | 'right') => setDisplacementDirection(value)}
+                    >
+                      <SelectTrigger className="bg-cosmic-800/50 border-amber-700/50">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="right">
+                          {t('Right (Standard)', '右（标准）')}
+                        </SelectItem>
+                        <SelectItem value="left">
+                          {t('Left (Inverted)', '左（反转）')}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                <div>
-                  <Label className="flex items-center justify-between">
-                    <span>{t('Stars Displacement', '恒星位移')}</span>
-                    <span className="text-cyan-400 font-mono text-lg">({starsDisplacementAmount}px)</span>
-                  </Label>
-                  <Slider
-                    value={[starsDisplacementAmount]}
-                    onValueChange={([value]) => setStarsDisplacementAmount(value)}
-                    min={0}
-                    max={50}
-                    step={1}
-                    className="mt-2"
-                  />
-                  <p className="text-xs text-cosmic-400 mt-1">
-                    {t('Amount of horizontal displacement for stars layer 3D effect', '恒星图层3D效果的水平位移量')}
-                  </p>
-                </div>
-
-                <div>
-                  <Label className="text-cosmic-200 mb-2 block">
-                    {t('Stars Direction', '恒星方向')}
-                  </Label>
-                  <Select
-                    value={starsDisplacementDirection}
-                    onValueChange={(value: 'left' | 'right') => setStarsDisplacementDirection(value)}
-                  >
-                    <SelectTrigger className="bg-cosmic-800/50 border-cosmic-700">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="right">
-                        {t('Right (Standard)', '右（标准）')}
-                      </SelectItem>
-                      <SelectItem value="left">
-                        {t('Left (Inverted)', '左（反转）')}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-cosmic-400 mt-1">
-                    {t('Direction to displace the stars layer for 3D effect', '恒星图层的位移方向以产生3D效果')}
-                  </p>
-                </div>
-
-                <div>
-                  <Label className="text-cosmic-200 mb-2 block">
-                    {t('Starless Direction', '无星方向')}
-                  </Label>
-                  <Select
-                    value={displacementDirection}
-                    onValueChange={(value: 'left' | 'right') => setDisplacementDirection(value)}
-                  >
-                    <SelectTrigger className="bg-cosmic-800/50 border-cosmic-700">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="right">
-                        {t('Right (Standard)', '右（标准）')}
-                      </SelectItem>
-                      <SelectItem value="left">
-                        {t('Left (Inverted)', '左（反转）')}
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-cosmic-400 mt-1">
-                    {t('Direction to displace the starless image for 3D effect', '无星图像的位移方向以产生3D效果')}
-                  </p>
+                {/* Stars Controls - Cyan */}
+                <div className="space-y-3 p-3 rounded-md bg-cyan-950/20 border border-cyan-700/30">
+                  <div className="flex items-center gap-2 text-cyan-400 text-xs font-medium">
+                    <span>{t('Stars Layer', '恒星图层')}</span>
+                  </div>
+                  <div>
+                    <Label className="flex items-center justify-between">
+                      <span className="text-cyan-300">{t('Displacement', '位移')}</span>
+                      <span className="text-cyan-400 font-mono text-lg">({starsDisplacementAmount}px)</span>
+                    </Label>
+                    <Slider
+                      value={[starsDisplacementAmount]}
+                      onValueChange={([value]) => setStarsDisplacementAmount(value)}
+                      min={0}
+                      max={50}
+                      step={1}
+                      className="mt-2"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-cyan-300 mb-2 block text-sm">
+                      {t('Direction', '方向')}
+                    </Label>
+                    <Select
+                      value={starsDisplacementDirection}
+                      onValueChange={(value: 'left' | 'right') => setStarsDisplacementDirection(value)}
+                    >
+                      <SelectTrigger className="bg-cosmic-800/50 border-cyan-700/50">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="right">
+                          {t('Right (Standard)', '右（标准）')}
+                        </SelectItem>
+                        <SelectItem value="left">
+                          {t('Left (Inverted)', '左（反转）')}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 {/* Distance-based displacement suggestions - Collapsible */}
