@@ -117,15 +117,32 @@ async function submitImage(session: string, imageBase64: string, scaleHint?: { l
   return data.subid;
 }
 
+interface SubmissionStatus {
+  user: number;
+  processing_started: string | null;
+  processing_finished: string | null;
+  user_images: number[];
+  images: number[];
+  jobs: (number | null)[];
+  job_calibrations: unknown[];
+}
+
 async function waitForJob(submissionId: number, maxWaitSeconds: number = 90): Promise<number | null> {
   console.log(`Waiting for job from submission ${submissionId}...`);
   const startTime = Date.now();
   
   while ((Date.now() - startTime) / 1000 < maxWaitSeconds) {
     const response = await fetch(`${ASTROMETRY_API_URL}/submissions/${submissionId}`);
-    const data: JobStatus = await response.json();
+    const data: SubmissionStatus = await response.json();
     
     console.log("Submission status:", data);
+    
+    // Early failure detection: if processing finished but jobs contains null, image is unsolvable
+    if (data.processing_finished && data.processing_finished !== "None" && 
+        data.jobs && data.jobs.length > 0 && data.jobs[0] === null) {
+      console.log("Astrometry.net processing finished but no valid job created - image likely unsolvable");
+      return null; // Fail fast
+    }
     
     if (data.jobs && data.jobs.length > 0) {
       const jobId = data.jobs[0];
