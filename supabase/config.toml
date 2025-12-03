@@ -82,3 +82,6 @@ verify_jwt = false
 
 [functions.plate-solve]
 verify_jwt = false
+
+[functions.search-target]
+verify_jwt = false

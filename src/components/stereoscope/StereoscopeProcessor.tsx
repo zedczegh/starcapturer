@@ -9,7 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Upload, Eye, Download, Loader2, Layers, Settings2, Sparkles, ChevronDown, Package, RotateCcw, Info, Wand2, Check } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Upload, Eye, Download, Loader2, Layers, Settings2, Sparkles, ChevronDown, Package, RotateCcw, Info, Wand2, Check, Search } from 'lucide-react';
 import { UploadProgress } from '@/components/ui/upload-progress';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { generateSimpleDepthMap, detectStars, type SimpleDepthParams } from '@/lib/simpleDepthMap';
@@ -17,6 +18,7 @@ import { TraditionalMorphProcessor, type TraditionalInputs, type TraditionalMorp
 import { NobelPrizeStereoscopeEngine } from '@/lib/advanced/NobelPrizeStereoscopeEngine';
 import { analyzeStarsWithAI, type StarAnalysisResult } from '@/services/aiStarAnalysis';
 import { plateSolveImage, formatRA, formatDec, identifyDeepSkyObject, calculateSuggestedDisplacement, type PlateSolveResult } from '@/services/plateSolve';
+import { searchTarget, calculateDisplacementFromDistance, mapObjectType, type TargetSearchResult } from '@/services/targetSearch';
 import { toast } from 'sonner';
 import JSZip from 'jszip';
 // @ts-ignore
@@ -125,6 +127,69 @@ const StereoscopeProcessor: React.FC = () => {
   const [plateSolving, setPlateSolving] = useState(false);
   const [plateSolveResult, setPlateSolveResult] = useState<PlateSolveResult | null>(null);
   const [identifiedObject, setIdentifiedObject] = useState<{ name: string; commonName?: string; distanceLY?: number; type: string } | null>(null);
+
+  // Target Search states (SIMBAD)
+  const [targetSearchQuery, setTargetSearchQuery] = useState('');
+  const [targetSearching, setTargetSearching] = useState(false);
+  const [targetSearchResult, setTargetSearchResult] = useState<TargetSearchResult | null>(null);
+
+  // Handle target search
+  const handleTargetSearch = async () => {
+    if (!targetSearchQuery.trim()) {
+      toast.error(t('Please enter a target name', '请输入目标名称'));
+      return;
+    }
+
+    setTargetSearching(true);
+    setTargetSearchResult(null);
+    try {
+      const result = await searchTarget(targetSearchQuery);
+      if (result) {
+        setTargetSearchResult(result);
+        toast.success(t(`Found: ${result.name}`, `已找到: ${result.name}`));
+      } else {
+        toast.error(t('Object not found in SIMBAD database', '在SIMBAD数据库中未找到该天体'));
+      }
+    } catch (error) {
+      console.error('Target search error:', error);
+      toast.error(t('Failed to search target', '搜索目标失败'));
+    } finally {
+      setTargetSearching(false);
+    }
+  };
+
+  // Apply target search parameters
+  const applyTargetSearchParams = () => {
+    if (!targetSearchResult) return;
+    
+    if (targetSearchResult.distance?.value) {
+      const suggested = calculateDisplacementFromDistance(targetSearchResult.distance.value);
+      setDisplacementAmount(suggested.starless);
+      setStarsDisplacementAmount(suggested.stars);
+      
+      // Set identified object for display
+      setIdentifiedObject({
+        name: targetSearchResult.name,
+        commonName: targetSearchResult.aliases?.[0],
+        distanceLY: targetSearchResult.distance.value,
+        type: targetSearchResult.objectType || 'unknown'
+      });
+      
+      // Set object type
+      const mappedType = mapObjectType(targetSearchResult.objectType);
+      setParams(prev => ({ ...prev, objectType: mappedType }));
+      
+      toast.success(t(`Displacement set based on ${targetSearchResult.distance.value.toLocaleString()} LY distance`, `已根据 ${targetSearchResult.distance.value.toLocaleString()} 光年距离设置位移`));
+    } else {
+      // No distance info, just set identified object
+      setIdentifiedObject({
+        name: targetSearchResult.name,
+        commonName: targetSearchResult.aliases?.[0],
+        type: targetSearchResult.objectType || 'unknown'
+      });
+      toast.info(t('No distance data available for this object', '此天体无距离数据'));
+    }
+  };
 
   // Handle AI analysis - now uses plate solve results for better recommendations
   const handleAiAnalysis = async () => {
@@ -1907,6 +1972,115 @@ const StereoscopeProcessor: React.FC = () => {
                     </div>
                   </CollapsibleContent>
                 </Collapsible>
+
+                {/* Target Search (SIMBAD) */}
+                <div className="space-y-3 p-3 rounded-lg bg-gradient-to-br from-sky-950/30 to-blue-950/30 border border-sky-500/30">
+                  <div className="flex items-center gap-2">
+                    <Search className="w-4 h-4 text-sky-400" />
+                    <span className="text-sm font-semibold text-sky-400">
+                      {t('Target Search (SIMBAD)', '目标搜索 (SIMBAD)')}
+                    </span>
+                  </div>
+                  
+                  <p className="text-xs text-cosmic-400">
+                    {t('Search by name (M42, NGC 7000, Orion Nebula, etc.)', '按名称搜索（M42、NGC 7000、猎户座星云等）')}
+                  </p>
+                  
+                  <div className="flex gap-2">
+                    <Input
+                      value={targetSearchQuery}
+                      onChange={(e) => setTargetSearchQuery(e.target.value)}
+                      placeholder={t('Enter target name...', '输入目标名称...')}
+                      className="flex-1 bg-cosmic-800/50 border-sky-700/50 text-cosmic-100 placeholder:text-cosmic-500"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleTargetSearch();
+                        }
+                      }}
+                    />
+                    <Button
+                      onClick={handleTargetSearch}
+                      disabled={targetSearching || !targetSearchQuery.trim()}
+                      size="sm"
+                      className="bg-sky-600/80 hover:bg-sky-500/80 text-white"
+                    >
+                      {targetSearching ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Search className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
+                  
+                  {targetSearchResult && (
+                    <div className="space-y-2">
+                      <div className="p-2 rounded bg-cosmic-800/50 border border-sky-500/20">
+                        <p className="text-sm font-medium text-sky-300">
+                          {targetSearchResult.name}
+                        </p>
+                        {targetSearchResult.objectType && (
+                          <span className="inline-block mt-1 px-2 py-0.5 text-[10px] rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                            {targetSearchResult.objectType}
+                          </span>
+                        )}
+                        <div className="text-xs text-cosmic-400 mt-2 space-y-1">
+                          <p>
+                            <span className="text-sky-400">RA:</span>{' '}
+                            {formatRA(targetSearchResult.ra)}
+                          </p>
+                          <p>
+                            <span className="text-sky-400">Dec:</span>{' '}
+                            {formatDec(targetSearchResult.dec)}
+                          </p>
+                          {targetSearchResult.distance && (
+                            <p className="text-teal-300">
+                              <span className="text-sky-400">{t('Distance:', '距离：')}</span>{' '}
+                              {targetSearchResult.distance.value.toLocaleString()} {targetSearchResult.distance.unit}
+                              <span className="text-cosmic-500 ml-1">({targetSearchResult.distance.source})</span>
+                            </p>
+                          )}
+                        </div>
+                        {targetSearchResult.aliases && targetSearchResult.aliases.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {targetSearchResult.aliases.slice(0, 4).map((alias, i) => (
+                              <span 
+                                key={i}
+                                className="px-1.5 py-0.5 text-[9px] rounded bg-cosmic-700/30 text-cosmic-400 border border-cosmic-600/30"
+                              >
+                                {alias}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <Button
+                        onClick={applyTargetSearchParams}
+                        className="w-full bg-teal-600/80 hover:bg-teal-500/80 text-white"
+                        size="sm"
+                      >
+                        <Check className="w-4 h-4 mr-2" />
+                        {targetSearchResult.distance 
+                          ? t('Apply Distance-Based Displacement', '应用基于距离的位移')
+                          : t('Set as Target', '设为目标')
+                        }
+                      </Button>
+                      
+                      <Button
+                        onClick={() => {
+                          setTargetSearchResult(null);
+                          setTargetSearchQuery('');
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs"
+                      >
+                        <RotateCcw className="w-3 h-3 mr-2" />
+                        {t('Search Another', '搜索其他')}
+                      </Button>
+                    </div>
+                  )}
+                </div>
 
                 {/* Plate Solve Section */}
                 <div className="space-y-3 p-3 rounded-lg bg-gradient-to-br from-orange-950/30 to-amber-950/30 border border-orange-500/30">
