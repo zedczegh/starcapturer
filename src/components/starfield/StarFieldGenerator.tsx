@@ -97,7 +97,8 @@ const StarFieldGenerator: React.FC = () => {
     spinDirection: 'clockwise' as 'clockwise' | 'counterclockwise',
     fadeOut: false, // Nebula fade-out effect disabled by default
     hyperspeed: false, // Hyperspeed motion blur effect disabled by default
-    spaceshipEffect: false // Acceleration/deceleration effect disabled by default
+    spaceshipEffect: false, // Acceleration/deceleration effect disabled by default
+    warpdriveEffect: false // Variable speed effect disabled by default
   });
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
@@ -1118,7 +1119,8 @@ const StarFieldGenerator: React.FC = () => {
                           spinDirection: 'clockwise',
                           fadeOut: false,
                           hyperspeed: false,
-                          spaceshipEffect: false
+                          spaceshipEffect: false,
+                          warpdriveEffect: false
                         });
                         setDepthIntensity(400);
                         setPreserveStarsIntensity(100);
@@ -1291,6 +1293,23 @@ const StarFieldGenerator: React.FC = () => {
                     <Switch
                       checked={animationSettings.spaceshipEffect}
                       onCheckedChange={(checked) => setAnimationSettings(prev => ({ ...prev, spaceshipEffect: checked }))}
+                      className="ml-4"
+                    />
+                  </div>
+
+                  {/* Warpdrive Effect toggle */}
+                  <div className="flex items-center justify-between p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30 mt-3">
+                    <div className="flex-1">
+                      <Label className="text-cosmic-200 text-sm font-medium">
+                        {t('Warpdrive Effect', '曲速效果')}
+                      </Label>
+                      <p className="text-xs text-cosmic-400 mt-1">
+                        {t('Add speed variations during flight for dynamic warp drive feel', '在飞行过程中添加速度变化以营造动态曲速感')}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={animationSettings.warpdriveEffect}
+                      onCheckedChange={(checked) => setAnimationSettings(prev => ({ ...prev, warpdriveEffect: checked }))}
                       className="ml-4"
                     />
                   </div>

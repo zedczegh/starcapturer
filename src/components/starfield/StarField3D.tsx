@@ -23,6 +23,7 @@ interface StarField3DProps {
     fadeOut?: boolean;
     hyperspeed?: boolean;
     spaceshipEffect?: boolean;
+    warpdriveEffect?: boolean;
   };
   isAnimating: boolean;
   isRecording: boolean;
@@ -1121,14 +1122,26 @@ const StarField3D: React.FC<StarField3DProps> = ({
     const canvasCenterX = cachedDimensions.current.canvasCenterX;
     const canvasCenterY = cachedDimensions.current.canvasCenterY;
     
-    // Apply easing to progress for smoother motion (only if spaceshipEffect is enabled)
-    // Ease-in-out cubic for smooth acceleration and deceleration
+    // Apply easing to progress based on effect settings
     const spaceshipEffect = settings.spaceshipEffect ?? false;
-    const easedProgress = spaceshipEffect
-      ? (progressRatio < 0.5
-          ? 4 * progressRatio * progressRatio * progressRatio
-          : 1 - Math.pow(-2 * progressRatio + 2, 3) / 2)
-      : progressRatio; // Linear progress when spaceship effect is off
+    const warpdriveEffect = settings.warpdriveEffect ?? false;
+    
+    let easedProgress: number;
+    if (spaceshipEffect) {
+      // Ease-in-out cubic for smooth acceleration and deceleration
+      easedProgress = progressRatio < 0.5
+        ? 4 * progressRatio * progressRatio * progressRatio
+        : 1 - Math.pow(-2 * progressRatio + 2, 3) / 2;
+    } else if (warpdriveEffect) {
+      // Warpdrive: Quick burst at start, then variable pulsing speed
+      const burst = Math.sin(progressRatio * Math.PI * 0.5); // Quick initial acceleration
+      const pulse = 0.1 * Math.sin(progressRatio * Math.PI * 4); // Subtle pulsing
+      easedProgress = progressRatio + (burst * 0.15) + pulse;
+      easedProgress = Math.max(0, Math.min(1, easedProgress)); // Clamp to 0-1
+    } else {
+      // True linear progress - consistent speed throughout
+      easedProgress = progressRatio;
+    }
     
     // Only recalculate offsets if state changed
     if (stateChanged) {
@@ -1899,14 +1912,18 @@ const StarField3D: React.FC<StarField3DProps> = ({
       
       // Only apply fade-out if enabled in settings
       if (fadeOut) {
-        // Helper function to calculate progress (uses easing only if spaceshipEffect is enabled)
+        // Helper function to calculate progress (uses easing based on effect settings)
         const calculateProgress = (ratio: number) => {
           if (settings.spaceshipEffect) {
             return ratio < 0.5
               ? 4 * ratio * ratio * ratio
               : 1 - Math.pow(-2 * ratio + 2, 3) / 2;
+          } else if (settings.warpdriveEffect) {
+            const burst = Math.sin(ratio * Math.PI * 0.5);
+            const pulse = 0.1 * Math.sin(ratio * Math.PI * 4);
+            return Math.max(0, Math.min(1, ratio + (burst * 0.15) + pulse));
           }
-          return ratio; // Linear when spaceship effect is off
+          return ratio; // Linear when both effects are off
         };
         
         // Calculate the progress at which fade should END (1 second before video ends)
