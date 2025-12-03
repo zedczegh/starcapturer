@@ -22,6 +22,7 @@ interface StarField3DProps {
     spinDirection?: string;
     fadeOut?: boolean;
     hyperspeed?: boolean;
+    spaceshipEffect?: boolean;
   };
   isAnimating: boolean;
   isRecording: boolean;
@@ -1120,11 +1121,14 @@ const StarField3D: React.FC<StarField3DProps> = ({
     const canvasCenterX = cachedDimensions.current.canvasCenterX;
     const canvasCenterY = cachedDimensions.current.canvasCenterY;
     
-    // Apply easing to progress for smoother motion
+    // Apply easing to progress for smoother motion (only if spaceshipEffect is enabled)
     // Ease-in-out cubic for smooth acceleration and deceleration
-    const easedProgress = progressRatio < 0.5
-      ? 4 * progressRatio * progressRatio * progressRatio
-      : 1 - Math.pow(-2 * progressRatio + 2, 3) / 2;
+    const spaceshipEffect = settings.spaceshipEffect ?? false;
+    const easedProgress = spaceshipEffect
+      ? (progressRatio < 0.5
+          ? 4 * progressRatio * progressRatio * progressRatio
+          : 1 - Math.pow(-2 * progressRatio + 2, 3) / 2)
+      : progressRatio; // Linear progress when spaceship effect is off
     
     // Only recalculate offsets if state changed
     if (stateChanged) {
@@ -1895,16 +1899,19 @@ const StarField3D: React.FC<StarField3DProps> = ({
       
       // Only apply fade-out if enabled in settings
       if (fadeOut) {
-        // Helper function to calculate eased progress (matches main easing function)
-        const calculateEasedProgress = (ratio: number) => {
-          return ratio < 0.5
-            ? 4 * ratio * ratio * ratio
-            : 1 - Math.pow(-2 * ratio + 2, 3) / 2;
+        // Helper function to calculate progress (uses easing only if spaceshipEffect is enabled)
+        const calculateProgress = (ratio: number) => {
+          if (settings.spaceshipEffect) {
+            return ratio < 0.5
+              ? 4 * ratio * ratio * ratio
+              : 1 - Math.pow(-2 * ratio + 2, 3) / 2;
+          }
+          return ratio; // Linear when spaceship effect is off
         };
         
         // Calculate the progress at which fade should END (1 second before video ends)
         const fadeEndProgressRatio = Math.max(0, (duration - 1) / duration);
-        const fadeEndEasedProgress = calculateEasedProgress(fadeEndProgressRatio);
+        const fadeEndEasedProgress = calculateProgress(fadeEndProgressRatio);
         const fadeEndScale = 1.0 + (fadeEndEasedProgress * ampFactor);
         
         // Start fade when background reaches 2.0x scale or 70% through the zoom range (whichever comes first)
