@@ -92,9 +92,24 @@ async function convertToBase64DataUrl(imageUrl: string): Promise<string> {
   });
 }
 
+export interface PlateSolveContext {
+  ra: number;
+  dec: number;
+  fieldRadius: number;
+  pixelScale: number;
+  identifiedObject?: {
+    name: string;
+    commonName?: string;
+    distanceLY?: number;
+    type: string;
+  };
+  objectsInField: string[];
+}
+
 export async function analyzeStarsWithAI(
   imageDataUrl: string,
-  analysisType: 'star-analysis' | 'depth-enhancement' = 'star-analysis'
+  analysisType: 'star-analysis' | 'depth-enhancement' = 'star-analysis',
+  plateSolveContext?: PlateSolveContext
 ): Promise<StarAnalysisResult | DepthEnhancementResult | null> {
   try {
     // Convert to proper base64 data URL if needed
@@ -103,7 +118,8 @@ export async function analyzeStarsWithAI(
     const { data, error } = await supabase.functions.invoke('analyze-stars', {
       body: {
         imageBase64: base64DataUrl,
-        analysisType
+        analysisType,
+        plateSolveContext
       }
     });
 
