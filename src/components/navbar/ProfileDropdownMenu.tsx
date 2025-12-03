@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   DropdownMenuContent,
   DropdownMenuItem,
@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useNotifications } from '@/hooks/useNotifications';
 import NotificationBadge from './NotificationBadge';
+import { AdminBadge } from '@/components/profile/AdminBadge';
 
 interface ProfileDropdownMenuProps {
   user: any;
@@ -85,15 +86,19 @@ const ProfileDropdownMenu: React.FC<ProfileDropdownMenuProps> = ({
         {/* Enhanced Header */}
         <DropdownMenuLabel className="px-6 pt-4 pb-3 flex flex-col border-none">
           <div className="flex items-center gap-3 mb-2">
-            <Avatar className="w-10 h-10 border-2 border-primary/30">
-              {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt="Profile" className="h-full w-full object-cover" />
-              ) : (
-                <AvatarFallback className="bg-gradient-to-br from-primary/20 to-[#8A6FD6]/20 text-primary">
-                  <User className="h-5 w-5" />
-                </AvatarFallback>
-              )}
-            </Avatar>
+            <div className="flex flex-col items-center gap-1">
+              <Avatar className="w-10 h-10 border-2 border-primary/30">
+                {profile?.avatar_url ? (
+                  <img src={profile.avatar_url} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  <AvatarFallback className="bg-gradient-to-br from-primary/20 to-[#8A6FD6]/20 text-primary">
+                    <User className="h-5 w-5" />
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              {/* Badge below avatar */}
+              <AdminBadge size="sm" />
+            </div>
             <div className="flex-1">
               <span className="font-semibold text-lg text-white block leading-tight">
                 {profile && profile.username ? profile.username : t('Account', '账户')}

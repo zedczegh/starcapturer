@@ -16,42 +16,49 @@ export function AdminBadge({ userId, className = '', size = 'sm' }: AdminBadgePr
   if (loading || (!isAdmin && !isOwner)) return null;
 
   const sizeClasses = {
-    sm: 'text-xs px-1.5 py-0.5',
-    md: 'text-sm px-2 py-1',
-    lg: 'text-base px-3 py-1.5'
+    sm: 'h-4 w-4 p-0.5',
+    md: 'h-5 w-5 p-0.5',
+    lg: 'h-6 w-6 p-1'
+  };
+
+  const iconSizes = {
+    sm: 'h-2.5 w-2.5',
+    md: 'h-3 w-3',
+    lg: 'h-4 w-4'
   };
 
   // Owner gets crown badge with gold styling
   if (isOwner) {
     return (
-      <Badge 
-        variant="secondary" 
+      <div 
         className={`
-          bg-yellow-500/20 text-yellow-400 border-yellow-500/30
-          flex items-center justify-center font-medium
-          ${sizeClasses[size]} 
+          ${sizeClasses[size]}
+          rounded-full bg-gradient-to-br from-yellow-400 to-amber-500
+          flex items-center justify-center
+          shadow-lg shadow-yellow-500/30
+          ring-2 ring-yellow-300/50
           ${className}
         `}
       >
-        <Crown className="h-3 w-3" />
-      </Badge>
+        <Crown className={`${iconSizes[size]} text-yellow-900`} />
+      </div>
     );
   }
 
-  // Admin gets shield badge
+  // Admin gets shield badge with purple styling
   return (
-    <Badge 
-      variant="secondary" 
+    <div 
       className={`
-        bg-amber-100 text-amber-800 border-amber-300 
-        dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-700
-        flex items-center justify-center font-medium
-        ${sizeClasses[size]} 
+        ${sizeClasses[size]}
+        rounded-full bg-gradient-to-br from-purple-400 to-purple-600
+        flex items-center justify-center
+        shadow-lg shadow-purple-500/30
+        ring-2 ring-purple-300/50
         ${className}
       `}
     >
-      <Shield className="h-3 w-3" />
-    </Badge>
+      <Shield className={`${iconSizes[size]} text-white`} />
+    </div>
   );
 }
 
@@ -106,41 +113,48 @@ export function AdminBadgeForUser({ userId, className = '', size = 'sm' }: Admin
   if (loading || !userRole) return null;
 
   const sizeClasses = {
-    sm: 'text-xs px-1.5 py-0.5',
-    md: 'text-sm px-2 py-1',
-    lg: 'text-base px-3 py-1.5'
+    sm: 'h-4 w-4 p-0.5',
+    md: 'h-5 w-5 p-0.5',
+    lg: 'h-6 w-6 p-1'
+  };
+
+  const iconSizes = {
+    sm: 'h-2.5 w-2.5',
+    md: 'h-3 w-3',
+    lg: 'h-4 w-4'
   };
 
   // Owner gets crown badge with gold styling
   if (userRole === 'owner') {
     return (
-      <Badge 
-        variant="secondary" 
+      <div 
         className={`
-          bg-yellow-500/20 text-yellow-400 border-yellow-500/30
-          flex items-center justify-center font-medium
-          ${sizeClasses[size]} 
+          ${sizeClasses[size]}
+          rounded-full bg-gradient-to-br from-yellow-400 to-amber-500
+          flex items-center justify-center
+          shadow-lg shadow-yellow-500/30
+          ring-2 ring-yellow-300/50
           ${className}
         `}
       >
-        <Crown className="h-3 w-3" />
-      </Badge>
+        <Crown className={`${iconSizes[size]} text-yellow-900`} />
+      </div>
     );
   }
 
-  // Admin gets shield badge
+  // Admin gets shield badge with purple styling
   return (
-    <Badge 
-      variant="secondary" 
+    <div 
       className={`
-        bg-amber-100 text-amber-800 border-amber-300 
-        dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-700
-        flex items-center justify-center font-medium
-        ${sizeClasses[size]} 
+        ${sizeClasses[size]}
+        rounded-full bg-gradient-to-br from-purple-400 to-purple-600
+        flex items-center justify-center
+        shadow-lg shadow-purple-500/30
+        ring-2 ring-purple-300/50
         ${className}
       `}
     >
-      <Shield className="h-3 w-3" />
-    </Badge>
+      <Shield className={`${iconSizes[size]} text-white`} />
+    </div>
   );
 }
