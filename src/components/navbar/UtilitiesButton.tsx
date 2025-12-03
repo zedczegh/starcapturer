@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -6,23 +6,60 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Wrench, Music, Calculator, Satellite, Eye, Video, Sigma, Film, Zap } from 'lucide-react';
+import { Wrench, Music, Calculator, Satellite, Eye, Video, Sigma, Film, Zap, Lock } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const UtilitiesButton: React.FC = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [permissions, setPermissions] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const fetchPermissions = async () => {
+      if (!user) return;
+      
+      const utilityKeys = [
+        'stereoscope', 'star-field-generator', 'parallel-video-generator',
+        'motion-animation', 'space-tracker', 'sonification', 
+        'sampling-calculator', 'astro-math'
+      ];
+      
+      const perms: Record<string, boolean> = {};
+      for (const key of utilityKeys) {
+        const { data } = await supabase.rpc('can_use_utility', { 
+          p_user_id: user.id, 
+          p_utility_key: key 
+        });
+        perms[key] = data ?? true;
+      }
+      setPermissions(perms);
+    };
+    
+    fetchPermissions();
+  }, [user]);
+
+  const getUtilityKey = (path: string): string => {
+    return path.replace('/', '');
+  };
 
   const handleItemClick = (path: string) => {
     if (!user) {
       toast.error(t('Please log in to use this tool.', '请登录以使用此工具。'));
       return;
     }
+    
+    const key = getUtilityKey(path);
+    if (permissions[key] === false) {
+      toast.error(t('You do not have permission to use this tool.', '您没有使用此工具的权限。'));
+      return;
+    }
+    
     navigate(path);
   };
 
@@ -84,25 +121,49 @@ const UtilitiesButton: React.FC = () => {
 
           {/* Menu Items */}
           <div className="p-2">
-            {utilityItems.map(({ icon: Icon, label, path }, i) => (
-              <motion.div
-                key={path}
-                custom={i}
-                initial="hidden"
-                animate="visible"
-                variants={menuItemVariants}
-              >
-                <DropdownMenuItem
-                  onClick={() => handleItemClick(path)}
-                  className="px-3 py-2.5 flex gap-3 items-center hover:bg-gradient-to-r hover:from-amber-500/15 hover:to-orange-500/15 rounded-lg transition-all duration-300 cursor-pointer group"
+            {utilityItems.map(({ icon: Icon, label, path }, i) => {
+              const key = getUtilityKey(path);
+              const isLocked = user && permissions[key] === false;
+              
+              return (
+                <motion.div
+                  key={path}
+                  custom={i}
+                  initial="hidden"
+                  animate="visible"
+                  variants={menuItemVariants}
                 >
-                  <div className="w-7 h-7 rounded-lg bg-cosmic-800/50 flex items-center justify-center group-hover:bg-amber-500/25 transition-colors">
-                    <Icon className="h-3.5 w-3.5 text-cosmic-300 group-hover:text-amber-400 transition-colors" />
-                  </div>
-                  <span className="text-cosmic-100 group-hover:text-white font-medium text-sm">{label}</span>
-                </DropdownMenuItem>
-              </motion.div>
-            ))}
+                  <DropdownMenuItem
+                    onClick={() => handleItemClick(path)}
+                    className={`px-3 py-2.5 flex gap-3 items-center rounded-lg transition-all duration-300 cursor-pointer group ${
+                      isLocked 
+                        ? 'opacity-50 hover:bg-red-500/10' 
+                        : 'hover:bg-gradient-to-r hover:from-amber-500/15 hover:to-orange-500/15'
+                    }`}
+                  >
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+                      isLocked 
+                        ? 'bg-red-800/30' 
+                        : 'bg-cosmic-800/50 group-hover:bg-amber-500/25'
+                    }`}>
+                      {isLocked ? (
+                        <Lock className="h-3.5 w-3.5 text-red-400" />
+                      ) : (
+                        <Icon className="h-3.5 w-3.5 text-cosmic-300 group-hover:text-amber-400 transition-colors" />
+                      )}
+                    </div>
+                    <span className={`font-medium text-sm ${
+                      isLocked ? 'text-cosmic-400' : 'text-cosmic-100 group-hover:text-white'
+                    }`}>
+                      {label}
+                    </span>
+                    {isLocked && (
+                      <Lock className="h-3 w-3 text-red-400 ml-auto" />
+                    )}
+                  </DropdownMenuItem>
+                </motion.div>
+              );
+            })}
           </div>
         </motion.div>
       </DropdownMenuContent>
