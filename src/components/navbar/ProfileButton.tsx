@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { AdminBadge } from '@/components/profile/AdminBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import AuthDialog from '../auth/AuthDialog';
@@ -131,21 +130,15 @@ const ProfileButton = () => {
                   className="relative rounded-full p-0 hover:bg-transparent focus:ring-2 focus:ring-primary" 
                   aria-label="Profile"
                 >
-                  <div className="relative">
-                    <Avatar className="h-8 w-8 transition-transform duration-300 group-hover:scale-105">
-                      {avatarUrl ? (
-                        <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
-                      ) : (
-                        <AvatarFallback className="bg-cosmic-800/60 text-cosmic-400">
-                          {user.email?.[0]?.toUpperCase() || "?"}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                    {/* Badge centered on top of avatar */}
-                    <div className="absolute -top-2 left-1/2 -translate-x-1/2">
-                      <AdminBadge size="sm" />
-                    </div>
-                  </div>
+                  <Avatar className="h-8 w-8 transition-transform duration-300 group-hover:scale-105">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="Profile" className="h-full w-full object-cover" />
+                    ) : (
+                      <AvatarFallback className="bg-cosmic-800/60 text-cosmic-400">
+                        {user.email?.[0]?.toUpperCase() || "?"}
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
                 </Button>
               </motion.div>
             </DropdownMenuTrigger>
