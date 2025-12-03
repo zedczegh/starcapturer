@@ -185,7 +185,23 @@ export const useAccountManagement = () => {
   const getUtilityEnabled = (userId: string, utilityKey: string): boolean => {
     const perms = userPermissions[userId] || [];
     const perm = perms.find(p => p.utility_key === utilityKey);
-    return perm?.is_enabled ?? true; // Default to true if no record
+    return perm?.is_enabled ?? false; // Default to false if no record
+  };
+
+  const toggleAllUtilities = async (userId: string, enabled: boolean) => {
+    try {
+      for (const utility of UTILITY_KEYS) {
+        await toggleUtilityPermission(userId, utility.key, enabled);
+      }
+      return true;
+    } catch (err: any) {
+      console.error('Error toggling all utilities:', err);
+      throw err;
+    }
+  };
+
+  const areAllUtilitiesEnabled = (userId: string): boolean => {
+    return UTILITY_KEYS.every(utility => getUtilityEnabled(userId, utility.key));
   };
 
   return {
@@ -197,6 +213,8 @@ export const useAccountManagement = () => {
     toggleUserStatus,
     toggleUtilityPermission,
     removeUser,
-    getUtilityEnabled
+    getUtilityEnabled,
+    toggleAllUtilities,
+    areAllUtilitiesEnabled
   };
 };
