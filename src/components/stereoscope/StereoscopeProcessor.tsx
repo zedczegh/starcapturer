@@ -95,10 +95,10 @@ const StereoscopeProcessor: React.FC = () => {
   });
 
   // Add stereo spacing parameter
-  const [stereoSpacing, setStereoSpacing] = useState<number>(600);
+  const [stereoSpacing, setStereoSpacing] = useState<number>(200);
   
   // Add border size parameter (0-600px)
-  const [borderSize, setBorderSize] = useState<number>(300);
+  const [borderSize, setBorderSize] = useState<number>(100);
   
   // Displacement controls for starless image
   const [displacementAmount, setDisplacementAmount] = useState<number>(25); // 0-50 pixels
@@ -235,7 +235,19 @@ const StereoscopeProcessor: React.FC = () => {
           objectType: classification.dominantType as 'nebula' | 'galaxy' | 'planetary' | 'mixed'
         }));
         
-        // Set displacement based on AI recommendation or distance
+        // Set displacement direction based on AI analysis (scientifically determined)
+        // SNR and expanding objects pop out (left), nebulae/galaxies sink in (right)
+        const aiDisplacementDir = (recs as any).displacementDirection;
+        const aiStarsDir = (recs as any).starsDisplacementDirection;
+        
+        if (aiDisplacementDir === 'left' || aiDisplacementDir === 'right') {
+          setDisplacementDirection(aiDisplacementDir);
+        }
+        if (aiStarsDir === 'left' || aiStarsDir === 'right') {
+          setStarsDisplacementDirection(aiStarsDir);
+        }
+        
+        // Set displacement amount based on AI recommendation or distance
         if (targetSearchResult.distance?.value) {
           const suggested = calculateDisplacementFromDistance(targetSearchResult.distance.value);
           setDisplacementAmount(suggested.starless);

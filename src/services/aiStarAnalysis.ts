@@ -16,12 +16,16 @@ export interface StarAnalysisResult {
     depthContrast: string;
     primaryForeground: string;
     primaryBackground: string;
+    displacementDirection?: 'left' | 'right'; // left=pop out (SNR), right=sink in (nebulae/galaxies)
+    starsDisplacementDirection?: 'left' | 'right';
+    scientificRationale?: string;
     processingTips: string[];
   };
   objectClassification: {
     hasNebula: boolean;
     hasGalaxy: boolean;
     hasStarCluster: boolean;
+    hasSupernova?: boolean;
     dominantType: string;
   };
 }
