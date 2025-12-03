@@ -8,6 +8,7 @@ export interface ManageableUser {
   avatar_url: string | null;
   is_active: boolean;
   role: string;
+  is_admin: boolean;
   created_at: string;
 }
 

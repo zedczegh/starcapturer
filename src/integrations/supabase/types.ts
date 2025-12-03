@@ -1224,6 +1224,7 @@ export type Database = {
           created_at: string
           email: string
           is_active: boolean
+          is_admin: boolean
           role: string
           user_id: string
           username: string
