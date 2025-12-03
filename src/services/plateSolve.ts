@@ -29,8 +29,9 @@ async function convertToBase64DataUrl(imageUrl: string): Promise<string> {
     
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      // Limit size for API (max 2048px for plate solving - needs detail)
-      const maxDim = 2048;
+      // Reduced size for faster upload - Astrometry.net downsamples anyway
+      // 1400px is enough for reliable plate solving
+      const maxDim = 1400;
       let width = img.width;
       let height = img.height;
       
@@ -51,8 +52,8 @@ async function convertToBase64DataUrl(imageUrl: string): Promise<string> {
       
       ctx.drawImage(img, 0, 0, width, height);
       
-      // Use JPEG with higher quality for plate solving (needs star details)
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      // Use JPEG with moderate quality for faster upload (still enough for star detection)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
       resolve(dataUrl);
     };
     
