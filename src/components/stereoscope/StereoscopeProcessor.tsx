@@ -101,6 +101,7 @@ const StereoscopeProcessor: React.FC = () => {
   
   // Displacement controls for stars image
   const [starsDisplacementAmount, setStarsDisplacementAmount] = useState<number>(15); // 0-50 pixels
+  const [starsDisplacementDirection, setStarsDisplacementDirection] = useState<'left' | 'right'>('right');
   
   // Traditional mode parameters - enhanced for better 3D effect
   const [traditionalParams, setTraditionalParams] = useState<TraditionalMorphParams>({
@@ -962,6 +963,7 @@ const StereoscopeProcessor: React.FC = () => {
         setProgressText(t('Processing astrophysical stars displacement...', '处理天体物理恒星位移...'));
         setProgress(70);
         
+        const invertStarsDisplacement = starsDisplacementDirection === 'left';
         const { left: starsLeft, right: starsRight } = createStereoViews(
           starsCanvas, 
           starsCtx, 
@@ -971,7 +973,7 @@ const StereoscopeProcessor: React.FC = () => {
           params, 
           new Uint8ClampedArray(width * height), // No star masking for stars layer
           starsDisplacementAmount, // Use custom stars displacement amount
-          invertDisplacement // Apply same direction as starless layer
+          invertStarsDisplacement // Use stars-specific direction
         );
 
         // STEP 5: Composite starless + stars for each eye
@@ -1527,6 +1529,7 @@ const StereoscopeProcessor: React.FC = () => {
                       setDisplacementAmount(25);
                       setStarsDisplacementAmount(15);
                       setDisplacementDirection('right');
+                      setStarsDisplacementDirection('right');
                     }}
                     className="h-8 gap-2 text-xs bg-cosmic-800/50 hover:bg-cosmic-700/50 border-cosmic-600"
                   >
@@ -1573,7 +1576,32 @@ const StereoscopeProcessor: React.FC = () => {
 
                 <div>
                   <Label className="text-cosmic-200 mb-2 block">
-                    {t('Displacement Direction', '位移方向')}
+                    {t('Stars Direction', '恒星方向')}
+                  </Label>
+                  <Select
+                    value={starsDisplacementDirection}
+                    onValueChange={(value: 'left' | 'right') => setStarsDisplacementDirection(value)}
+                  >
+                    <SelectTrigger className="bg-cosmic-800/50 border-cosmic-700">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="right">
+                        {t('Right (Standard)', '右（标准）')}
+                      </SelectItem>
+                      <SelectItem value="left">
+                        {t('Left (Inverted)', '左（反转）')}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-cosmic-400 mt-1">
+                    {t('Direction to displace the stars layer for 3D effect', '恒星图层的位移方向以产生3D效果')}
+                  </p>
+                </div>
+
+                <div>
+                  <Label className="text-cosmic-200 mb-2 block">
+                    {t('Starless Direction', '无星方向')}
                   </Label>
                   <Select
                     value={displacementDirection}
