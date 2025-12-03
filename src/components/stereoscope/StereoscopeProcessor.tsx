@@ -9,13 +9,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Upload, Eye, Download, Loader2, Layers, Settings2, Sparkles, ChevronDown, Package, RotateCcw, Info } from 'lucide-react';
+import { Upload, Eye, Download, Loader2, Layers, Settings2, Sparkles, ChevronDown, Package, RotateCcw, Info, Wand2, Check } from 'lucide-react';
 import { UploadProgress } from '@/components/ui/upload-progress';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { generateSimpleDepthMap, detectStars, type SimpleDepthParams } from '@/lib/simpleDepthMap';
 import { TraditionalMorphProcessor, type TraditionalInputs, type TraditionalMorphParams } from '@/lib/traditionalMorphMode';
 import { NobelPrizeStereoscopeEngine } from '@/lib/advanced/NobelPrizeStereoscopeEngine';
-import AIStarAnalysisPanel from './AIStarAnalysisPanel';
+import { analyzeStarsWithAI, type StarAnalysisResult } from '@/services/aiStarAnalysis';
+import { toast } from 'sonner';
 import JSZip from 'jszip';
 // @ts-ignore
 import * as UTIF from 'utif';
@@ -111,6 +112,64 @@ const StereoscopeProcessor: React.FC = () => {
     luminanceBlur: 1.5,
     contrastBoost: 1.2
   });
+
+  // AI Star Analysis states
+  const [aiAnalysisEnabled, setAiAnalysisEnabled] = useState(false);
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [aiAnalysisResult, setAiAnalysisResult] = useState<StarAnalysisResult | null>(null);
+  const [useAiParams, setUseAiParams] = useState(false);
+
+  // Handle AI analysis
+  const handleAiAnalysis = async () => {
+    const imageUrl = starsPreview || starlessPreview;
+    if (!imageUrl) {
+      toast.error(t('Please upload an image first', '请先上传图像'));
+      return;
+    }
+
+    setAiAnalyzing(true);
+    try {
+      const result = await analyzeStarsWithAI(imageUrl, 'star-analysis');
+      if (result && 'summary' in result) {
+        setAiAnalysisResult(result as StarAnalysisResult);
+        toast.success(t('AI analysis complete!', 'AI分析完成！'));
+      } else {
+        toast.error(t('Analysis failed', '分析失败'));
+      }
+    } catch (error) {
+      console.error('AI analysis error:', error);
+      toast.error(t('Failed to analyze image', '分析图像失败'));
+    } finally {
+      setAiAnalyzing(false);
+    }
+  };
+
+  // Apply AI recommended parameters
+  const applyAiRecommendations = () => {
+    if (!aiAnalysisResult) return;
+    
+    const recs = aiAnalysisResult.stereoscopicRecommendations;
+    setParams(prev => ({
+      ...prev,
+      maxShift: recs.suggestedMaxShift || prev.maxShift,
+      objectType: aiAnalysisResult.objectClassification.dominantType as 'nebula' | 'galaxy' | 'planetary' | 'mixed'
+    }));
+    
+    // Set displacement based on depth contrast
+    if (recs.depthContrast === 'high') {
+      setDisplacementAmount(35);
+      setStarsDisplacementAmount(20);
+    } else if (recs.depthContrast === 'medium') {
+      setDisplacementAmount(25);
+      setStarsDisplacementAmount(15);
+    } else {
+      setDisplacementAmount(15);
+      setStarsDisplacementAmount(10);
+    }
+    
+    setUseAiParams(true);
+    toast.success(t('AI parameters applied!', 'AI参数已应用！'));
+  };
 
   const validateImageFile = (file: File): boolean => {
     const supportedFormats = [
@@ -1757,6 +1816,112 @@ const StereoscopeProcessor: React.FC = () => {
                     </div>
                   </CollapsibleContent>
                 </Collapsible>
+
+                {/* AI Star Analysis Toggle */}
+                <div className="space-y-3 p-3 rounded-lg bg-gradient-to-br from-violet-950/30 to-purple-950/30 border border-violet-500/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Wand2 className="w-4 h-4 text-violet-400" />
+                      <span className="text-sm font-semibold text-violet-400">
+                        {t('AI Star Analysis', 'AI星点分析')}
+                      </span>
+                    </div>
+                    <Switch
+                      checked={aiAnalysisEnabled}
+                      onCheckedChange={(checked) => {
+                        setAiAnalysisEnabled(checked);
+                        if (!checked) {
+                          setAiAnalysisResult(null);
+                          setUseAiParams(false);
+                        }
+                      }}
+                    />
+                  </div>
+                  
+                  {aiAnalysisEnabled && (
+                    <div className="space-y-3">
+                      <p className="text-xs text-cosmic-400">
+                        {t('AI will analyze star positions and suggest optimal displacement parameters.', 'AI将分析星点位置并建议最佳位移参数。')}
+                      </p>
+                      
+                      {!aiAnalysisResult && (
+                        <Button
+                          onClick={handleAiAnalysis}
+                          disabled={aiAnalyzing || (!starlessPreview && !starsPreview)}
+                          className="w-full bg-violet-600/80 hover:bg-violet-500/80 text-white"
+                          size="sm"
+                        >
+                          {aiAnalyzing ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              {t('Analyzing...', '分析中...')}
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-4 h-4 mr-2" />
+                              {t('Analyze Image', '分析图像')}
+                            </>
+                          )}
+                        </Button>
+                      )}
+                      
+                      {aiAnalysisResult && (
+                        <div className="space-y-3">
+                          <div className="p-2 rounded bg-cosmic-800/50 border border-violet-500/20">
+                            <p className="text-xs text-cosmic-200 mb-2">
+                              <span className="text-violet-400 font-medium">{t('Analysis:', '分析：')}</span>{' '}
+                              {aiAnalysisResult.summary.slice(0, 100)}...
+                            </p>
+                            <div className="flex flex-wrap gap-1">
+                              {aiAnalysisResult.objectClassification.hasNebula && (
+                                <span className="px-2 py-0.5 text-[10px] rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                                  {t('Nebula', '星云')}
+                                </span>
+                              )}
+                              {aiAnalysisResult.objectClassification.hasGalaxy && (
+                                <span className="px-2 py-0.5 text-[10px] rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                  {t('Galaxy', '星系')}
+                                </span>
+                              )}
+                              {aiAnalysisResult.objectClassification.hasStarCluster && (
+                                <span className="px-2 py-0.5 text-[10px] rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                  {t('Star Cluster', '星团')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Apply AI Params Toggle */}
+                          <div className="flex items-center justify-between p-2 rounded bg-emerald-950/30 border border-emerald-500/30">
+                            <div className="flex items-center gap-2">
+                              <Check className="w-4 h-4 text-emerald-400" />
+                              <span className="text-xs font-medium text-emerald-400">
+                                {t('Use AI Parameters', '使用AI参数')}
+                              </span>
+                            </div>
+                            <Switch
+                              checked={useAiParams}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  applyAiRecommendations();
+                                } else {
+                                  setUseAiParams(false);
+                                }
+                              }}
+                            />
+                          </div>
+                          
+                          {useAiParams && (
+                            <p className="text-[10px] text-emerald-400 italic">
+                              {t('AI-recommended displacement values applied. Suggested max shift:', 'AI推荐的位移值已应用。建议最大位移：')}{' '}
+                              {aiAnalysisResult.stereoscopicRecommendations.suggestedMaxShift}px
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {processing && (
@@ -1838,26 +2003,6 @@ const StereoscopeProcessor: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
-
-      {/* AI Star Analysis Panel */}
-      <div className="max-w-md mx-auto">
-        <AIStarAnalysisPanel
-          imageDataUrl={starlessPreview || starsPreview}
-          onApplyRecommendations={(recommendedParams) => {
-            setParams(prev => ({
-              ...prev,
-              maxShift: recommendedParams.maxShift,
-              objectType: recommendedParams.objectType
-            }));
-            if (recommendedParams.nebulaDisplacement) {
-              setDisplacementAmount(recommendedParams.nebulaDisplacement);
-            }
-            if (recommendedParams.starDisplacement) {
-              setStarsDisplacementAmount(recommendedParams.starDisplacement);
-            }
-          }}
-        />
       </div>
 
       {/* Results */}
