@@ -370,7 +370,8 @@ const AccountManagement: React.FC = () => {
                                   {t('Owner', '所有者')}
                                 </Badge>
                               )}
-                              {user.role === 'admin' && (
+                              {/* Show Admin badge if user has admin role (including owners with admin) */}
+                              {(user.role === 'admin' || (user.role === 'owner' && user.is_admin)) && (
                                 <Badge className="text-xs bg-purple-500/20 text-purple-400 border-purple-500/30">
                                   <Shield className="h-3 w-3 mr-1" />
                                   {t('Admin', '管理员')}
