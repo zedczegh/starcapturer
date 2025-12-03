@@ -22,7 +22,7 @@ interface StarField3DProps {
     spinDirection?: string;
     fadeOut?: boolean;
     hyperspeed?: boolean;
-    spaceshipEffect?: boolean;
+    warpdriveEffect?: boolean;
   };
   isAnimating: boolean;
   isRecording: boolean;
@@ -1121,14 +1121,14 @@ const StarField3D: React.FC<StarField3DProps> = ({
     const canvasCenterX = cachedDimensions.current.canvasCenterX;
     const canvasCenterY = cachedDimensions.current.canvasCenterY;
     
-    // Apply easing to progress for smoother motion (only if spaceshipEffect is enabled)
+    // Apply easing to progress for smoother motion (only if warpdriveEffect is enabled)
     // Ease-in-out cubic for smooth acceleration and deceleration
-    const spaceshipEffect = settings.spaceshipEffect ?? false;
-    const easedProgress = spaceshipEffect
+    const warpdriveEffect = settings.warpdriveEffect ?? false;
+    const easedProgress = warpdriveEffect
       ? (progressRatio < 0.5
           ? 4 * progressRatio * progressRatio * progressRatio
           : 1 - Math.pow(-2 * progressRatio + 2, 3) / 2)
-      : progressRatio; // Linear progress when spaceship effect is off
+      : progressRatio; // Linear progress when warpdrive effect is off
     
     // Only recalculate offsets if state changed
     if (stateChanged) {
@@ -1901,12 +1901,12 @@ const StarField3D: React.FC<StarField3DProps> = ({
       if (fadeOut) {
         // Helper function to calculate progress (uses easing only if spaceshipEffect is enabled)
         const calculateProgress = (ratio: number) => {
-          if (settings.spaceshipEffect) {
+          if (settings.warpdriveEffect) {
             return ratio < 0.5
               ? 4 * ratio * ratio * ratio
               : 1 - Math.pow(-2 * ratio + 2, 3) / 2;
           }
-          return ratio; // Linear when spaceship effect is off
+          return ratio; // Linear when warpdrive effect is off
         };
         
         // Calculate the progress at which fade should END (1 second before video ends)
