@@ -76,3 +76,9 @@ verify_jwt = true
 
 [functions.get-amap-key]
 verify_jwt = false
+
+[functions.analyze-stars]
+verify_jwt = false
+
+[functions.plate-solve]
+verify_jwt = false
