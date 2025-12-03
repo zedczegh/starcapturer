@@ -96,7 +96,8 @@ const StarFieldGenerator: React.FC = () => {
     spin: 0, // 0-90 degrees
     spinDirection: 'clockwise' as 'clockwise' | 'counterclockwise',
     fadeOut: false, // Nebula fade-out effect disabled by default
-    hyperspeed: false // Hyperspeed motion blur effect disabled by default
+    hyperspeed: false, // Hyperspeed motion blur effect disabled by default
+    spaceshipEffect: false // Acceleration/deceleration effect disabled by default
   });
 
   const t = (en: string, zh: string) => language === 'en' ? en : zh;
@@ -1116,7 +1117,8 @@ const StarFieldGenerator: React.FC = () => {
                           spin: 0,
                           spinDirection: 'clockwise',
                           fadeOut: false,
-                          hyperspeed: false
+                          hyperspeed: false,
+                          spaceshipEffect: false
                         });
                         setDepthIntensity(200);
                         setPreserveStarsIntensity(50);
@@ -1272,6 +1274,23 @@ const StarFieldGenerator: React.FC = () => {
                     <Switch
                       checked={animationSettings.hyperspeed}
                       onCheckedChange={(checked) => setAnimationSettings(prev => ({ ...prev, hyperspeed: checked }))}
+                      className="ml-4"
+                    />
+                  </div>
+
+                  {/* Spaceship Effect toggle */}
+                  <div className="flex items-center justify-between p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30 mt-3">
+                    <div className="flex-1">
+                      <Label className="text-cosmic-200 text-sm font-medium">
+                        {t('Spaceship Effect', '飞船效果')}
+                      </Label>
+                      <p className="text-xs text-cosmic-400 mt-1">
+                        {t('Accelerate at start and decelerate at end like a spaceship', '像飞船一样在开始时加速，在结束时减速')}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={animationSettings.spaceshipEffect}
+                      onCheckedChange={(checked) => setAnimationSettings(prev => ({ ...prev, spaceshipEffect: checked }))}
                       className="ml-4"
                     />
                   </div>
