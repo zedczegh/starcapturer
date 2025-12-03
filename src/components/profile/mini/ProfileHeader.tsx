@@ -3,7 +3,6 @@ import React from "react";
 import { User, Users, UserPlus } from "lucide-react";
 import { motion } from "framer-motion";
 import ProfileTag from "@/components/profile/ProfileTag";
-import { AdminBadgeForUser } from "@/components/profile/AdminBadge";
 import { Button } from "@/components/ui/button";
 import { useFollow } from "@/hooks/profile/useFollow";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,17 +40,13 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile, userId }) => {
   return (
     <div className="mb-6">
       <div className="flex gap-4 items-start">
-        <div className="flex flex-col items-center gap-1">
-          {profile.avatar_url ? (
-            <img src={profile.avatar_url} alt="avatar" className="w-20 h-20 rounded-full object-cover shadow-lg" />
-          ) : (
-            <div className="w-20 h-20 flex items-center justify-center rounded-full bg-cosmic-800/60 shadow-lg">
-              <User className="w-10 h-10 text-cosmic-400" />
-            </div>
-          )}
-          {/* Badge below avatar */}
-          {userId && <AdminBadgeForUser userId={userId} size="md" />}
-        </div>
+        {profile.avatar_url ? (
+          <img src={profile.avatar_url} alt="avatar" className="w-20 h-20 rounded-full object-cover shadow-lg" />
+        ) : (
+          <div className="w-20 h-20 flex items-center justify-center rounded-full bg-cosmic-800/60 shadow-lg">
+            <User className="w-10 h-10 text-cosmic-400" />
+          </div>
+        )}
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             <h2 className="text-2xl font-bold text-white">

@@ -8,7 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import ProfileAvatar from './ProfileAvatar';
 import ProfileMotto from './ProfileMotto';
-import { AdminBadge } from './AdminBadge';
+import { AdminBadgeForUser } from './AdminBadge';
 import { UserPostsManager } from './UserPostsManager';
 import { InstagramPostUpload } from './InstagramPostUpload';
 import ProfileTag from './ProfileTag';
@@ -217,7 +217,7 @@ const ProfileMainNew = ({
                   <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-white via-primary to-purple-400 bg-clip-text text-transparent">
                     {displayUsername}
                   </h1>
-                  <AdminBadge />
+                  {userId && <AdminBadgeForUser userId={userId} size="md" />}
                   
                   {/* Message Button - When viewing other profiles */}
                   {viewMode && userId && (
