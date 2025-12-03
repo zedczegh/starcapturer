@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Input } from '@/components/ui/input';
 import { 
   Users, 
   ChevronDown, 
@@ -17,7 +18,11 @@ import {
   AlertTriangle,
   Crown,
   ShieldPlus,
-  ShieldMinus
+  ShieldMinus,
+  Search,
+  ArrowDownAZ,
+  ArrowUpAZ,
+  Calendar
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAccountManagement, UTILITY_KEYS } from '@/hooks/admin/useAccountManagement';
@@ -57,19 +62,40 @@ const AccountManagement: React.FC = () => {
   // Filter states
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'user'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'deactivated'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortByDate, setSortByDate] = useState<'newest' | 'oldest'>('newest');
 
-  // Filtered users
-  const filteredUsers = users.filter(user => {
-    // Role filter
-    if (roleFilter === 'admin' && user.role !== 'admin' && user.role !== 'owner') return false;
-    if (roleFilter === 'user' && (user.role === 'admin' || user.role === 'owner')) return false;
+  // Filtered and sorted users
+  const filteredUsers = useMemo(() => {
+    let result = users.filter(user => {
+      // Search filter - search by username or email
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        const matchesUsername = user.username?.toLowerCase().includes(query);
+        const matchesEmail = user.email?.toLowerCase().includes(query);
+        if (!matchesUsername && !matchesEmail) return false;
+      }
+      
+      // Role filter
+      if (roleFilter === 'admin' && user.role !== 'admin' && user.role !== 'owner') return false;
+      if (roleFilter === 'user' && (user.role === 'admin' || user.role === 'owner')) return false;
+      
+      // Status filter
+      if (statusFilter === 'active' && !user.is_active) return false;
+      if (statusFilter === 'deactivated' && user.is_active) return false;
+      
+      return true;
+    });
     
-    // Status filter
-    if (statusFilter === 'active' && !user.is_active) return false;
-    if (statusFilter === 'deactivated' && user.is_active) return false;
+    // Sort by registration date
+    result.sort((a, b) => {
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
+      return sortByDate === 'newest' ? dateB - dateA : dateA - dateB;
+    });
     
-    return true;
-  });
+    return result;
+  }, [users, searchQuery, roleFilter, statusFilter, sortByDate]);
 
   const toggleExpanded = (userId: string) => {
     setExpandedUsers(prev => {
@@ -197,6 +223,17 @@ const AccountManagement: React.FC = () => {
           </Button>
         </div>
         
+        {/* Search Bar */}
+        <div className="relative mt-4">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-cosmic-400" />
+          <Input
+            placeholder={t('Search by username or email...', '搜索用户名或邮箱...')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 bg-cosmic-800/50 border-cosmic-600 text-cosmic-100 placeholder:text-cosmic-500"
+          />
+        </div>
+        
         {/* Filters */}
         <div className="flex flex-wrap gap-2 mt-4">
           <div className="flex items-center gap-2">
@@ -260,6 +297,26 @@ const AccountManagement: React.FC = () => {
                 {t('Deactivated', '已停用')}
               </Button>
             </div>
+          </div>
+          
+          <div className="flex items-center gap-2 ml-4">
+            <span className="text-xs text-cosmic-400">{t('Sort:', '排序:')}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              className={`border-cosmic-600 ${sortByDate === 'newest' ? 'bg-cosmic-700' : ''}`}
+              onClick={() => setSortByDate(sortByDate === 'newest' ? 'oldest' : 'newest')}
+            >
+              <Calendar className="h-3 w-3 mr-1" />
+              {sortByDate === 'newest' 
+                ? t('Newest First', '最新优先') 
+                : t('Oldest First', '最早优先')
+              }
+              {sortByDate === 'newest' 
+                ? <ArrowDownAZ className="h-3 w-3 ml-1" />
+                : <ArrowUpAZ className="h-3 w-3 ml-1" />
+              }
+            </Button>
           </div>
         </div>
         
