@@ -191,6 +191,87 @@ const StereoscopeProcessor: React.FC = () => {
     }
   };
 
+  // Handle AI analysis with target search data from SIMBAD
+  const handleAiAnalysisWithTargetData = async () => {
+    const imageUrl = starsPreview || starlessPreview;
+    if (!imageUrl) {
+      toast.error(t('Please upload an image first', '请先上传图像'));
+      return;
+    }
+
+    if (!targetSearchResult) {
+      toast.error(t('Please search for a target first', '请先搜索目标'));
+      return;
+    }
+
+    setAiAnalyzing(true);
+    try {
+      // Build context from target search results
+      const plateSolveContext = {
+        ra: targetSearchResult.ra,
+        dec: targetSearchResult.dec,
+        fieldRadius: 2, // Assume typical 2 degree FOV
+        pixelScale: 1, // Default
+        identifiedObject: {
+          name: targetSearchResult.name,
+          commonName: targetSearchResult.aliases?.[0],
+          distanceLY: targetSearchResult.distance?.value,
+          type: targetSearchResult.objectType || 'unknown'
+        },
+        objectsInField: targetSearchResult.aliases || []
+      };
+
+      const result = await analyzeStarsWithAI(imageUrl, 'star-analysis', plateSolveContext);
+      if (result && 'summary' in result) {
+        setAiAnalysisResult(result as StarAnalysisResult);
+        
+        // Auto-apply the recommendations
+        const recs = (result as StarAnalysisResult).stereoscopicRecommendations;
+        const classification = (result as StarAnalysisResult).objectClassification;
+        
+        setParams(prev => ({
+          ...prev,
+          maxShift: recs.suggestedMaxShift || prev.maxShift,
+          objectType: classification.dominantType as 'nebula' | 'galaxy' | 'planetary' | 'mixed'
+        }));
+        
+        // Set displacement based on AI recommendation or distance
+        if (targetSearchResult.distance?.value) {
+          const suggested = calculateDisplacementFromDistance(targetSearchResult.distance.value);
+          setDisplacementAmount(suggested.starless);
+          setStarsDisplacementAmount(suggested.stars);
+        } else if (recs.depthContrast === 'high') {
+          setDisplacementAmount(35);
+          setStarsDisplacementAmount(20);
+        } else if (recs.depthContrast === 'medium') {
+          setDisplacementAmount(25);
+          setStarsDisplacementAmount(15);
+        } else {
+          setDisplacementAmount(15);
+          setStarsDisplacementAmount(10);
+        }
+        
+        // Set identified object for display
+        setIdentifiedObject({
+          name: targetSearchResult.name,
+          commonName: targetSearchResult.aliases?.[0],
+          distanceLY: targetSearchResult.distance?.value,
+          type: targetSearchResult.objectType || 'unknown'
+        });
+        
+        setUseAiParams(true);
+        toast.success(t('AI analysis complete! Parameters applied.', 'AI分析完成！参数已应用。'));
+      } else {
+        toast.error(t('Analysis failed', '分析失败'));
+      }
+    } catch (error) {
+      console.error('AI analysis error:', error);
+      toast.error(t('Failed to analyze image', '分析图像失败'));
+    } finally {
+      setAiAnalyzing(false);
+    }
+  };
+
   // Handle AI analysis - now uses plate solve results for better recommendations
   const handleAiAnalysis = async () => {
     const imageUrl = starsPreview || starlessPreview;
@@ -2054,22 +2135,64 @@ const StereoscopeProcessor: React.FC = () => {
                         )}
                       </div>
                       
-                      <Button
-                        onClick={applyTargetSearchParams}
-                        className="w-full bg-teal-600/80 hover:bg-teal-500/80 text-white"
-                        size="sm"
-                      >
-                        <Check className="w-4 h-4 mr-2" />
-                        {targetSearchResult.distance 
-                          ? t('Apply Distance-Based Displacement', '应用基于距离的位移')
-                          : t('Set as Target', '设为目标')
-                        }
-                      </Button>
+                      {/* AI Analysis Results */}
+                      {aiAnalysisResult && useAiParams && (
+                        <div className="p-2 rounded bg-emerald-950/30 border border-emerald-500/20">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Check className="w-4 h-4 text-emerald-400" />
+                            <span className="text-xs font-medium text-emerald-400">
+                              {t('AI Parameters Applied', 'AI参数已应用')}
+                            </span>
+                          </div>
+                          <div className="text-xs text-cosmic-300 space-y-1">
+                            <p>{t('Starless:', '无星：')} <span className="text-amber-400">{displacementAmount}px</span></p>
+                            <p>{t('Stars:', '恒星：')} <span className="text-cyan-400">{starsDisplacementAmount}px</span></p>
+                            <p>{t('Type:', '类型：')} <span className="text-violet-400 capitalize">{params.objectType}</span></p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {!aiAnalysisResult ? (
+                        <Button
+                          onClick={handleAiAnalysisWithTargetData}
+                          disabled={aiAnalyzing || (!starlessPreview && !starsPreview)}
+                          className="w-full bg-violet-600/80 hover:bg-violet-500/80 text-white"
+                          size="sm"
+                        >
+                          {aiAnalyzing ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              {t('Analyzing...', '分析中...')}
+                            </>
+                          ) : (
+                            <>
+                              <Wand2 className="w-4 h-4 mr-2" />
+                              {t('Analyze with AI', '使用AI分析')}
+                            </>
+                          )}
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() => {
+                            setAiAnalysisResult(null);
+                            setUseAiParams(false);
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="w-full text-xs"
+                        >
+                          <RotateCcw className="w-3 h-3 mr-2" />
+                          {t('Re-analyze', '重新分析')}
+                        </Button>
+                      )}
                       
                       <Button
                         onClick={() => {
                           setTargetSearchResult(null);
                           setTargetSearchQuery('');
+                          setAiAnalysisResult(null);
+                          setUseAiParams(false);
+                          setIdentifiedObject(null);
                         }}
                         variant="outline"
                         size="sm"
