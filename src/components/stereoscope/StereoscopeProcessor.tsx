@@ -99,6 +99,9 @@ const StereoscopeProcessor: React.FC = () => {
   const [displacementAmount, setDisplacementAmount] = useState<number>(25); // 0-50 pixels
   const [displacementDirection, setDisplacementDirection] = useState<'left' | 'right'>('right');
   
+  // Displacement controls for stars image
+  const [starsDisplacementAmount, setStarsDisplacementAmount] = useState<number>(15); // 0-50 pixels
+  
   // Traditional mode parameters - enhanced for better 3D effect
   const [traditionalParams, setTraditionalParams] = useState<TraditionalMorphParams>({
     horizontalDisplace: 25, // Increased for more nebula depth
@@ -967,7 +970,7 @@ const StereoscopeProcessor: React.FC = () => {
           height, 
           params, 
           new Uint8ClampedArray(width * height), // No star masking for stars layer
-          params.starParallaxPx, // Use star parallax displacement
+          starsDisplacementAmount, // Use custom stars displacement amount
           invertDisplacement // Apply same direction as starless layer
         );
 
@@ -1522,6 +1525,7 @@ const StereoscopeProcessor: React.FC = () => {
                     size="sm"
                     onClick={() => {
                       setDisplacementAmount(25);
+                      setStarsDisplacementAmount(15);
                       setDisplacementDirection('right');
                     }}
                     className="h-8 gap-2 text-xs bg-cosmic-800/50 hover:bg-cosmic-700/50 border-cosmic-600"
@@ -1533,7 +1537,7 @@ const StereoscopeProcessor: React.FC = () => {
                 
                 <div>
                   <Label className="flex items-center justify-between">
-                    <span>{t('Displacement Amount', '位移量')}</span>
+                    <span>{t('Starless Displacement', '无星位移')}</span>
                     <span className="text-amber-400 font-mono text-lg">({displacementAmount}px)</span>
                   </Label>
                   <Slider
@@ -1546,6 +1550,24 @@ const StereoscopeProcessor: React.FC = () => {
                   />
                   <p className="text-xs text-cosmic-400 mt-1">
                     {t('Amount of horizontal displacement for starless/nebula image', '无星/星云图像的水平位移量')}
+                  </p>
+                </div>
+
+                <div>
+                  <Label className="flex items-center justify-between">
+                    <span>{t('Stars Displacement', '恒星位移')}</span>
+                    <span className="text-cyan-400 font-mono text-lg">({starsDisplacementAmount}px)</span>
+                  </Label>
+                  <Slider
+                    value={[starsDisplacementAmount]}
+                    onValueChange={([value]) => setStarsDisplacementAmount(value)}
+                    min={0}
+                    max={50}
+                    step={1}
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-cosmic-400 mt-1">
+                    {t('Amount of horizontal displacement for stars layer 3D effect', '恒星图层3D效果的水平位移量')}
                   </p>
                 </div>
 
