@@ -182,6 +182,38 @@ export const useAccountManagement = () => {
     }
   };
 
+  const assignAdminRole = async (userId: string) => {
+    try {
+      const { error } = await supabase.rpc('assign_admin_role', { p_target_user_id: userId });
+      if (error) throw error;
+      
+      // Update local state
+      setUsers(prev => prev.map(u => 
+        u.user_id === userId ? { ...u, role: 'admin' } : u
+      ));
+      return true;
+    } catch (err: any) {
+      console.error('Error assigning admin role:', err);
+      throw err;
+    }
+  };
+
+  const removeAdminRole = async (userId: string) => {
+    try {
+      const { error } = await supabase.rpc('remove_admin_role', { p_target_user_id: userId });
+      if (error) throw error;
+      
+      // Update local state
+      setUsers(prev => prev.map(u => 
+        u.user_id === userId ? { ...u, role: 'user' } : u
+      ));
+      return true;
+    } catch (err: any) {
+      console.error('Error removing admin role:', err);
+      throw err;
+    }
+  };
+
   const getUtilityEnabled = (userId: string, utilityKey: string): boolean => {
     const perms = userPermissions[userId] || [];
     const perm = perms.find(p => p.utility_key === utilityKey);
@@ -215,6 +247,8 @@ export const useAccountManagement = () => {
     removeUser,
     getUtilityEnabled,
     toggleAllUtilities,
-    areAllUtilitiesEnabled
+    areAllUtilitiesEnabled,
+    assignAdminRole,
+    removeAdminRole
   };
 };

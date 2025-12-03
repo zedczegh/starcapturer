@@ -1188,6 +1188,10 @@ export type Database = {
     }
     Functions: {
       add_admin: { Args: { user_email: string }; Returns: Json }
+      assign_admin_role: {
+        Args: { p_target_user_id: string }
+        Returns: boolean
+      }
       can_use_utility: {
         Args: { p_user_id: string; p_utility_key: string }
         Returns: boolean
@@ -1332,6 +1336,10 @@ export type Database = {
       }
       ping_db: { Args: never; Returns: boolean }
       remove_admin: { Args: { user_email: string }; Returns: Json }
+      remove_admin_role: {
+        Args: { p_target_user_id: string }
+        Returns: boolean
+      }
       update_astro_spot_timeslot:
         | {
             Args: {

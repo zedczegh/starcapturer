@@ -14,10 +14,14 @@ import {
   UserCheck,
   Shield,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  Crown,
+  ShieldPlus,
+  ShieldMinus
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAccountManagement, UTILITY_KEYS } from '@/hooks/admin/useAccountManagement';
+import { useUserRole } from '@/hooks/useUserRole';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -33,6 +37,7 @@ import {
 
 const AccountManagement: React.FC = () => {
   const { t } = useLanguage();
+  const { isOwner } = useUserRole();
   const { 
     users, 
     loading, 
@@ -42,7 +47,9 @@ const AccountManagement: React.FC = () => {
     toggleUtilityPermission,
     getUtilityEnabled,
     toggleAllUtilities,
-    areAllUtilitiesEnabled
+    areAllUtilitiesEnabled,
+    assignAdminRole,
+    removeAdminRole
   } = useAccountManagement();
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [processingUsers, setProcessingUsers] = useState<Set<string>>(new Set());
@@ -99,6 +106,24 @@ const AccountManagement: React.FC = () => {
       );
     } catch (err: any) {
       toast.error(err.message || t('Failed to toggle all utilities', '切换所有功能失败'));
+    }
+  };
+
+  const handleAssignAdmin = async (userId: string) => {
+    try {
+      await assignAdminRole(userId);
+      toast.success(t('Admin role assigned', '已授予管理员权限'));
+    } catch (err: any) {
+      toast.error(err.message || t('Failed to assign admin role', '授予管理员权限失败'));
+    }
+  };
+
+  const handleRemoveAdmin = async (userId: string) => {
+    try {
+      await removeAdminRole(userId);
+      toast.success(t('Admin role removed', '已移除管理员权限'));
+    } catch (err: any) {
+      toast.error(err.message || t('Failed to remove admin role', '移除管理员权限失败'));
     }
   };
 
@@ -191,6 +216,18 @@ const AccountManagement: React.FC = () => {
                               <span className="font-medium text-cosmic-100">
                                 {user.username || t('No username', '无用户名')}
                               </span>
+                              {user.role === 'owner' && (
+                                <Badge className="text-xs bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+                                  <Crown className="h-3 w-3 mr-1" />
+                                  {t('Owner', '所有者')}
+                                </Badge>
+                              )}
+                              {user.role === 'admin' && (
+                                <Badge className="text-xs bg-purple-500/20 text-purple-400 border-purple-500/30">
+                                  <Shield className="h-3 w-3 mr-1" />
+                                  {t('Admin', '管理员')}
+                                </Badge>
+                              )}
                               <Badge variant={user.is_active ? 'default' : 'destructive'} className="text-xs">
                                 {user.is_active ? t('Active', '活跃') : t('Deactivated', '已停用')}
                               </Badge>
@@ -200,6 +237,57 @@ const AccountManagement: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="flex items-center gap-2">
+                            {/* Admin role management - only for owner and not for owner users */}
+                            {isOwner && user.role !== 'owner' && (
+                              user.role === 'admin' ? (
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      className="border-purple-500/30 text-purple-400 hover:bg-purple-500/20"
+                                    >
+                                      <ShieldMinus className="h-4 w-4 mr-1" />
+                                      {t('Remove Admin', '移除管理员')}
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent className="bg-cosmic-900 border-cosmic-700">
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle className="text-cosmic-50">
+                                        {t('Remove Admin Role', '移除管理员权限')}
+                                      </AlertDialogTitle>
+                                      <AlertDialogDescription className="text-cosmic-300">
+                                        {t(
+                                          'This will remove admin privileges from this user. Are you sure?',
+                                          '这将移除该用户的管理员权限。确定吗？'
+                                        )}
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel className="bg-cosmic-800 border-cosmic-600 text-cosmic-100">
+                                        {t('Cancel', '取消')}
+                                      </AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => handleRemoveAdmin(user.user_id)}
+                                        className="bg-purple-600 hover:bg-purple-700"
+                                      >
+                                        {t('Remove Admin', '移除管理员')}
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              ) : (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  className="border-purple-500/30 text-purple-400 hover:bg-purple-500/20"
+                                  onClick={() => handleAssignAdmin(user.user_id)}
+                                >
+                                  <ShieldPlus className="h-4 w-4 mr-1" />
+                                  {t('Make Admin', '设为管理员')}
+                                </Button>
+                              )
+                            )}
                             {user.is_active ? (
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
