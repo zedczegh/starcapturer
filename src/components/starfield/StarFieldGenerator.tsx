@@ -1317,6 +1317,27 @@ const StarFieldGenerator: React.FC = () => {
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
+                    <Label className="text-cosmic-200">{t('Flight Speed', '飞行速度')}</Label>
+                    <span className="text-cosmic-300 text-sm font-semibold">{animationSettings.speed.toFixed(1)}x</span>
+                  </div>
+                  <Slider
+                    value={[animationSettings.speed]}
+                    onValueChange={(value) => setAnimationSettings(prev => ({
+                      ...prev, 
+                      speed: value[0]
+                    }))}
+                    min={0.1}
+                    max={3.0}
+                    step={0.1}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-cosmic-400">
+                    {t('Controls the overall animation speed (0.1x = slow drift, 3.0x = fast travel)', '控制整体动画速度（0.1x = 缓慢漂移，3.0x = 快速飞行）')}
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
                     <Label className="text-cosmic-200">{t('Spin Angle', '旋转角度')}</Label>
                     <span className="text-cosmic-300 text-sm font-semibold">{animationSettings.spin}°</span>
                   </div>
