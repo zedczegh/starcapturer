@@ -46,6 +46,13 @@ const PeriodStatsCard: React.FC<{
     return label;
   };
 
+  const getDaysLabel = (days: number) => {
+    if (language === 'zh') {
+      return `${days} 天数据`;
+    }
+    return days === 1 ? '1 day of data' : `${days} days of data`;
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -77,7 +84,7 @@ const PeriodStatsCard: React.FC<{
                     <p className="text-lg font-bold text-amber-400">
                       {stats.overall_avg_siqs.toFixed(1)}
                     </p>
-                    <p className="text-xs text-cosmic-500">{t('Avg SIQS', '平均SIQS')}</p>
+                    <p className="text-xs text-cosmic-500">{getDaysLabel(stats.unique_days)}</p>
                   </div>
                   {isOpen ? (
                     <ChevronUp className="h-4 w-4 text-cosmic-400" />
@@ -141,7 +148,7 @@ const PeriodStatsCard: React.FC<{
 };
 
 const SiqsTimeAnalytics: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const {
     period,
     setPeriod,
@@ -231,8 +238,8 @@ const SiqsTimeAnalytics: React.FC = () => {
                 <CalendarDays className="h-4 w-4 text-purple-400" />
               </div>
               <div>
-                <p className="text-xs text-cosmic-400">{t('Time Periods', '时间段')}</p>
-                <p className="text-xl font-bold text-cosmic-100">{summary.totalPeriods}</p>
+                <p className="text-xs text-cosmic-400">{t('Total Days', '总天数')}</p>
+                <p className="text-xl font-bold text-cosmic-100">{summary.totalDays}</p>
               </div>
             </div>
           </CardContent>

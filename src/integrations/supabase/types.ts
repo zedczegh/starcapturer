@@ -1173,6 +1173,7 @@ export type Database = {
           period_label: string
           period_start: string
           source: string
+          unique_days: number
           unique_locations: number
         }[]
       }

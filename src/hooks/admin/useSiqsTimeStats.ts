@@ -11,6 +11,7 @@ export interface TimeAggregatedStats {
   max_siqs: number;
   calculation_count: number;
   unique_locations: number;
+  unique_days: number;
   source: string;
 }
 
@@ -19,6 +20,7 @@ export interface GroupedTimeStats {
   period_start: string;
   total_calculations: number;
   unique_locations: number;
+  unique_days: number;
   overall_avg_siqs: number;
   overall_min_siqs: number;
   overall_max_siqs: number;
@@ -60,6 +62,7 @@ export const useSiqsTimeStats = (initialPeriod: TimePeriod = 'month') => {
         if (existing) {
           existing.total_calculations += stat.calculation_count;
           existing.unique_locations += stat.unique_locations;
+          existing.unique_days = Math.max(existing.unique_days, stat.unique_days);
           existing.by_source.push({
             source: stat.source,
             avg_siqs: stat.avg_siqs,
@@ -77,6 +80,7 @@ export const useSiqsTimeStats = (initialPeriod: TimePeriod = 'month') => {
             period_start: stat.period_start,
             total_calculations: stat.calculation_count,
             unique_locations: stat.unique_locations,
+            unique_days: stat.unique_days,
             overall_avg_siqs: stat.avg_siqs,
             overall_min_siqs: stat.min_siqs,
             overall_max_siqs: stat.max_siqs,
@@ -108,6 +112,7 @@ export const useSiqsTimeStats = (initialPeriod: TimePeriod = 'month') => {
   const summary = {
     totalPeriods: groupedStats.length,
     totalCalculations: groupedStats.reduce((sum, g) => sum + g.total_calculations, 0),
+    totalDays: groupedStats.reduce((sum, g) => sum + g.unique_days, 0),
     overallAvgSiqs: groupedStats.length > 0 
       ? groupedStats.reduce((sum, g) => sum + g.overall_avg_siqs * g.total_calculations, 0) / 
         groupedStats.reduce((sum, g) => sum + g.total_calculations, 0)
