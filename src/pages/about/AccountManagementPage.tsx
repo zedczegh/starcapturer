@@ -2,24 +2,35 @@ import React, { useEffect } from "react";
 import { motion } from "framer-motion";
 import NavBar from "@/components/NavBar";
 import AboutNavbar from "@/components/about/AboutNavbar";
-import SiqsSection from "@/components/about/SiqsSection";
-import AboutIntro from "@/components/about/AboutIntro";
-import PhotoPointsFeature from "@/components/about/PhotoPointsFeature";
-import AboutTeam from "@/components/about/AboutTeam";
-import SiqsAdminDashboard from "@/components/admin/SiqsAdminDashboard";
-import { ArrowLeft } from "lucide-react";
-import { Link } from "react-router-dom";
+import AccountManagement from "@/components/admin/AccountManagement";
+import { ArrowLeft, ShieldAlert } from "lucide-react";
+import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useUserRole } from "@/hooks/useUserRole";
+import { Loader2 } from "lucide-react";
 
-const SiqsPage = () => {
+const AccountManagementPage = () => {
   const { t } = useLanguage();
-  const { isAdmin, isOwner, loading: adminLoading } = useUserRole();
+  const { isAdmin, loading } = useUserRole();
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // Show loading while checking role
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-cosmic-950 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-cosmic-400" />
+      </div>
+    );
+  }
+
+  // Redirect non-admins
+  if (!isAdmin) {
+    return <Navigate to="/about" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-cosmic-950 text-cosmic-50 pb-16 relative overflow-hidden">
@@ -63,33 +74,25 @@ const SiqsPage = () => {
           </Link>
         </div>
 
-        <motion.h1
-          className="text-4xl font-bold text-cosmic-50 mb-6"
+        <motion.div
+          className="flex items-center gap-3 mb-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          {t("SIQS System", "SIQS系统")}
-        </motion.h1>
+          <ShieldAlert className="h-8 w-8 text-purple-400" />
+          <h1 className="text-4xl font-bold text-cosmic-50">
+            {t("Account Management", "账户管理")}
+          </h1>
+        </motion.div>
 
         <AboutNavbar />
 
-        <section id="siqs" className="mt-8 space-y-6">
-          <SiqsSection />
-          
-          {/* Admin Analytics Dashboard */}
-          {!adminLoading && isAdmin && (
-            <div className="mt-8">
-              <SiqsAdminDashboard />
-            </div>
-          )}
-          
-          <AboutIntro />
-          <PhotoPointsFeature />
-          <AboutTeam />
+        <section className="mt-8">
+          <AccountManagement />
         </section>
       </div>
     </div>
   );
 };
 
-export default SiqsPage;
+export default AccountManagementPage;

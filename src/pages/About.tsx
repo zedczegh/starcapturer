@@ -4,9 +4,10 @@ import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { ArrowLeft, Star } from "lucide-react";
+import { ArrowLeft, Star, ShieldAlert } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import NavBar from "@/components/NavBar";
+import { useUserRole } from "@/hooks/useUserRole";
 
 import AboutHeader from "@/components/about/AboutHeader";
 import AboutFooter from "@/components/about/AboutFooter";
@@ -15,6 +16,7 @@ import AboutNavbar from "@/components/about/AboutNavbar";
 const About = () => {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
+  const { isAdmin } = useUserRole();
 
   useEffect(() => {
     // Scroll to top when page loads
@@ -198,6 +200,31 @@ const About = () => {
               </div>
             </motion.div>
           </Link>
+
+          {/* Admin-only Account Management */}
+          {isAdmin && (
+            <Link to="/about/accounts">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                className="cursor-pointer group"
+              >
+                <div className="p-6 bg-purple-900/30 border border-purple-500/30 rounded-lg hover:border-purple-400/50 transition-all">
+                  <div className="flex items-center gap-2 mb-2">
+                    <ShieldAlert className="h-5 w-5 text-purple-400" />
+                    <h3 className="text-xl font-bold text-cosmic-50 group-hover:text-cosmic-200">
+                      {t("Account Management", "账户管理")}
+                    </h3>
+                  </div>
+                  <p className="text-cosmic-300 text-sm">
+                    {t("Manage user accounts and utility permissions", 
+                       "管理用户账户和功能权限")}
+                  </p>
+                </div>
+              </motion.div>
+            </Link>
+          )}
         </div>
 
         <AboutFooter />

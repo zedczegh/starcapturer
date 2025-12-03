@@ -49,6 +49,7 @@ import UtilitiesPage from './pages/about/UtilitiesPage';
 import SiqsPage from './pages/about/SiqsPage';
 import DarkSkyPage from './pages/about/DarkSkyPage';
 import ResourcesPage from './pages/about/ResourcesPage';
+import AccountManagementPage from './pages/about/AccountManagementPage';
 import SeedObscuraSpots from './pages/SeedObscuraSpots';
 
 const LazySpaceStationTracker = lazy(() => import('./pages/SpaceStationTracker'));
@@ -121,6 +122,7 @@ function AppContent() {
       <Route path="/about/siqs" element={<SiqsPage />} />
       <Route path="/about/darksky" element={<DarkSkyPage />} />
       <Route path="/about/resources" element={<ResourcesPage />} />
+      <Route path="/about/accounts" element={<AccountManagementPage />} />
       <Route path="/about-siqs" element={<Navigate to="/about/siqs" replace />} />
       <Route path="/location/:id" element={
         <ErrorBoundary>
