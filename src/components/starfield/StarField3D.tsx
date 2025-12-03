@@ -1940,10 +1940,18 @@ const StarField3D: React.FC<StarField3DProps> = ({
           const fadeProgress = Math.min((bgScale - fadeStartScale) / (fadeEndScale - fadeStartScale), 1.0);
           bgAlpha = 0.85 * (1.0 - fadeProgress); // Fade from 0.85 to 0
           
-          // Accelerate scale during fade-out to make flying-through effect more obvious
-          // Scale increases by an additional 30% during the fade phase
-          const scaleBoost = 1.0 + (fadeProgress * 0.3);
-          finalBgScale = bgScale * scaleBoost;
+          // Only apply scale boost (acceleration effect) if an effect is enabled
+          // When effects are off, maintain consistent linear speed
+          const spaceshipEffect = settings.spaceshipEffect ?? false;
+          const warpdriveEffect = settings.warpdriveEffect ?? false;
+          
+          if (spaceshipEffect || warpdriveEffect) {
+            // Accelerate scale during fade-out to make flying-through effect more obvious
+            // Scale increases by an additional 30% during the fade phase
+            const scaleBoost = 1.0 + (fadeProgress * 0.3);
+            finalBgScale = bgScale * scaleBoost;
+          }
+          // When both effects are off, finalBgScale remains bgScale (no boost)
         }
       }
       
