@@ -40,7 +40,9 @@ const AccountManagement: React.FC = () => {
     fetchUsers, 
     toggleUserStatus, 
     toggleUtilityPermission,
-    getUtilityEnabled 
+    getUtilityEnabled,
+    toggleAllUtilities,
+    areAllUtilitiesEnabled
   } = useAccountManagement();
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [processingUsers, setProcessingUsers] = useState<Set<string>>(new Set());
@@ -85,6 +87,18 @@ const AccountManagement: React.FC = () => {
       );
     } catch (err: any) {
       toast.error(err.message || t('Failed to update utility permission', '更新功能权限失败'));
+    }
+  };
+
+  const handleToggleAll = async (userId: string, enabled: boolean) => {
+    try {
+      await toggleAllUtilities(userId, enabled);
+      toast.success(enabled 
+        ? t('All utilities enabled', '已启用所有功能')
+        : t('All utilities disabled', '已禁用所有功能')
+      );
+    } catch (err: any) {
+      toast.error(err.message || t('Failed to toggle all utilities', '切换所有功能失败'));
     }
   };
 
@@ -256,11 +270,23 @@ const AccountManagement: React.FC = () => {
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <div className="px-4 pb-4 border-t border-cosmic-700/30 pt-4">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Shield className="h-4 w-4 text-cosmic-400" />
-                        <span className="text-sm font-medium text-cosmic-200">
-                          {t('Utility Permissions', '功能权限')}
-                        </span>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <Shield className="h-4 w-4 text-cosmic-400" />
+                          <span className="text-sm font-medium text-cosmic-200">
+                            {t('Utility Permissions', '功能权限')}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-cosmic-400">
+                            {t('Toggle All', '全部切换')}
+                          </span>
+                          <Switch
+                            checked={areAllUtilitiesEnabled(user.user_id)}
+                            onCheckedChange={(checked) => handleToggleAll(user.user_id, checked)}
+                            disabled={!user.is_active}
+                          />
+                        </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {UTILITY_KEYS.map(utility => {
