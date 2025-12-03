@@ -16,6 +16,7 @@ import { generateSimpleDepthMap, detectStars, type SimpleDepthParams } from '@/l
 import { TraditionalMorphProcessor, type TraditionalInputs, type TraditionalMorphParams } from '@/lib/traditionalMorphMode';
 import { NobelPrizeStereoscopeEngine } from '@/lib/advanced/NobelPrizeStereoscopeEngine';
 import { analyzeStarsWithAI, type StarAnalysisResult } from '@/services/aiStarAnalysis';
+import { plateSolveImage, formatRA, formatDec, type PlateSolveResult } from '@/services/plateSolve';
 import { toast } from 'sonner';
 import JSZip from 'jszip';
 // @ts-ignore
@@ -119,6 +120,11 @@ const StereoscopeProcessor: React.FC = () => {
   const [aiAnalysisResult, setAiAnalysisResult] = useState<StarAnalysisResult | null>(null);
   const [useAiParams, setUseAiParams] = useState(false);
 
+  // Plate Solve states
+  const [plateSolveEnabled, setPlateSolveEnabled] = useState(false);
+  const [plateSolving, setPlateSolving] = useState(false);
+  const [plateSolveResult, setPlateSolveResult] = useState<PlateSolveResult | null>(null);
+
   // Handle AI analysis
   const handleAiAnalysis = async () => {
     const imageUrl = starsPreview || starlessPreview;
@@ -169,6 +175,31 @@ const StereoscopeProcessor: React.FC = () => {
     
     setUseAiParams(true);
     toast.success(t('AI parameters applied!', 'AI参数已应用！'));
+  };
+
+  // Handle plate solving
+  const handlePlateSolve = async () => {
+    const imageUrl = starsPreview || starlessPreview;
+    if (!imageUrl) {
+      toast.error(t('Please upload an image first', '请先上传图像'));
+      return;
+    }
+
+    setPlateSolving(true);
+    try {
+      const result = await plateSolveImage(imageUrl);
+      setPlateSolveResult(result);
+      if (result.success) {
+        toast.success(t('Plate solve complete!', '星图解析完成！'));
+      } else {
+        toast.error(result.error || t('Plate solve failed', '星图解析失败'));
+      }
+    } catch (error) {
+      console.error('Plate solve error:', error);
+      toast.error(t('Failed to plate solve image', '星图解析失败'));
+    } finally {
+      setPlateSolving(false);
+    }
   };
 
   const validateImageFile = (file: File): boolean => {
@@ -1916,6 +1947,140 @@ const StereoscopeProcessor: React.FC = () => {
                               {t('AI-recommended displacement values applied. Suggested max shift:', 'AI推荐的位移值已应用。建议最大位移：')}{' '}
                               {aiAnalysisResult.stereoscopicRecommendations.suggestedMaxShift}px
                             </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Plate Solve Section */}
+                <div className="space-y-3 p-3 rounded-lg bg-gradient-to-br from-orange-950/30 to-amber-950/30 border border-orange-500/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-orange-400" />
+                      <span className="text-sm font-semibold text-orange-400">
+                        {t('Plate Solve (Astrometry.net)', '星图解析 (Astrometry.net)')}
+                      </span>
+                    </div>
+                    <Switch
+                      checked={plateSolveEnabled}
+                      onCheckedChange={(checked) => {
+                        setPlateSolveEnabled(checked);
+                        if (!checked) {
+                          setPlateSolveResult(null);
+                        }
+                      }}
+                    />
+                  </div>
+                  
+                  {plateSolveEnabled && (
+                    <div className="space-y-3">
+                      <p className="text-xs text-cosmic-400">
+                        {t('Precisely identify celestial objects using star pattern matching (10-60s).', '使用星点模式匹配精确识别天体（10-60秒）。')}
+                      </p>
+                      
+                      {!plateSolveResult && (
+                        <Button
+                          onClick={handlePlateSolve}
+                          disabled={plateSolving || (!starlessPreview && !starsPreview)}
+                          className="w-full bg-orange-600/80 hover:bg-orange-500/80 text-white"
+                          size="sm"
+                        >
+                          {plateSolving ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              {t('Solving...', '解析中...')}
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="w-4 h-4 mr-2" />
+                              {t('Plate Solve', '星图解析')}
+                            </>
+                          )}
+                        </Button>
+                      )}
+                      
+                      {plateSolving && (
+                        <p className="text-[10px] text-orange-400 italic">
+                          {t('Matching star patterns against Tycho-2 catalog...', '正在与Tycho-2星表进行星点模式匹配...')}
+                        </p>
+                      )}
+                      
+                      {plateSolveResult && (
+                        <div className="space-y-3">
+                          {plateSolveResult.success ? (
+                            <>
+                              <div className="p-2 rounded bg-cosmic-800/50 border border-orange-500/20">
+                                {plateSolveResult.calibration && (
+                                  <div className="text-xs text-cosmic-200 space-y-1">
+                                    <p>
+                                      <span className="text-orange-400 font-medium">RA:</span>{' '}
+                                      {formatRA(plateSolveResult.calibration.ra)}
+                                    </p>
+                                    <p>
+                                      <span className="text-orange-400 font-medium">Dec:</span>{' '}
+                                      {formatDec(plateSolveResult.calibration.dec)}
+                                    </p>
+                                    <p>
+                                      <span className="text-orange-400 font-medium">{t('Field Radius:', '视场半径：')}</span>{' '}
+                                      {plateSolveResult.calibration.radius.toFixed(2)}°
+                                    </p>
+                                    <p>
+                                      <span className="text-orange-400 font-medium">{t('Pixel Scale:', '像素比例：')}</span>{' '}
+                                      {plateSolveResult.calibration.pixscale.toFixed(2)} arcsec/px
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {plateSolveResult.objectsInField.length > 0 && (
+                                <div className="p-2 rounded bg-emerald-950/30 border border-emerald-500/20">
+                                  <p className="text-xs text-emerald-400 font-medium mb-2">
+                                    {t('Objects Identified:', '已识别天体：')}
+                                  </p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {plateSolveResult.objectsInField.slice(0, 8).map((obj, i) => (
+                                      <span 
+                                        key={i}
+                                        className="px-2 py-0.5 text-[10px] rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                                      >
+                                        {obj}
+                                      </span>
+                                    ))}
+                                    {plateSolveResult.objectsInField.length > 8 && (
+                                      <span className="px-2 py-0.5 text-[10px] text-cosmic-400">
+                                        +{plateSolveResult.objectsInField.length - 8} more
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <Button
+                                onClick={() => setPlateSolveResult(null)}
+                                variant="outline"
+                                size="sm"
+                                className="w-full text-xs"
+                              >
+                                <RotateCcw className="w-3 h-3 mr-2" />
+                                {t('Solve Again', '重新解析')}
+                              </Button>
+                            </>
+                          ) : (
+                            <div className="p-2 rounded bg-red-950/30 border border-red-500/20">
+                              <p className="text-xs text-red-400">
+                                {plateSolveResult.error || t('Plate solve failed', '星图解析失败')}
+                              </p>
+                              <Button
+                                onClick={() => setPlateSolveResult(null)}
+                                variant="outline"
+                                size="sm"
+                                className="w-full mt-2 text-xs"
+                              >
+                                {t('Try Again', '重试')}
+                              </Button>
+                            </div>
                           )}
                         </div>
                       )}
