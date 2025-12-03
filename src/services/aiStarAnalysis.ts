@@ -1,33 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export interface ObjectIdentification {
-  primaryObject?: {
-    catalogName: string;
-    commonName: string;
-    constellation: string;
-    objectType: string;
-    coordinates?: {
-      ra: string;
-      dec: string;
-      raDecimal?: number;
-      decDecimal?: number;
-    };
-    distanceLightYears?: string;
-    apparentMagnitude?: string;
-    angularSize?: string;
-  };
-  secondaryObjects?: Array<{
-    catalogName: string;
-    commonName?: string;
-    relationship?: string;
-  }>;
-  confidence?: 'high' | 'medium' | 'low';
-  identificationNotes?: string;
-}
-
 export interface StarAnalysisResult {
   summary: string;
-  identification?: ObjectIdentification;
   objects: Array<{
     type: string;
     name: string;

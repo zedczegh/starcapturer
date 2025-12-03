@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Upload, Eye, Download, Loader2, Layers, Settings2, Sparkles, ChevronDown, Package, RotateCcw, Info, Wand2, Check, MapPin, ExternalLink } from 'lucide-react';
+import { Upload, Eye, Download, Loader2, Layers, Settings2, Sparkles, ChevronDown, Package, RotateCcw, Info, Wand2, Check } from 'lucide-react';
 import { UploadProgress } from '@/components/ui/upload-progress';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { generateSimpleDepthMap, detectStars, type SimpleDepthParams } from '@/lib/simpleDepthMap';
@@ -1867,75 +1867,6 @@ const StereoscopeProcessor: React.FC = () => {
                       
                       {aiAnalysisResult && (
                         <div className="space-y-3">
-                          {/* Object Identification */}
-                          {aiAnalysisResult.identification?.primaryObject && (
-                            <div className="p-3 rounded-lg bg-gradient-to-br from-amber-950/40 to-orange-950/40 border border-amber-500/30">
-                              <div className="flex items-start justify-between gap-2 mb-2">
-                                <div>
-                                  <p className="text-sm font-bold text-amber-300">
-                                    {aiAnalysisResult.identification.primaryObject.catalogName}
-                                  </p>
-                                  <p className="text-xs text-amber-200/80">
-                                    {aiAnalysisResult.identification.primaryObject.commonName}
-                                  </p>
-                                </div>
-                                {aiAnalysisResult.identification.confidence && (
-                                  <span className={`px-2 py-0.5 text-[10px] rounded-full ${
-                                    aiAnalysisResult.identification.confidence === 'high' 
-                                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                                      : aiAnalysisResult.identification.confidence === 'medium'
-                                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                                      : 'bg-red-500/20 text-red-300 border border-red-500/30'
-                                  }`}>
-                                    {aiAnalysisResult.identification.confidence}
-                                  </span>
-                                )}
-                              </div>
-                              
-                              <div className="grid grid-cols-2 gap-2 text-[10px]">
-                                <div>
-                                  <span className="text-cosmic-400">{t('Constellation:', '星座：')}</span>
-                                  <span className="text-cosmic-200 ml-1">{aiAnalysisResult.identification.primaryObject.constellation}</span>
-                                </div>
-                                <div>
-                                  <span className="text-cosmic-400">{t('Type:', '类型：')}</span>
-                                  <span className="text-cosmic-200 ml-1">{aiAnalysisResult.identification.primaryObject.objectType}</span>
-                                </div>
-                                {aiAnalysisResult.identification.primaryObject.distanceLightYears && (
-                                  <div className="col-span-2">
-                                    <span className="text-cosmic-400">{t('Distance:', '距离：')}</span>
-                                    <span className="text-cosmic-200 ml-1">{aiAnalysisResult.identification.primaryObject.distanceLightYears} {t('light years', '光年')}</span>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Stellarium Coordinates */}
-                              {aiAnalysisResult.identification.primaryObject.coordinates && (
-                                <div className="mt-2 pt-2 border-t border-amber-500/20">
-                                  <div className="flex items-center gap-1 mb-1">
-                                    <MapPin className="w-3 h-3 text-cyan-400" />
-                                    <span className="text-[10px] font-medium text-cyan-400">
-                                      {t('Stellarium Coordinates', 'Stellarium坐标')}
-                                    </span>
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-2 text-[10px] font-mono bg-cosmic-900/50 rounded p-2">
-                                    <div>
-                                      <span className="text-cosmic-400">RA:</span>
-                                      <span className="text-cyan-300 ml-1">{aiAnalysisResult.identification.primaryObject.coordinates.ra}</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-cosmic-400">Dec:</span>
-                                      <span className="text-cyan-300 ml-1">{aiAnalysisResult.identification.primaryObject.coordinates.dec}</span>
-                                    </div>
-                                  </div>
-                                  <p className="text-[9px] text-cosmic-500 mt-1 italic">
-                                    {t('Copy these coordinates to find in Stellarium', '复制这些坐标在Stellarium中查找')}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
                           <div className="p-2 rounded bg-cosmic-800/50 border border-violet-500/20">
                             <p className="text-xs text-cosmic-200 mb-2">
                               <span className="text-violet-400 font-medium">{t('Analysis:', '分析：')}</span>{' '}

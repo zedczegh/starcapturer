@@ -22,46 +22,17 @@ serve(async (req) => {
     let userPrompt = "";
 
     if (analysisType === "star-analysis") {
-      systemPrompt = `You are an expert astrophysicist and astronomical image analyst with encyclopedic knowledge of the NGC, IC, Messier, and other deep sky catalogs. Analyze astronomy images to:
-1. IDENTIFY the specific celestial object(s) by their catalog names
-2. Provide celestial coordinates for use in planetarium software like Stellarium
-3. Estimate depth/distance for stereoscopic rendering
+      systemPrompt = `You are an expert astrophysicist and astronomical image analyst. Analyze astronomy images to identify celestial objects and provide depth/distance estimates for stereoscopic rendering.
 
 Your response MUST be valid JSON with this exact structure:
 {
   "summary": "Brief description of what's in the image",
-  "identification": {
-    "primaryObject": {
-      "catalogName": "e.g. M42, NGC 7000, IC 1396",
-      "commonName": "e.g. Orion Nebula, North America Nebula",
-      "constellation": "e.g. Orion, Cygnus",
-      "objectType": "emission nebula|reflection nebula|planetary nebula|galaxy|star cluster|supernova remnant|other",
-      "coordinates": {
-        "ra": "Right Ascension in format HH:MM:SS or decimal hours",
-        "dec": "Declination in format +/-DD:MM:SS or decimal degrees",
-        "raDecimal": 0.0,
-        "decDecimal": 0.0
-      },
-      "distanceLightYears": "estimated distance in light years (number or range)",
-      "apparentMagnitude": "visual magnitude if known",
-      "angularSize": "approximate angular size in arcminutes"
-    },
-    "secondaryObjects": [
-      {
-        "catalogName": "any other identifiable objects in the field",
-        "commonName": "common name if any",
-        "relationship": "e.g. foreground star, nearby nebula, part of same complex"
-      }
-    ],
-    "confidence": "high|medium|low",
-    "identificationNotes": "Any notes about the identification, uncertainties, or distinguishing features used"
-  },
   "objects": [
     {
       "type": "star|galaxy|nebula|planetary_nebula|cluster|other",
-      "name": "Common name if identifiable",
+      "name": "Common name if identifiable, otherwise descriptive name",
       "estimatedDistance": "near|medium|far|very_far",
-      "depthLayer": 1-10,
+      "depthLayer": 1-10 (1=closest, 10=farthest),
       "brightness": "bright|medium|dim",
       "color": "blue|white|yellow|orange|red|mixed",
       "notes": "Any special characteristics"
@@ -82,7 +53,7 @@ Your response MUST be valid JSON with this exact structure:
   }
 }`;
 
-      userPrompt = "Analyze this astronomical image. FIRST, identify the specific deep sky object(s) shown - look for recognizable nebulae, galaxies, or star clusters from major catalogs (Messier, NGC, IC, etc). Provide the object's catalog name, common name, constellation, and precise celestial coordinates (RA/Dec) so users can find it in Stellarium. THEN analyze depth relationships for stereoscopic 3D rendering.";
+      userPrompt = "Analyze this astronomical image. Identify all visible celestial objects (stars, nebulae, galaxies, etc.) and estimate their relative distances for creating a stereoscopic 3D effect. Provide specific recommendations for depth layering.";
     } else if (analysisType === "depth-enhancement") {
       systemPrompt = `You are an expert in astronomical image processing and stereoscopic rendering. Analyze the image to suggest optimal depth parameters for creating realistic 3D stereoscopic pairs.
 
