@@ -2147,21 +2147,73 @@ const StereoscopeProcessor: React.FC = () => {
                         )}
                       </div>
                       
-                      {/* AI Analysis Results */}
+                      {/* AI Analysis Results - Collapsible */}
                       {aiAnalysisResult && useAiParams && (
-                        <div className="p-2 rounded bg-emerald-950/30 border border-emerald-500/20">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Check className="w-4 h-4 text-emerald-400" />
-                            <span className="text-xs font-medium text-emerald-400">
-                              {t('AI Parameters Applied', 'AI参数已应用')}
-                            </span>
+                        <Collapsible defaultOpen>
+                          <div className="p-2 rounded bg-emerald-950/30 border border-emerald-500/20">
+                            <CollapsibleTrigger asChild>
+                              <div className="flex items-center justify-between cursor-pointer hover:opacity-80">
+                                <div className="flex items-center gap-2">
+                                  <Check className="w-4 h-4 text-emerald-400" />
+                                  <span className="text-xs font-medium text-emerald-400">
+                                    {t('AI Parameters Applied', 'AI参数已应用')}
+                                  </span>
+                                </div>
+                                <ChevronDown className="w-4 h-4 text-emerald-400" />
+                              </div>
+                            </CollapsibleTrigger>
+                            
+                            {/* Quick summary always visible */}
+                            <div className="text-xs text-cosmic-300 space-y-1 mt-2">
+                              <p>
+                                {t('Starless:', '无星：')} <span className="text-amber-400">{displacementAmount}px</span>
+                                <span className={`ml-1 ${displacementDirection === 'left' ? 'text-orange-400' : 'text-cyan-400'}`}>
+                                  ({displacementDirection === 'left' ? '← Pop Out' : '→ Sink In'})
+                                </span>
+                              </p>
+                              <p>
+                                {t('Stars:', '恒星：')} <span className="text-cyan-400">{starsDisplacementAmount}px</span>
+                                <span className={`ml-1 ${starsDisplacementDirection === 'left' ? 'text-orange-400' : 'text-cyan-400'}`}>
+                                  ({starsDisplacementDirection === 'left' ? '← Pop Out' : '→ Sink In'})
+                                </span>
+                              </p>
+                              <p>{t('Type:', '类型：')} <span className="text-violet-400 capitalize">{params.objectType}</span></p>
+                            </div>
+                            
+                            {/* Collapsible full details */}
+                            <CollapsibleContent>
+                              <div className="mt-3 pt-3 border-t border-emerald-500/20 space-y-2">
+                                {/* Scientific Rationale */}
+                                {aiAnalysisResult.stereoscopicRecommendations.scientificRationale && (
+                                  <div className="p-2 rounded bg-cosmic-800/30">
+                                    <p className="text-xs text-emerald-300 font-medium mb-1">{t('Scientific Rationale:', '科学依据：')}</p>
+                                    <p className="text-xs text-cosmic-300">
+                                      {aiAnalysisResult.stereoscopicRecommendations.scientificRationale}
+                                    </p>
+                                  </div>
+                                )}
+                                
+                                {/* Full Summary */}
+                                <div className="p-2 rounded bg-cosmic-800/30">
+                                  <p className="text-xs text-violet-300 font-medium mb-1">{t('AI Analysis:', 'AI分析：')}</p>
+                                  <p className="text-xs text-cosmic-300">{aiAnalysisResult.summary}</p>
+                                </div>
+                                
+                                {/* Processing Tips */}
+                                {aiAnalysisResult.stereoscopicRecommendations.processingTips && aiAnalysisResult.stereoscopicRecommendations.processingTips.length > 0 && (
+                                  <div className="p-2 rounded bg-cosmic-800/30">
+                                    <p className="text-xs text-blue-300 font-medium mb-1">{t('Processing Tips:', '处理提示：')}</p>
+                                    <ul className="text-xs text-cosmic-300 list-disc list-inside space-y-0.5">
+                                      {aiAnalysisResult.stereoscopicRecommendations.processingTips.map((tip, i) => (
+                                        <li key={i}>{tip}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            </CollapsibleContent>
                           </div>
-                          <div className="text-xs text-cosmic-300 space-y-1">
-                            <p>{t('Starless:', '无星：')} <span className="text-amber-400">{displacementAmount}px</span></p>
-                            <p>{t('Stars:', '恒星：')} <span className="text-cyan-400">{starsDisplacementAmount}px</span></p>
-                            <p>{t('Type:', '类型：')} <span className="text-violet-400 capitalize">{params.objectType}</span></p>
-                          </div>
-                        </div>
+                        </Collapsible>
                       )}
                       
                       {!aiAnalysisResult ? (
@@ -2412,29 +2464,82 @@ const StereoscopeProcessor: React.FC = () => {
                                     
                                     {aiAnalysisResult && (
                                       <div className="space-y-3">
-                                        <div className="p-2 rounded bg-cosmic-800/50 border border-violet-500/20">
-                                          <p className="text-xs text-cosmic-200 mb-2">
-                                            <span className="text-violet-400 font-medium">{t('Analysis:', '分析：')}</span>{' '}
-                                            {aiAnalysisResult.summary.slice(0, 100)}...
-                                          </p>
-                                          <div className="flex flex-wrap gap-1">
-                                            {aiAnalysisResult.objectClassification.hasNebula && (
-                                              <span className="px-2 py-0.5 text-[10px] rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
-                                                {t('Nebula', '星云')}
-                                              </span>
-                                            )}
-                                            {aiAnalysisResult.objectClassification.hasGalaxy && (
-                                              <span className="px-2 py-0.5 text-[10px] rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                                                {t('Galaxy', '星系')}
-                                              </span>
-                                            )}
-                                            {aiAnalysisResult.objectClassification.hasStarCluster && (
-                                              <span className="px-2 py-0.5 text-[10px] rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                                                {t('Star Cluster', '星团')}
-                                              </span>
-                                            )}
+                                        <Collapsible defaultOpen>
+                                          <div className="p-2 rounded bg-cosmic-800/50 border border-violet-500/20">
+                                            <CollapsibleTrigger asChild>
+                                              <div className="flex items-center justify-between cursor-pointer hover:opacity-80 mb-2">
+                                                <span className="text-violet-400 font-medium text-xs">{t('Analysis Results', '分析结果')}</span>
+                                                <ChevronDown className="w-3 h-3 text-violet-400" />
+                                              </div>
+                                            </CollapsibleTrigger>
+                                            
+                                            {/* Displacement directions always visible */}
+                                            <div className="text-xs text-cosmic-200 space-y-1 mb-2">
+                                              <p>
+                                                {t('Starless:', '无星：')} <span className="text-amber-400">{aiAnalysisResult.stereoscopicRecommendations.suggestedMaxShift}px</span>
+                                                <span className={`ml-1 ${aiAnalysisResult.stereoscopicRecommendations.displacementDirection === 'left' ? 'text-orange-400' : 'text-cyan-400'}`}>
+                                                  ({aiAnalysisResult.stereoscopicRecommendations.displacementDirection === 'left' ? '← Pop Out' : '→ Sink In'})
+                                                </span>
+                                              </p>
+                                              <p>
+                                                {t('Stars:', '恒星：')} <span className="text-cyan-400">{Math.round(aiAnalysisResult.stereoscopicRecommendations.suggestedMaxShift * 0.3)}px</span>
+                                                <span className={`ml-1 ${aiAnalysisResult.stereoscopicRecommendations.starsDisplacementDirection === 'left' ? 'text-orange-400' : 'text-cyan-400'}`}>
+                                                  ({aiAnalysisResult.stereoscopicRecommendations.starsDisplacementDirection === 'left' ? '← Pop Out' : '→ Sink In'})
+                                                </span>
+                                              </p>
+                                            </div>
+                                            
+                                            <div className="flex flex-wrap gap-1 mb-2">
+                                              {aiAnalysisResult.objectClassification.hasNebula && (
+                                                <span className="px-2 py-0.5 text-[10px] rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                                                  {t('Nebula', '星云')}
+                                                </span>
+                                              )}
+                                              {aiAnalysisResult.objectClassification.hasGalaxy && (
+                                                <span className="px-2 py-0.5 text-[10px] rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                                  {t('Galaxy', '星系')}
+                                                </span>
+                                              )}
+                                              {aiAnalysisResult.objectClassification.hasStarCluster && (
+                                                <span className="px-2 py-0.5 text-[10px] rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                                  {t('Star Cluster', '星团')}
+                                                </span>
+                                              )}
+                                            </div>
+                                            
+                                            <CollapsibleContent>
+                                              <div className="pt-2 border-t border-violet-500/20 space-y-2">
+                                                {/* Scientific Rationale */}
+                                                {aiAnalysisResult.stereoscopicRecommendations.scientificRationale && (
+                                                  <div className="p-2 rounded bg-cosmic-800/30">
+                                                    <p className="text-xs text-emerald-300 font-medium mb-1">{t('Scientific Rationale:', '科学依据：')}</p>
+                                                    <p className="text-xs text-cosmic-300">
+                                                      {aiAnalysisResult.stereoscopicRecommendations.scientificRationale}
+                                                    </p>
+                                                  </div>
+                                                )}
+                                                
+                                                {/* Full Summary */}
+                                                <div className="p-2 rounded bg-cosmic-800/30">
+                                                  <p className="text-xs text-violet-300 font-medium mb-1">{t('Full Analysis:', '完整分析：')}</p>
+                                                  <p className="text-xs text-cosmic-300">{aiAnalysisResult.summary}</p>
+                                                </div>
+                                                
+                                                {/* Processing Tips */}
+                                                {aiAnalysisResult.stereoscopicRecommendations.processingTips && aiAnalysisResult.stereoscopicRecommendations.processingTips.length > 0 && (
+                                                  <div className="p-2 rounded bg-cosmic-800/30">
+                                                    <p className="text-xs text-blue-300 font-medium mb-1">{t('Tips:', '提示：')}</p>
+                                                    <ul className="text-xs text-cosmic-300 list-disc list-inside space-y-0.5">
+                                                      {aiAnalysisResult.stereoscopicRecommendations.processingTips.map((tip, i) => (
+                                                        <li key={i}>{tip}</li>
+                                                      ))}
+                                                    </ul>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </CollapsibleContent>
                                           </div>
-                                        </div>
+                                        </Collapsible>
                                         
                                         {/* Apply AI Params Toggle */}
                                         <div className="flex items-center justify-between p-2 rounded bg-emerald-950/30 border border-emerald-500/30">
