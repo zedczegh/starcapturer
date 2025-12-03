@@ -96,6 +96,10 @@ const ParallelVideoGenerator: React.FC = () => {
   const [displacementAmount, setDisplacementAmount] = useState<number>(25); // 0-50 pixels
   const [displacementDirection, setDisplacementDirection] = useState<'left' | 'right'>('right');
   
+  // Displacement controls for stars image (matching Stereoscope Processor)
+  const [starsDisplacementAmount, setStarsDisplacementAmount] = useState<number>(15); // 0-50 pixels
+  const [starsDisplacementDirection, setStarsDisplacementDirection] = useState<'left' | 'right'>('left');
+  
   // Internal processing parameters
   const horizontalDisplace = displacementAmount; // Use displacement amount from UI
   const starShiftAmount = 6; // Fixed star shift amount
@@ -114,7 +118,7 @@ const ParallelVideoGenerator: React.FC = () => {
   });
 
   const [depthIntensity, setDepthIntensity] = useState<number>(200);
-  const [preserveStarsIntensity, setPreserveStarsIntensity] = useState<number>(50); // Changed to 50 to match 3D StarField Generator
+  const [preserveStarsIntensity, setPreserveStarsIntensity] = useState<number>(100); // Set to 100% for best star preservation
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationProgress, setAnimationProgress] = useState(0);
   const [debugImagesOpen, setDebugImagesOpen] = useState(false);
@@ -862,6 +866,7 @@ const ParallelVideoGenerator: React.FC = () => {
   }, [depthIntensity]);
 
   // Helper to create stereo views from Fast Mode displacement logic
+  // Updated to match Stereoscope Processor with brightness-based uniform displacement for stars
   const createStereoViews = useCallback((
     canvas: HTMLCanvasElement,
     ctx: CanvasRenderingContext2D,
@@ -870,7 +875,8 @@ const ParallelVideoGenerator: React.FC = () => {
     height: number,
     maxShift: number,
     starMask: Uint8ClampedArray,
-    invertDirection?: boolean
+    invertDirection?: boolean,
+    isStarsLayer?: boolean // New parameter to handle stars specially
   ): { left: ImageData; right: ImageData } => {
     const originalData = ctx.getImageData(0, 0, width, height);
     const leftData = new ImageData(width, height);
@@ -878,11 +884,54 @@ const ParallelVideoGenerator: React.FC = () => {
 
     const directionMultiplier = invertDirection ? -1 : 1;
 
+    // For stars layer: pre-compute smoothed depth map to prevent star deformation
+    // This uses a simple uniform depth approach - all bright pixels get similar displacement
+    let smoothedDepth: Float32Array | null = null;
+    if (isStarsLayer) {
+      smoothedDepth = new Float32Array(width * height);
+      
+      // For stars, use the brightness of the pixel to determine a uniform shift
+      // Bright stars should shift uniformly, not be torn apart by depth variations
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const idx = y * width + x;
+          const pixelIdx = idx * 4;
+          
+          // Get pixel brightness
+          const r = originalData.data[pixelIdx];
+          const g = originalData.data[pixelIdx + 1];
+          const b = originalData.data[pixelIdx + 2];
+          const brightness = (r + g + b) / 3;
+          
+          if (brightness > 10) {
+            // For visible star pixels, use a uniform depth based on brightness
+            // Brighter stars appear "closer" (more displacement)
+            // This prevents depth map variations from tearing stars apart
+            const normalizedBrightness = Math.min(brightness / 255, 1);
+            // Apply a curve to make the displacement more uniform for bright stars
+            smoothedDepth[idx] = Math.pow(normalizedBrightness, 0.3); // Gentle curve
+          } else {
+            // Dark pixels: use original depth (or minimal displacement)
+            smoothedDepth[idx] = depthMap.data[pixelIdx] / 255.0 * 0.5;
+          }
+        }
+      }
+    }
+
     // Simple inverse mapping - pull pixels from source
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const destIdx = (y * width + x) * 4;
-        const depthValue = depthMap.data[destIdx] / 255.0;
+        const idx = y * width + x;
+        
+        // Get depth value - use smoothed depth for stars layer
+        let depthValue: number;
+        if (isStarsLayer && smoothedDepth) {
+          depthValue = smoothedDepth[idx];
+        } else {
+          depthValue = depthMap.data[destIdx] / 255.0;
+        }
+        
         const shift = depthValue * maxShift * directionMultiplier;
         
         // LEFT VIEW: Pull from right
@@ -1001,18 +1050,22 @@ const ParallelVideoGenerator: React.FC = () => {
         invertDisplacement
       );
 
-      // STEP 4: Process stars with starless depth map (Traditional Mode displacement)
+      // STEP 4: Process stars with stars-specific displacement (matching Stereoscope Processor)
       setProcessingStep(t('Processing stars displacement...', '处理恒星位移...'));
       setProgress(65);
 
+      const invertStarsDisplacement = starsDisplacementDirection === 'left';
+      
       const { left: starsLeft, right: starsRight } = createStereoViews(
         starsCanvas,
         starsCtx,
         starlessDepthMap, // Use starless depth map for stars
         width,
         height,
-        horizontalDisplace,
-        new Uint8ClampedArray(width * height)
+        starsDisplacementAmount, // Use stars-specific displacement amount
+        new Uint8ClampedArray(width * height),
+        invertStarsDisplacement, // Use stars-specific direction
+        true // isStarsLayer - use brightness-based uniform displacement
       );
 
       // STEP 5: Composite starless + stars for each eye
@@ -1647,12 +1700,12 @@ const ParallelVideoGenerator: React.FC = () => {
                 </div>
               </div>
 
-              {/* Starless Displacement Control */}
-              <div className="space-y-4 p-4 rounded-lg bg-cosmic-900/40 border border-cosmic-700/30 mt-6">
+              {/* Displacement Control Section - Matching Stereoscope Processor */}
+              <div className="space-y-4 p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 mt-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-amber-400">
                     <Settings2 className="w-4 h-4" />
-                    <span className="text-sm font-semibold">{t('Starless Displacement Control', '无星图位移控制')}</span>
+                    <span className="text-sm font-semibold">{t('Starless Displacement', '无星图位移')}</span>
                   </div>
                   <Button
                     variant="outline"
@@ -1660,11 +1713,13 @@ const ParallelVideoGenerator: React.FC = () => {
                     onClick={() => {
                       setDisplacementAmount(25);
                       setDisplacementDirection('right');
+                      setStarsDisplacementAmount(15);
+                      setStarsDisplacementDirection('left');
                     }}
-                    className="h-8 gap-2 text-xs bg-cosmic-800/50 hover:bg-cosmic-700/50 border-cosmic-600"
+                    className="h-8 gap-2 text-xs bg-cosmic-800/50 hover:bg-cosmic-700/50 border-amber-500/30"
                   >
                     <RotateCcw className="w-3 h-3" />
-                    {t('Reset', '重置')}
+                    {t('Reset All', '全部重置')}
                   </Button>
                 </div>
                 
@@ -1972,6 +2027,71 @@ const ParallelVideoGenerator: React.FC = () => {
                           </div>
                   </CollapsibleContent>
                 </Collapsible>
+              </div>
+
+              {/* Stars Displacement Control - Matching Stereoscope Processor */}
+              <div className="space-y-4 p-4 rounded-lg bg-cyan-500/10 border border-cyan-500/30 mt-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-cyan-400">
+                    <Sparkles className="w-4 h-4" />
+                    <span className="text-sm font-semibold">{t('Stars Displacement Control', '星图位移控制')}</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setStarsDisplacementAmount(15);
+                      setStarsDisplacementDirection('left');
+                    }}
+                    className="h-8 gap-2 text-xs bg-cosmic-800/50 hover:bg-cosmic-700/50 border-cyan-500/30"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    {t('Reset', '重置')}
+                  </Button>
+                </div>
+                
+                <div>
+                  <Label className="flex items-center justify-between">
+                    <span>{t('Stars Displacement', '星图位移量')}</span>
+                    <span className="text-cyan-400 font-mono text-lg">({starsDisplacementAmount}px)</span>
+                  </Label>
+                  <Slider
+                    value={[starsDisplacementAmount]}
+                    onValueChange={([value]) => setStarsDisplacementAmount(value)}
+                    min={0}
+                    max={50}
+                    step={1}
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-cosmic-400 mt-1">
+                    {t('Amount of horizontal displacement for stars image (uses brightness-based uniform shift)', '星图的水平位移量（使用基于亮度的均匀位移）')}
+                  </p>
+                </div>
+
+                <div>
+                  <Label className="text-cosmic-200 mb-2 block">
+                    {t('Stars Direction', '星图方向')}
+                  </Label>
+                  <Select
+                    value={starsDisplacementDirection}
+                    onValueChange={(value: 'left' | 'right') => setStarsDisplacementDirection(value)}
+                  >
+                    <SelectTrigger className="bg-cosmic-800/50 border-cyan-500/30">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="left">
+                        {t('Left (Standard)', '左（标准）')}
+                      </SelectItem>
+                      <SelectItem value="right">
+                        {t('Right (Inverted)', '右（反转）')}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-cosmic-400 mt-1">
+                    {t('Direction to displace stars for 3D effect (opposite to starless creates depth separation)', '星点的位移方向以产生3D效果（与无星方向相反以产生深度分离）')}
+                  </p>
+                </div>
               </div>
             </div>
 
