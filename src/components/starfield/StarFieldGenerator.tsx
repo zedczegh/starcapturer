@@ -69,8 +69,8 @@ const StarFieldGenerator: React.FC = () => {
   });
   
   // 3D depth intensity control (0-500 scale)
-  const [depthIntensity, setDepthIntensity] = useState<number>(200);
-  const [preserveStarsIntensity, setPreserveStarsIntensity] = useState<number>(50);
+  const [depthIntensity, setDepthIntensity] = useState<number>(400);
+  const [preserveStarsIntensity, setPreserveStarsIntensity] = useState<number>(100);
   
   const starsFileInputRef = useRef<HTMLInputElement>(null);
   const starlessFileInputRef = useRef<HTMLInputElement>(null);
@@ -88,7 +88,7 @@ const StarFieldGenerator: React.FC = () => {
                 'pan_diagonal_up_left' | 'pan_diagonal_up_right' | 'pan_diagonal_down_left' | 'pan_diagonal_down_right' |
                 'zoom_in_pan_diagonal_up_left' | 'zoom_in_pan_diagonal_up_right' | 'zoom_in_pan_diagonal_down_left' | 'zoom_in_pan_diagonal_down_right' |
                 'zoom_out_pan_diagonal_up_left' | 'zoom_out_pan_diagonal_up_right' | 'zoom_out_pan_diagonal_down_left' | 'zoom_out_pan_diagonal_down_right',
-    speed: 1.5,
+    speed: 0.8,
     duration: 10,
     fieldOfView: 75,
     depthMultiplier: 1.0,
@@ -1109,7 +1109,7 @@ const StarFieldGenerator: React.FC = () => {
                       onClick={() => {
                         setAnimationSettings({
                           motionType: 'zoom_in',
-                          speed: 1.5,
+                          speed: 0.8,
                           duration: 10,
                           fieldOfView: 75,
                           depthMultiplier: 1.0,
@@ -1120,8 +1120,8 @@ const StarFieldGenerator: React.FC = () => {
                           hyperspeed: false,
                           spaceshipEffect: false
                         });
-                        setDepthIntensity(200);
-                        setPreserveStarsIntensity(50);
+                        setDepthIntensity(400);
+                        setPreserveStarsIntensity(100);
                       }}
                       className="h-8 gap-2 text-xs bg-cosmic-800/50 hover:bg-cosmic-700/50 border-cosmic-600"
                     >
