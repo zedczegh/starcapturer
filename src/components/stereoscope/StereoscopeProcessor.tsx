@@ -15,6 +15,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { generateSimpleDepthMap, detectStars, type SimpleDepthParams } from '@/lib/simpleDepthMap';
 import { TraditionalMorphProcessor, type TraditionalInputs, type TraditionalMorphParams } from '@/lib/traditionalMorphMode';
 import { NobelPrizeStereoscopeEngine } from '@/lib/advanced/NobelPrizeStereoscopeEngine';
+import AIStarAnalysisPanel from './AIStarAnalysisPanel';
 import JSZip from 'jszip';
 // @ts-ignore
 import * as UTIF from 'utif';
@@ -1837,6 +1838,26 @@ const StereoscopeProcessor: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* AI Star Analysis Panel */}
+      <div className="max-w-md mx-auto">
+        <AIStarAnalysisPanel
+          imageDataUrl={starlessPreview || starsPreview}
+          onApplyRecommendations={(recommendedParams) => {
+            setParams(prev => ({
+              ...prev,
+              maxShift: recommendedParams.maxShift,
+              objectType: recommendedParams.objectType
+            }));
+            if (recommendedParams.nebulaDisplacement) {
+              setDisplacementAmount(recommendedParams.nebulaDisplacement);
+            }
+            if (recommendedParams.starDisplacement) {
+              setStarsDisplacementAmount(recommendedParams.starDisplacement);
+            }
+          }}
+        />
       </div>
 
       {/* Results */}
