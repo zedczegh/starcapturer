@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { imageBase64, analysisType } = await req.json();
+    const { imageBase64, analysisType, plateSolveContext } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -21,8 +21,39 @@ serve(async (req) => {
     let systemPrompt = "";
     let userPrompt = "";
 
+    // Build context string from plate solve data
+    let plateSolveInfo = "";
+    if (plateSolveContext) {
+      plateSolveInfo = `
+PLATE SOLVE DATA (verified astrometric solution):
+- Center coordinates: RA ${plateSolveContext.ra?.toFixed(4)}°, Dec ${plateSolveContext.dec?.toFixed(4)}°
+- Field radius: ${plateSolveContext.fieldRadius?.toFixed(2)}°
+- Pixel scale: ${plateSolveContext.pixelScale?.toFixed(2)} arcsec/pixel`;
+      
+      if (plateSolveContext.identifiedObject) {
+        const obj = plateSolveContext.identifiedObject;
+        plateSolveInfo += `
+- PRIMARY IDENTIFIED OBJECT: ${obj.commonName || obj.name}
+  - Catalog name: ${obj.name}
+  - Object type: ${obj.type}${obj.distanceLY ? `
+  - KNOWN DISTANCE: ${obj.distanceLY.toLocaleString()} light years` : ''}`;
+      }
+      
+      if (plateSolveContext.objectsInField?.length > 0) {
+        plateSolveInfo += `
+- Other objects in field: ${plateSolveContext.objectsInField.slice(0, 10).join(', ')}`;
+      }
+    }
+
     if (analysisType === "star-analysis") {
       systemPrompt = `You are an expert astrophysicist and astronomical image analyst. Analyze astronomy images to identify celestial objects and provide depth/distance estimates for stereoscopic rendering.
+
+${plateSolveContext ? `IMPORTANT: Use the plate solve data provided to give ACCURATE distance-based recommendations. The identified object's actual distance in light years should directly influence the suggestedMaxShift value:
+- Objects < 500 ly: suggestedMaxShift 40-50
+- Objects 500-1500 ly: suggestedMaxShift 25-40
+- Objects 1500-3000 ly: suggestedMaxShift 15-25  
+- Objects 3000-7000 ly: suggestedMaxShift 10-18
+- Objects > 7000 ly or galaxies: suggestedMaxShift 5-12` : ''}
 
 Your response MUST be valid JSON with this exact structure:
 {
@@ -53,7 +84,12 @@ Your response MUST be valid JSON with this exact structure:
   }
 }`;
 
-      userPrompt = "Analyze this astronomical image. Identify all visible celestial objects (stars, nebulae, galaxies, etc.) and estimate their relative distances for creating a stereoscopic 3D effect. Provide specific recommendations for depth layering.";
+      userPrompt = plateSolveContext 
+        ? `Analyze this astronomical image with the following verified plate solve data:
+${plateSolveInfo}
+
+Based on this astrometric data and the KNOWN distance of the primary object, provide optimized stereoscopic rendering recommendations. The suggestedMaxShift should be calibrated to the actual distance.`
+        : "Analyze this astronomical image. Identify all visible celestial objects (stars, nebulae, galaxies, etc.) and estimate their relative distances for creating a stereoscopic 3D effect. Provide specific recommendations for depth layering.";
     } else if (analysisType === "depth-enhancement") {
       systemPrompt = `You are an expert in astronomical image processing and stereoscopic rendering. Analyze the image to suggest optimal depth parameters for creating realistic 3D stereoscopic pairs.
 

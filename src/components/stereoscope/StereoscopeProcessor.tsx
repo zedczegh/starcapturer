@@ -126,7 +126,7 @@ const StereoscopeProcessor: React.FC = () => {
   const [plateSolveResult, setPlateSolveResult] = useState<PlateSolveResult | null>(null);
   const [identifiedObject, setIdentifiedObject] = useState<{ name: string; commonName?: string; distanceLY?: number; type: string } | null>(null);
 
-  // Handle AI analysis
+  // Handle AI analysis - now uses plate solve results for better recommendations
   const handleAiAnalysis = async () => {
     const imageUrl = starsPreview || starlessPreview;
     if (!imageUrl) {
@@ -136,7 +136,22 @@ const StereoscopeProcessor: React.FC = () => {
 
     setAiAnalyzing(true);
     try {
-      const result = await analyzeStarsWithAI(imageUrl, 'star-analysis');
+      // Build context from plate solve results for better AI recommendations
+      const plateSolveContext = plateSolveResult?.success && plateSolveResult?.calibration ? {
+        ra: plateSolveResult.calibration.ra,
+        dec: plateSolveResult.calibration.dec,
+        fieldRadius: plateSolveResult.calibration.radius,
+        pixelScale: plateSolveResult.calibration.pixscale,
+        identifiedObject: identifiedObject ? {
+          name: identifiedObject.name,
+          commonName: identifiedObject.commonName,
+          distanceLY: identifiedObject.distanceLY,
+          type: identifiedObject.type
+        } : undefined,
+        objectsInField: plateSolveResult.objectsInField
+      } : undefined;
+
+      const result = await analyzeStarsWithAI(imageUrl, 'star-analysis', plateSolveContext);
       if (result && 'summary' in result) {
         setAiAnalysisResult(result as StarAnalysisResult);
         toast.success(t('AI analysis complete!', 'AI分析完成！'));
@@ -1893,112 +1908,6 @@ const StereoscopeProcessor: React.FC = () => {
                   </CollapsibleContent>
                 </Collapsible>
 
-                {/* AI Star Analysis Toggle */}
-                <div className="space-y-3 p-3 rounded-lg bg-gradient-to-br from-violet-950/30 to-purple-950/30 border border-violet-500/30">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Wand2 className="w-4 h-4 text-violet-400" />
-                      <span className="text-sm font-semibold text-violet-400">
-                        {t('AI Star Analysis', 'AI星点分析')}
-                      </span>
-                    </div>
-                    <Switch
-                      checked={aiAnalysisEnabled}
-                      onCheckedChange={(checked) => {
-                        setAiAnalysisEnabled(checked);
-                        if (!checked) {
-                          setAiAnalysisResult(null);
-                          setUseAiParams(false);
-                        }
-                      }}
-                    />
-                  </div>
-                  
-                  {aiAnalysisEnabled && (
-                    <div className="space-y-3">
-                      <p className="text-xs text-cosmic-400">
-                        {t('AI will analyze star positions and suggest optimal displacement parameters.', 'AI将分析星点位置并建议最佳位移参数。')}
-                      </p>
-                      
-                      {!aiAnalysisResult && (
-                        <Button
-                          onClick={handleAiAnalysis}
-                          disabled={aiAnalyzing || (!starlessPreview && !starsPreview)}
-                          className="w-full bg-violet-600/80 hover:bg-violet-500/80 text-white"
-                          size="sm"
-                        >
-                          {aiAnalyzing ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              {t('Analyzing...', '分析中...')}
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="w-4 h-4 mr-2" />
-                              {t('Analyze Image', '分析图像')}
-                            </>
-                          )}
-                        </Button>
-                      )}
-                      
-                      {aiAnalysisResult && (
-                        <div className="space-y-3">
-                          <div className="p-2 rounded bg-cosmic-800/50 border border-violet-500/20">
-                            <p className="text-xs text-cosmic-200 mb-2">
-                              <span className="text-violet-400 font-medium">{t('Analysis:', '分析：')}</span>{' '}
-                              {aiAnalysisResult.summary.slice(0, 100)}...
-                            </p>
-                            <div className="flex flex-wrap gap-1">
-                              {aiAnalysisResult.objectClassification.hasNebula && (
-                                <span className="px-2 py-0.5 text-[10px] rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
-                                  {t('Nebula', '星云')}
-                                </span>
-                              )}
-                              {aiAnalysisResult.objectClassification.hasGalaxy && (
-                                <span className="px-2 py-0.5 text-[10px] rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                                  {t('Galaxy', '星系')}
-                                </span>
-                              )}
-                              {aiAnalysisResult.objectClassification.hasStarCluster && (
-                                <span className="px-2 py-0.5 text-[10px] rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                                  {t('Star Cluster', '星团')}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {/* Apply AI Params Toggle */}
-                          <div className="flex items-center justify-between p-2 rounded bg-emerald-950/30 border border-emerald-500/30">
-                            <div className="flex items-center gap-2">
-                              <Check className="w-4 h-4 text-emerald-400" />
-                              <span className="text-xs font-medium text-emerald-400">
-                                {t('Use AI Parameters', '使用AI参数')}
-                              </span>
-                            </div>
-                            <Switch
-                              checked={useAiParams}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  applyAiRecommendations();
-                                } else {
-                                  setUseAiParams(false);
-                                }
-                              }}
-                            />
-                          </div>
-                          
-                          {useAiParams && (
-                            <p className="text-[10px] text-emerald-400 italic">
-                              {t('AI-recommended displacement values applied. Suggested max shift:', 'AI推荐的位移值已应用。建议最大位移：')}{' '}
-                              {aiAnalysisResult.stereoscopicRecommendations.suggestedMaxShift}px
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
                 {/* Plate Solve Section */}
                 <div className="space-y-3 p-3 rounded-lg bg-gradient-to-br from-orange-950/30 to-amber-950/30 border border-orange-500/30">
                   <div className="flex items-center justify-between">
@@ -2014,6 +1923,10 @@ const StereoscopeProcessor: React.FC = () => {
                         setPlateSolveEnabled(checked);
                         if (!checked) {
                           setPlateSolveResult(null);
+                          setIdentifiedObject(null);
+                          setAiAnalysisResult(null);
+                          setAiAnalysisEnabled(false);
+                          setUseAiParams(false);
                         }
                       }}
                     />
@@ -2139,11 +2052,119 @@ const StereoscopeProcessor: React.FC = () => {
                                   </div>
                                 </div>
                               )}
+
+                              {/* AI Star Analysis - Only shown after plate solve success */}
+                              <div className="space-y-3 p-3 rounded-lg bg-gradient-to-br from-violet-950/30 to-purple-950/30 border border-violet-500/30">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <Wand2 className="w-4 h-4 text-violet-400" />
+                                    <span className="text-sm font-semibold text-violet-400">
+                                      {t('AI Analysis (Enhanced)', 'AI分析（增强）')}
+                                    </span>
+                                  </div>
+                                  <Switch
+                                    checked={aiAnalysisEnabled}
+                                    onCheckedChange={(checked) => {
+                                      setAiAnalysisEnabled(checked);
+                                      if (!checked) {
+                                        setAiAnalysisResult(null);
+                                        setUseAiParams(false);
+                                      }
+                                    }}
+                                  />
+                                </div>
+                                
+                                {aiAnalysisEnabled && (
+                                  <div className="space-y-3">
+                                    <p className="text-xs text-cosmic-400">
+                                      {t('AI will use plate solve data to calculate optimal displacement parameters.', 'AI将使用星图解析数据计算最佳位移参数。')}
+                                    </p>
+                                    
+                                    {!aiAnalysisResult && (
+                                      <Button
+                                        onClick={handleAiAnalysis}
+                                        disabled={aiAnalyzing || (!starlessPreview && !starsPreview)}
+                                        className="w-full bg-violet-600/80 hover:bg-violet-500/80 text-white"
+                                        size="sm"
+                                      >
+                                        {aiAnalyzing ? (
+                                          <>
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                            {t('Analyzing with plate data...', '使用星图数据分析中...')}
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Sparkles className="w-4 h-4 mr-2" />
+                                            {t('Analyze with Plate Data', '使用星图数据分析')}
+                                          </>
+                                        )}
+                                      </Button>
+                                    )}
+                                    
+                                    {aiAnalysisResult && (
+                                      <div className="space-y-3">
+                                        <div className="p-2 rounded bg-cosmic-800/50 border border-violet-500/20">
+                                          <p className="text-xs text-cosmic-200 mb-2">
+                                            <span className="text-violet-400 font-medium">{t('Analysis:', '分析：')}</span>{' '}
+                                            {aiAnalysisResult.summary.slice(0, 100)}...
+                                          </p>
+                                          <div className="flex flex-wrap gap-1">
+                                            {aiAnalysisResult.objectClassification.hasNebula && (
+                                              <span className="px-2 py-0.5 text-[10px] rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                                                {t('Nebula', '星云')}
+                                              </span>
+                                            )}
+                                            {aiAnalysisResult.objectClassification.hasGalaxy && (
+                                              <span className="px-2 py-0.5 text-[10px] rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                                {t('Galaxy', '星系')}
+                                              </span>
+                                            )}
+                                            {aiAnalysisResult.objectClassification.hasStarCluster && (
+                                              <span className="px-2 py-0.5 text-[10px] rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                                {t('Star Cluster', '星团')}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                        
+                                        {/* Apply AI Params Toggle */}
+                                        <div className="flex items-center justify-between p-2 rounded bg-emerald-950/30 border border-emerald-500/30">
+                                          <div className="flex items-center gap-2">
+                                            <Check className="w-4 h-4 text-emerald-400" />
+                                            <span className="text-xs font-medium text-emerald-400">
+                                              {t('Use AI Parameters', '使用AI参数')}
+                                            </span>
+                                          </div>
+                                          <Switch
+                                            checked={useAiParams}
+                                            onCheckedChange={(checked) => {
+                                              if (checked) {
+                                                applyAiRecommendations();
+                                              } else {
+                                                setUseAiParams(false);
+                                              }
+                                            }}
+                                          />
+                                        </div>
+                                        
+                                        {useAiParams && (
+                                          <p className="text-[10px] text-emerald-400 italic">
+                                            {t('AI-recommended displacement values applied. Suggested max shift:', 'AI推荐的位移值已应用。建议最大位移：')}{' '}
+                                            {aiAnalysisResult.stereoscopicRecommendations.suggestedMaxShift}px
+                                          </p>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                               
                               <Button
                                 onClick={() => {
                                   setPlateSolveResult(null);
                                   setIdentifiedObject(null);
+                                  setAiAnalysisResult(null);
+                                  setUseAiParams(false);
                                 }}
                                 variant="outline"
                                 size="sm"
@@ -2162,6 +2183,8 @@ const StereoscopeProcessor: React.FC = () => {
                                 onClick={() => {
                                   setPlateSolveResult(null);
                                   setIdentifiedObject(null);
+                                  setAiAnalysisResult(null);
+                                  setUseAiParams(false);
                                 }}
                                 variant="outline"
                                 size="sm"
