@@ -1188,6 +1188,10 @@ export type Database = {
     }
     Functions: {
       add_admin: { Args: { user_email: string }; Returns: Json }
+      admin_create_user: {
+        Args: { p_email: string; p_password: string; p_username?: string }
+        Returns: string
+      }
       assign_admin_role: {
         Args: { p_target_user_id: string }
         Returns: boolean
