@@ -1170,7 +1170,8 @@ const StereoscopeProcessor: React.FC = () => {
   }, []);
 
   const processUnifiedMode = async () => {
-    if (!starlessImage) {
+    // Allow processing with either starless OR stars-only image
+    if (!starlessImage && !starsImage) {
       console.error('Please select at least one image');
       return;
     }
@@ -1182,15 +1183,18 @@ const StereoscopeProcessor: React.FC = () => {
       setProgressText(t('Loading images...', '加载图像...'));
       setProgress(10);
       
-      // Load starless image (required)
-      const starlessImg = new Image();
-      await new Promise((resolve, reject) => {
-        starlessImg.onload = resolve;
-        starlessImg.onerror = reject;
-        starlessImg.src = starlessPreview!;
-      });
+      // Load starless image if provided
+      let starlessImg: HTMLImageElement | null = null;
+      if (starlessImage && starlessPreview) {
+        starlessImg = new Image();
+        await new Promise((resolve, reject) => {
+          starlessImg!.onload = resolve;
+          starlessImg!.onerror = reject;
+          starlessImg!.src = starlessPreview!;
+        });
+      }
 
-      // Load stars image if provided (optional)
+      // Load stars image if provided
       let starsImg: HTMLImageElement | null = null;
       if (starsImage && starsPreview) {
         starsImg = new Image();
@@ -1201,8 +1205,13 @@ const StereoscopeProcessor: React.FC = () => {
         });
       }
 
-      const originalWidth = starsImg ? Math.max(starlessImg.width, starsImg.width) : starlessImg.width;
-      const originalHeight = starsImg ? Math.max(starlessImg.height, starsImg.height) : starlessImg.height;
+      // Determine dimensions from whichever image is available
+      const primaryImg = starlessImg || starsImg;
+      if (!primaryImg) {
+        throw new Error('No image loaded');
+      }
+      const originalWidth = starlessImg && starsImg ? Math.max(starlessImg.width, starsImg.width) : primaryImg.width;
+      const originalHeight = starlessImg && starsImg ? Math.max(starlessImg.height, starsImg.height) : primaryImg.height;
       
       // Handle very large images with intelligent scaling
       // Max dimension of 8000px should handle most astrophotography while preventing crashes
@@ -1220,11 +1229,15 @@ const StereoscopeProcessor: React.FC = () => {
       }
       
       // Create canvases with willReadFrequently for better performance
-      const starlessCanvas = document.createElement('canvas');
-      const starlessCtx = starlessCanvas.getContext('2d', { willReadFrequently: true })!;
-      starlessCanvas.width = width;
-      starlessCanvas.height = height;
-      starlessCtx.drawImage(starlessImg, 0, 0, width, height);
+      let starlessCanvas: HTMLCanvasElement | null = null;
+      let starlessCtx: CanvasRenderingContext2D | null = null;
+      if (starlessImg) {
+        starlessCanvas = document.createElement('canvas');
+        starlessCtx = starlessCanvas.getContext('2d', { willReadFrequently: true })!;
+        starlessCanvas.width = width;
+        starlessCanvas.height = height;
+        starlessCtx.drawImage(starlessImg, 0, 0, width, height);
+      }
       
       // Yield to UI to prevent freeze on large images
       await new Promise(resolve => setTimeout(resolve, 0));
@@ -1243,26 +1256,31 @@ const StereoscopeProcessor: React.FC = () => {
       // Yield to UI
       await new Promise(resolve => setTimeout(resolve, 0));
 
-      // STEP 1: Generate depth map from starless (Fast Mode approach)
-      setProgressText(t('Generating depth map...', '生成深度图...'));
-      setProgress(25);
+      let starlessDepthMap: ImageData | null = null;
+      let starlessImageData: ImageData | null = null;
       
-      const starlessImageData = starlessCtx.getImageData(0, 0, width, height);
-      const simpleParams: SimpleDepthParams = {
-        depth: params.maxShift,
-        edgeWeight: params.edgeWeight,
-        brightnessWeight: 1 - params.edgeWeight
-      };
-      
-      const starlessDepthMap = generateSimpleDepthMap(starlessImageData, simpleParams);
-      
-      // Save starless depth map
-      const starlessDepthCanvas = document.createElement('canvas');
-      const starlessDepthCtx = starlessDepthCanvas.getContext('2d')!;
-      starlessDepthCanvas.width = width;
-      starlessDepthCanvas.height = height;
-      starlessDepthCtx.putImageData(starlessDepthMap, 0, 0);
-      setStarlessDepthMapUrl(starlessDepthCanvas.toDataURL('image/png'));
+      // STEP 1: Generate depth map from starless if provided
+      if (starlessCanvas && starlessCtx) {
+        setProgressText(t('Generating depth map...', '生成深度图...'));
+        setProgress(25);
+        
+        starlessImageData = starlessCtx.getImageData(0, 0, width, height);
+        const simpleParams: SimpleDepthParams = {
+          depth: params.maxShift,
+          edgeWeight: params.edgeWeight,
+          brightnessWeight: 1 - params.edgeWeight
+        };
+        
+        starlessDepthMap = generateSimpleDepthMap(starlessImageData, simpleParams);
+        
+        // Save starless depth map
+        const starlessDepthCanvas = document.createElement('canvas');
+        const starlessDepthCtx = starlessDepthCanvas.getContext('2d')!;
+        starlessDepthCanvas.width = width;
+        starlessDepthCanvas.height = height;
+        starlessDepthCtx.putImageData(starlessDepthMap, 0, 0);
+        setStarlessDepthMapUrl(starlessDepthCanvas.toDataURL('image/png'));
+      }
 
       // STEP 2: Generate astrophysical depth map for stars if provided
       let starsDepthMap: ImageData | null = null;
@@ -1282,30 +1300,76 @@ const StereoscopeProcessor: React.FC = () => {
         setStarsDepthMapUrl(starsDepthCanvas.toDataURL('image/png'));
       }
 
-      // STEP 3: Process starless with its own depth map
-      setProgressText(t('Processing displacement...', '处理位移...'));
-      setProgress(50);
-      
-      const starMask = detectStars(starlessImageData.data, width, height, params.starThreshold);
-      const invertDisplacement = displacementDirection === 'left';
-      
-      const { left: starlessLeft, right: starlessRight } = createStereoViews(
-        starlessCanvas, 
-        starlessCtx, 
-        starlessDepthMap, 
-        width, 
-        height, 
-        params, 
-        starMask,
-        displacementAmount, // Use custom displacement amount
-        invertDisplacement  // Apply displacement direction
-      );
-
-      // STEP 4: Process stars if provided
       let compositeLeft: ImageData;
       let compositeRight: ImageData;
-      
-      if (starsCanvas && starsCtx && starsDepthMap) {
+
+      // STARS-ONLY MODE: Process only stars image
+      if (starsCanvas && starsCtx && starsDepthMap && !starlessCanvas) {
+        setProgressText(t('Processing stars-only 3D displacement...', '处理纯星点3D位移...'));
+        setProgress(60);
+        
+        const invertStarsDisplacement = starsDisplacementDirection === 'left';
+        const { left: starsLeft, right: starsRight } = createStereoViews(
+          starsCanvas, 
+          starsCtx, 
+          starsDepthMap,
+          width, 
+          height, 
+          params, 
+          new Uint8ClampedArray(width * height),
+          starsDisplacementAmount,
+          invertStarsDisplacement,
+          true // isStarsLayer - use brightness-based displacement
+        );
+        
+        compositeLeft = starsLeft;
+        compositeRight = starsRight;
+        
+      // STARLESS-ONLY MODE: Process only starless image
+      } else if (starlessCanvas && starlessCtx && starlessDepthMap && starlessImageData && !starsCanvas) {
+        setProgressText(t('Processing displacement...', '处理位移...'));
+        setProgress(50);
+        
+        const starMask = detectStars(starlessImageData.data, width, height, params.starThreshold);
+        const invertDisplacement = displacementDirection === 'left';
+        
+        const { left: starlessLeft, right: starlessRight } = createStereoViews(
+          starlessCanvas, 
+          starlessCtx, 
+          starlessDepthMap, 
+          width, 
+          height, 
+          params, 
+          starMask,
+          displacementAmount,
+          invertDisplacement
+        );
+        
+        compositeLeft = starlessLeft;
+        compositeRight = starlessRight;
+        
+      // COMBINED MODE: Process both starless and stars
+      } else if (starlessCanvas && starlessCtx && starlessDepthMap && starlessImageData && starsCanvas && starsCtx && starsDepthMap) {
+        // STEP 3: Process starless with its own depth map
+        setProgressText(t('Processing displacement...', '处理位移...'));
+        setProgress(50);
+        
+        const starMask = detectStars(starlessImageData.data, width, height, params.starThreshold);
+        const invertDisplacement = displacementDirection === 'left';
+        
+        const { left: starlessLeft, right: starlessRight } = createStereoViews(
+          starlessCanvas, 
+          starlessCtx, 
+          starlessDepthMap, 
+          width, 
+          height, 
+          params, 
+          starMask,
+          displacementAmount,
+          invertDisplacement
+        );
+
+        // STEP 4: Process stars
         setProgressText(t('Processing astrophysical stars displacement...', '处理天体物理恒星位移...'));
         setProgress(70);
         
@@ -1313,14 +1377,14 @@ const StereoscopeProcessor: React.FC = () => {
         const { left: starsLeft, right: starsRight } = createStereoViews(
           starsCanvas, 
           starsCtx, 
-          starsDepthMap, // Use astrophysical star depth map
+          starsDepthMap,
           width, 
           height, 
           params, 
-          new Uint8ClampedArray(width * height), // No star masking for stars layer
-          starsDisplacementAmount, // Use custom stars displacement amount
-          invertStarsDisplacement, // Use stars-specific direction
-          true // isStarsLayer - use brightness-based uniform displacement
+          new Uint8ClampedArray(width * height),
+          starsDisplacementAmount,
+          invertStarsDisplacement,
+          true // isStarsLayer
         );
 
         // STEP 5: Composite starless + stars for each eye
@@ -1344,11 +1408,7 @@ const StereoscopeProcessor: React.FC = () => {
           compositeRight.data[i + 3] = 255;
         }
       } else {
-        // No stars layer - use starless views as-is
-        setProgressText(t('Finalizing stereo views...', '完成立体视图...'));
-        setProgress(85);
-        compositeLeft = starlessLeft;
-        compositeRight = starlessRight;
+        throw new Error('Invalid image configuration');
       }
 
       // STEP 6: Save individual left and right images
@@ -1689,7 +1749,7 @@ const StereoscopeProcessor: React.FC = () => {
                   {t('Input Images', '输入图像')}
                 </CardTitle>
                 <CardDescription className="text-cosmic-300">
-                  {t('Upload a single image or separate starless and stars-only images', '上传单张图像或分别上传无星和纯星图像')}
+                  {t('Upload stars-only OR starless image, or both for best results', '上传纯星图或无星图，或两者都上传以获得最佳效果')}
                 </CardDescription>
               </div>
             </div>
@@ -1699,7 +1759,7 @@ const StereoscopeProcessor: React.FC = () => {
               <div className="space-y-2">
                 <Label className="text-cosmic-200 flex items-center gap-2">
                   <Sparkles className="w-4 h-4" />
-                  {t('Stars Only Image (Optional)', '星点图像（可选）')}
+                  {t('Stars Only Image', '纯星图像')}
                 </Label>
                 <input
                   ref={starsInputRef}
@@ -1754,7 +1814,7 @@ const StereoscopeProcessor: React.FC = () => {
               <div className="space-y-2">
                 <Label className="text-cosmic-200 flex items-center gap-2">
                   <Eye className="w-4 h-4" />
-                  {t('Starless Image (Background)', '无星图像（背景）')}
+                  {t('Starless Image (Optional)', '无星图像（可选）')}
                 </Label>
                 <input
                   ref={starlessInputRef}
@@ -1804,6 +1864,21 @@ const StereoscopeProcessor: React.FC = () => {
                     </span>
                   </div>
                 )}
+              </div>
+              
+              {/* Mode indicator */}
+              <div className="p-3 rounded-lg bg-cosmic-800/40 border border-cosmic-700/30">
+                <p className="text-xs text-cosmic-400 text-center">
+                  {starsElement && starlessElement ? (
+                    <span className="text-emerald-400">{t('✓ Combined mode: Stars + Starless for best results', '✓ 组合模式：纯星+无星以获得最佳效果')}</span>
+                  ) : starsElement ? (
+                    <span className="text-orange-400">{t('Stars-only mode: 3D from star brightness', '纯星模式：基于星点亮度生成3D')}</span>
+                  ) : starlessElement ? (
+                    <span className="text-purple-400">{t('Starless-only mode: 3D from nebula depth', '无星模式：基于星云深度生成3D')}</span>
+                  ) : (
+                    <span>{t('Upload stars-only image to start', '上传纯星图像以开始')}</span>
+                  )}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -2759,7 +2834,7 @@ const StereoscopeProcessor: React.FC = () => {
 
               <Button
                 onClick={processUnifiedMode}
-                disabled={!starlessImage || processing}
+                disabled={(!starlessImage && !starsImage) || processing}
                 className="w-full h-12 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold shadow-lg shadow-blue-500/20"
               >
                 {processing ? (
