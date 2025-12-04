@@ -68,24 +68,20 @@ Deno.serve(async (req) => {
     const existingUser = existingUsers?.users?.find(u => u.email === email)
     
     if (existingUser) {
-      console.log('User already exists, deleting:', email)
-      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(existingUser.id)
-      if (deleteError) {
-        console.error('Error deleting existing user:', deleteError)
-        return new Response(
-          JSON.stringify({ error: 'Failed to delete existing user: ' + deleteError.message }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-      console.log('Existing user deleted successfully')
+      console.log('User already exists, deleting:', existingUser.id)
+      await supabaseAdmin.auth.admin.deleteUser(existingUser.id)
+      console.log('Existing user deleted')
+      // Small delay to ensure cleanup
+      await new Promise(resolve => setTimeout(resolve, 500))
     }
 
-    // Use the database function to create user with proper auth setup
-    console.log('Creating user via database function...')
-    const { data: userId, error: createError } = await supabaseAdmin.rpc('admin_create_user', {
-      p_email: email,
-      p_password: password,
-      p_username: username || null
+    // Use Admin API to create user - this handles password hashing correctly
+    console.log('Creating user via Admin API...')
+    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email: email,
+      password: password,
+      email_confirm: true,
+      user_metadata: username ? { username } : {}
     })
 
     if (createError) {
@@ -96,14 +92,29 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log('User created successfully with ID:', userId)
+    console.log('User created with ID:', newUser.user.id)
+
+    // Create profile entry
+    const { error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .upsert({
+        id: newUser.user.id,
+        username: username || null
+      }, { onConflict: 'id' })
+
+    if (profileError) {
+      console.error('Error creating profile:', profileError)
+      // Don't fail the whole request, user was created
+    }
+
+    console.log('User created successfully:', newUser.user.email)
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         user: { 
-          id: userId, 
-          email: email
+          id: newUser.user.id, 
+          email: newUser.user.email
         } 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
