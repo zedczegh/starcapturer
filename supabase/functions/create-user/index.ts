@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     }
 
     const { email, password, username } = await req.json()
-    console.log('Creating user with email:', email, 'username:', username)
+    console.log('Creating user with email:', email, 'password length:', password?.length)
 
     if (!email || !password) {
       return new Response(
@@ -68,61 +68,26 @@ Deno.serve(async (req) => {
     const existingUser = existingUsers?.users?.find(u => u.email === email)
     
     if (existingUser) {
-      console.log('User already exists, updating password for:', email)
-      // Update existing user's password
-      const { data: updatedUser, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-        existingUser.id,
-        { 
-          password,
-          email_confirm: true,
-          user_metadata: { 
-            email_verified: true,
-            username: username || existingUser.user_metadata?.username
-          }
-        }
-      )
-      
-      if (updateError) {
-        console.error('Error updating user:', updateError)
-        return new Response(
-          JSON.stringify({ error: updateError.message }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+      console.log('User already exists, deleting and recreating:', email)
+      // Delete the existing user first to ensure clean state
+      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(existingUser.id)
+      if (deleteError) {
+        console.error('Error deleting existing user:', deleteError)
       }
-
-      // Update username in profiles table if provided
-      if (username) {
-        const { error: profileError } = await supabaseAdmin
-          .from('profiles')
-          .update({ username })
-          .eq('id', existingUser.id)
-
-        if (profileError) {
-          console.error('Error updating profile username:', profileError)
-        }
-      }
-
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          updated: true,
-          user: { 
-            id: updatedUser.user?.id, 
-            email: updatedUser.user?.email 
-          } 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
     }
 
-    // Create the user using admin API
+    // Create the user using admin API with all necessary fields
+    console.log('Creating new user...')
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: {
-        email_verified: true,
         username: username || undefined
+      },
+      app_metadata: {
+        provider: 'email',
+        providers: ['email']
       }
     })
 
@@ -134,19 +99,46 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log('User created successfully:', newUser.user?.id)
+    console.log('User created:', newUser.user?.id)
 
-    // Update username in profiles table if provided
-    if (username && newUser.user) {
-      const { error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .update({ username })
-        .eq('id', newUser.user.id)
+    // Force update the user to ensure password is properly set
+    if (newUser.user) {
+      console.log('Updating user to ensure password is set correctly...')
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        newUser.user.id,
+        { 
+          password: password,
+          email_confirm: true
+        }
+      )
+      
+      if (updateError) {
+        console.error('Error updating user password:', updateError)
+      } else {
+        console.log('User password updated successfully')
+      }
 
-      if (profileError) {
-        console.error('Error updating profile username:', profileError)
+      // Update username in profiles table if provided
+      if (username) {
+        // Wait a moment for the profile trigger to create the profile
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        const { error: profileError } = await supabaseAdmin
+          .from('profiles')
+          .upsert({ 
+            id: newUser.user.id,
+            username 
+          }, { 
+            onConflict: 'id' 
+          })
+
+        if (profileError) {
+          console.error('Error updating profile username:', profileError)
+        }
       }
     }
+
+    console.log('User creation complete:', newUser.user?.email)
 
     return new Response(
       JSON.stringify({ 
