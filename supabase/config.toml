@@ -85,3 +85,6 @@ verify_jwt = false
 
 [functions.search-target]
 verify_jwt = false
+
+[functions.create-user]
+verify_jwt = false
