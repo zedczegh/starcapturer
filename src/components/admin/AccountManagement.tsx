@@ -27,7 +27,9 @@ import {
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAccountManagement, UTILITY_KEYS } from '@/hooks/admin/useAccountManagement';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import AddAccountDialog from './AddAccountDialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +45,8 @@ import {
 const AccountManagement: React.FC = () => {
   const { t } = useLanguage();
   const { isOwner } = useUserRole();
+  const { user } = useAuth();
+  const canAddAccounts = user?.email === 'yanzeyucq@163.com';
   const { 
     users, 
     loading, 
@@ -212,15 +216,20 @@ const AccountManagement: React.FC = () => {
               </CardDescription>
             </div>
           </div>
-          <Button 
-            onClick={fetchUsers} 
-            variant="outline" 
-            size="sm"
-            className="border-cosmic-600 hover:bg-cosmic-800"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            {t('Refresh', '刷新')}
-          </Button>
+          <div className="flex items-center gap-2">
+            {canAddAccounts && (
+              <AddAccountDialog onAccountCreated={fetchUsers} />
+            )}
+            <Button 
+              onClick={fetchUsers} 
+              variant="outline" 
+              size="sm"
+              className="border-cosmic-600 hover:bg-cosmic-800"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              {t('Refresh', '刷新')}
+            </Button>
+          </div>
         </div>
         
         {/* Search Bar */}
