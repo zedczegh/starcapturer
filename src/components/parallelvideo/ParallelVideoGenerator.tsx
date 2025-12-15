@@ -7,8 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
-import { Upload, Video, Sparkles, Eye, Settings2, Download, ChevronDown, RotateCcw, Info, RotateCw } from 'lucide-react';
-import { rotateAndCreateImageElement } from '@/utils/imageRotation';
+import { Upload, Video, Sparkles, Eye, Settings2, Download, ChevronDown, RotateCcw, Info } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { VideoGenerationService, MotionSettings } from '@/services/VideoGenerationService';
 import { validateImageFile } from '@/utils/imageProcessingUtils';
@@ -19,7 +18,6 @@ import { CanvasPool } from '@/lib/performance/CanvasPool';
 import { UploadProgress } from '@/components/ui/upload-progress';
 import { Separator } from '@/components/ui/separator';
 import VideoPlayerControls from '@/components/video/VideoPlayerControls';
-import GPUSettingsPanel, { GPUSettings } from '@/components/video/GPUSettingsPanel';
 
 interface StarData {
   x: number;
@@ -90,9 +88,9 @@ const ParallelVideoGenerator: React.FC = () => {
     starsDepthMap?: HTMLCanvasElement;
   }>({});
 
-  // Processing Parameters - matching stereoscope processor defaults
-  const [stereoSpacing, setStereoSpacing] = useState<number>(100);
-  const [borderSize, setBorderSize] = useState<number>(50);
+  // Processing Parameters - matching stereoscope processor exactly
+  const [stereoSpacing, setStereoSpacing] = useState<number>(600);
+  const [borderSize, setBorderSize] = useState<number>(300);
   
   // Displacement controls for starless image
   const [displacementAmount, setDisplacementAmount] = useState<number>(25); // 0-50 pixels
@@ -106,22 +104,20 @@ const ParallelVideoGenerator: React.FC = () => {
   const horizontalDisplace = displacementAmount; // Use displacement amount from UI
   const starShiftAmount = 6; // Fixed star shift amount
 
-  // 3D Star Field Motion Settings - complete settings (matching 3D StarField Generator defaults exactly)
+  // 3D Star Field Motion Settings - complete settings (matching 3D StarField Generator defaults)
   const [motionSettings, setMotionSettings] = useState<MotionSettings>({
     motionType: 'zoom_in',
-    speed: 0.8, // Match starfield default
+    speed: 1.5,
     duration: 10,
     fieldOfView: 75,
     amplification: 150,
     spin: 0,
     spinDirection: 'clockwise',
-    fadeOut: false,
-    hyperspeed: false,
-    spaceshipEffect: false, // Match starfield: acceleration/deceleration effect
-    warpdriveEffect: false  // Match starfield: speed variations during flight
+    fadeOut: false, // Changed to false to match 3D StarField Generator
+    hyperspeed: false // New: hyperspeed effect disabled by default
   });
 
-  const [depthIntensity, setDepthIntensity] = useState<number>(400); // Match starfield default (400%)
+  const [depthIntensity, setDepthIntensity] = useState<number>(200);
   const [preserveStarsIntensity, setPreserveStarsIntensity] = useState<number>(100); // Set to 100% for best star preservation
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationProgress, setAnimationProgress] = useState(0);
@@ -419,33 +415,6 @@ const ParallelVideoGenerator: React.FC = () => {
   const handleStarsUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     return handleImageUpload(event, setStarsFile, setStarsElement, starsInputRef, 'stars');
   }, [handleImageUpload]);
-
-  // Rotate image 90 degrees clockwise handlers
-  const handleRotateStars = useCallback(async () => {
-    if (!starsElement) return;
-    try {
-      toast.info(t('Rotating image...', '正在旋转图像...'));
-      const { element, dataUrl } = await rotateAndCreateImageElement(starsElement);
-      setStarsElement(element);
-      toast.success(t('Image rotated', '图像已旋转'));
-    } catch (error) {
-      console.error('Rotation error:', error);
-      toast.error(t('Failed to rotate image', '旋转图像失败'));
-    }
-  }, [starsElement, t]);
-
-  const handleRotateStarless = useCallback(async () => {
-    if (!starlessElement) return;
-    try {
-      toast.info(t('Rotating image...', '正在旋转图像...'));
-      const { element, dataUrl } = await rotateAndCreateImageElement(starlessElement);
-      setStarlessElement(element);
-      toast.success(t('Image rotated', '图像已旋转'));
-    } catch (error) {
-      console.error('Rotation error:', error);
-      toast.error(t('Failed to rotate image', '旋转图像失败'));
-    }
-  }, [starlessElement, t]);
 
   // Helper to load image from file (handles TIFF)
   const loadImageFromFileElement = useCallback(async (element: HTMLImageElement): Promise<HTMLImageElement> => {
@@ -1605,34 +1574,18 @@ const ParallelVideoGenerator: React.FC = () => {
                     </div>
                   </Button>
                 ) : (
-                  <div className="space-y-2">
-                    <div className="relative group cursor-pointer" onClick={() => starsInputRef.current?.click()}>
-                      <img
-                        src={starsElement.src}
-                        alt="Stars Preview"
-                        className="w-full h-40 object-cover rounded-lg border-2 border-orange-500/50 hover:border-orange-500 transition-all"
-                      />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                        <Upload className="w-8 h-8 text-orange-400" />
-                      </div>
+                  <div className="relative group cursor-pointer" onClick={() => starsInputRef.current?.click()}>
+                    <img
+                      src={starsElement.src}
+                      alt="Stars Preview"
+                      className="w-full h-40 object-cover rounded-lg border-2 border-orange-500/50 hover:border-orange-500 transition-all"
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                      <Upload className="w-8 h-8 text-orange-400" />
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-cosmic-400">
-                        {starsElement.width} × {starsElement.height}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRotateStars();
-                        }}
-                        className="h-7 gap-1 text-xs bg-cosmic-800/50 hover:bg-orange-500/20 border-orange-500/30"
-                      >
-                        <RotateCw className="w-3 h-3" />
-                        {t('90°', '90°')}
-                      </Button>
-                    </div>
+                    <span className="text-xs text-cosmic-400 mt-1 block text-center">
+                      {starsElement.width} × {starsElement.height}
+                    </span>
                   </div>
                 )}
               </div>
@@ -1676,34 +1629,18 @@ const ParallelVideoGenerator: React.FC = () => {
                     </div>
                   </Button>
                 ) : (
-                  <div className="space-y-2">
-                    <div className="relative group cursor-pointer" onClick={() => starlessInputRef.current?.click()}>
-                      <img
-                        src={starlessElement.src}
-                        alt="Starless Preview"
-                        className="w-full h-40 object-cover rounded-lg border-2 border-purple-500/50 hover:border-purple-500 transition-all"
-                      />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                        <Upload className="w-8 h-8 text-purple-400" />
-                      </div>
+                  <div className="relative group cursor-pointer" onClick={() => starlessInputRef.current?.click()}>
+                    <img
+                      src={starlessElement.src}
+                      alt="Starless Preview"
+                      className="w-full h-40 object-cover rounded-lg border-2 border-purple-500/50 hover:border-purple-500 transition-all"
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                      <Upload className="w-8 h-8 text-purple-400" />
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-cosmic-400">
-                        {starlessElement.width} × {starlessElement.height}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRotateStarless();
-                        }}
-                        className="h-7 gap-1 text-xs bg-cosmic-800/50 hover:bg-purple-500/20 border-purple-500/30"
-                      >
-                        <RotateCw className="w-3 h-3" />
-                        {t('90°', '90°')}
-                      </Button>
-                    </div>
+                    <span className="text-xs text-cosmic-400 mt-1 block text-center">
+                      {starlessElement.width} × {starlessElement.height}
+                    </span>
                   </div>
                 )}
               </div>
@@ -2454,72 +2391,6 @@ const ParallelVideoGenerator: React.FC = () => {
                     <SelectItem value="pan_right" className="text-white hover:bg-cosmic-700">
                       {t('Pan Right', '向右平移')}
                     </SelectItem>
-                    <SelectItem value="zoom_in_pan_left" className="text-white hover:bg-cosmic-700">
-                      {t('Zoom In + Pan Left', '放大 + 左移')}
-                    </SelectItem>
-                    <SelectItem value="zoom_in_pan_right" className="text-white hover:bg-cosmic-700">
-                      {t('Zoom In + Pan Right', '放大 + 右移')}
-                    </SelectItem>
-                    <SelectItem value="zoom_out_pan_left" className="text-white hover:bg-cosmic-700">
-                      {t('Zoom Out + Pan Left', '缩小 + 左移')}
-                    </SelectItem>
-                    <SelectItem value="zoom_out_pan_right" className="text-white hover:bg-cosmic-700">
-                      {t('Zoom Out + Pan Right', '缩小 + 右移')}
-                    </SelectItem>
-                    <SelectItem value="pan_up" className="text-white hover:bg-cosmic-700">
-                      {t('Pan Up', '向上平移')}
-                    </SelectItem>
-                    <SelectItem value="pan_down" className="text-white hover:bg-cosmic-700">
-                      {t('Pan Down', '向下平移')}
-                    </SelectItem>
-                    <SelectItem value="zoom_in_pan_up" className="text-white hover:bg-cosmic-700">
-                      {t('Zoom In + Pan Up', '放大 + 上移')}
-                    </SelectItem>
-                    <SelectItem value="zoom_in_pan_down" className="text-white hover:bg-cosmic-700">
-                      {t('Zoom In + Pan Down', '放大 + 下移')}
-                    </SelectItem>
-                    <SelectItem value="zoom_out_pan_up" className="text-white hover:bg-cosmic-700">
-                      {t('Zoom Out + Pan Up', '缩小 + 上移')}
-                    </SelectItem>
-                    <SelectItem value="zoom_out_pan_down" className="text-white hover:bg-cosmic-700">
-                      {t('Zoom Out + Pan Down', '缩小 + 下移')}
-                    </SelectItem>
-                    <SelectItem value="pan_diagonal_up_left" className="text-white hover:bg-cosmic-700">
-                      {t('Pan Diagonal Up-Left', '对角线左上')}
-                    </SelectItem>
-                    <SelectItem value="pan_diagonal_up_right" className="text-white hover:bg-cosmic-700">
-                      {t('Pan Diagonal Up-Right', '对角线右上')}
-                    </SelectItem>
-                    <SelectItem value="pan_diagonal_down_left" className="text-white hover:bg-cosmic-700">
-                      {t('Pan Diagonal Down-Left', '对角线左下')}
-                    </SelectItem>
-                    <SelectItem value="pan_diagonal_down_right" className="text-white hover:bg-cosmic-700">
-                      {t('Pan Diagonal Down-Right', '对角线右下')}
-                    </SelectItem>
-                    <SelectItem value="zoom_in_pan_diagonal_up_left" className="text-white hover:bg-cosmic-700">
-                      {t('Zoom In + Diagonal Up-Left', '放大 + 对角线左上')}
-                    </SelectItem>
-                    <SelectItem value="zoom_in_pan_diagonal_up_right" className="text-white hover:bg-cosmic-700">
-                      {t('Zoom In + Diagonal Up-Right', '放大 + 对角线右上')}
-                    </SelectItem>
-                    <SelectItem value="zoom_in_pan_diagonal_down_left" className="text-white hover:bg-cosmic-700">
-                      {t('Zoom In + Diagonal Down-Left', '放大 + 对角线左下')}
-                    </SelectItem>
-                    <SelectItem value="zoom_in_pan_diagonal_down_right" className="text-white hover:bg-cosmic-700">
-                      {t('Zoom In + Diagonal Down-Right', '放大 + 对角线右下')}
-                    </SelectItem>
-                    <SelectItem value="zoom_out_pan_diagonal_up_left" className="text-white hover:bg-cosmic-700">
-                      {t('Zoom Out + Diagonal Up-Left', '缩小 + 对角线左上')}
-                    </SelectItem>
-                    <SelectItem value="zoom_out_pan_diagonal_up_right" className="text-white hover:bg-cosmic-700">
-                      {t('Zoom Out + Diagonal Up-Right', '缩小 + 对角线右上')}
-                    </SelectItem>
-                    <SelectItem value="zoom_out_pan_diagonal_down_left" className="text-white hover:bg-cosmic-700">
-                      {t('Zoom Out + Diagonal Down-Left', '缩小 + 对角线左下')}
-                    </SelectItem>
-                    <SelectItem value="zoom_out_pan_diagonal_down_right" className="text-white hover:bg-cosmic-700">
-                      {t('Zoom Out + Diagonal Down-Right', '缩小 + 对角线右下')}
-                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -2536,7 +2407,7 @@ const ParallelVideoGenerator: React.FC = () => {
                     amplification: value[0],
                     speed: (value[0] / 100) * (60 / prev.duration)
                   }))}
-                  min={20}
+                  min={100}
                   max={300}
                   step={10}
                   className="w-full"
@@ -2578,62 +2449,6 @@ const ParallelVideoGenerator: React.FC = () => {
                     className="ml-4"
                   />
                 </div>
-
-                {/* Spaceship Effect toggle - matches StarField Generator */}
-                <div className="flex items-center justify-between p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30 mt-3">
-                  <div className="flex-1">
-                    <Label className="text-cosmic-200 text-sm font-medium">
-                      {t('Spaceship Effect', '飞船效果')}
-                    </Label>
-                    <p className="text-xs text-cosmic-400 mt-1">
-                      {t('Accelerate at start and decelerate at end like a spaceship', '像飞船一样在开始时加速，在结束时减速')}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={motionSettings.spaceshipEffect || false}
-                    onCheckedChange={(checked) => setMotionSettings(prev => ({ ...prev, spaceshipEffect: checked }))}
-                    className="ml-4"
-                  />
-                </div>
-
-                {/* Warpdrive Effect toggle - matches StarField Generator */}
-                <div className="flex items-center justify-between p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30 mt-3">
-                  <div className="flex-1">
-                    <Label className="text-cosmic-200 text-sm font-medium">
-                      {t('Warpdrive Effect', '曲速效果')}
-                    </Label>
-                    <p className="text-xs text-cosmic-400 mt-1">
-                      {t('Add speed variations during flight for dynamic warp drive feel', '在飞行过程中添加速度变化以营造动态曲速感')}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={motionSettings.warpdriveEffect || false}
-                    onCheckedChange={(checked) => setMotionSettings(prev => ({ ...prev, warpdriveEffect: checked }))}
-                    className="ml-4"
-                  />
-                </div>
-              </div>
-
-              {/* Flight Speed - matches StarField Generator */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-cosmic-200">{t('Flight Speed', '飞行速度')}</Label>
-                  <span className="text-cosmic-300 text-sm font-semibold">{motionSettings.speed.toFixed(1)}x</span>
-                </div>
-                <Slider
-                  value={[motionSettings.speed]}
-                  onValueChange={(value) => setMotionSettings(prev => ({
-                    ...prev, 
-                    speed: value[0]
-                  }))}
-                  min={0.1}
-                  max={3.0}
-                  step={0.1}
-                  className="w-full"
-                />
-                <p className="text-xs text-cosmic-400">
-                  {t('Controls the overall animation speed (0.1x = slow drift, 3.0x = fast travel)', '控制整体动画速度（0.1x = 缓慢漂移，3.0x = 快速飞行）')}
-                </p>
               </div>
 
               <div className="space-y-3">

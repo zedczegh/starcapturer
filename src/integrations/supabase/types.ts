@@ -374,63 +374,6 @@ export type Database = {
         }
         Relationships: []
       }
-      light_pollution_cache: {
-        Row: {
-          bortle_estimate: number | null
-          confidence: string | null
-          created_at: string
-          expires_at: string | null
-          id: string
-          latitude: number
-          longitude: number
-          lpi_value: number | null
-          pixel_rgb: Json | null
-          source: string
-          sqm_value: number | null
-          tile_x: number | null
-          tile_y: number | null
-          tile_z: number | null
-          updated_at: string
-          zone_code: string | null
-        }
-        Insert: {
-          bortle_estimate?: number | null
-          confidence?: string | null
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          latitude: number
-          longitude: number
-          lpi_value?: number | null
-          pixel_rgb?: Json | null
-          source?: string
-          sqm_value?: number | null
-          tile_x?: number | null
-          tile_y?: number | null
-          tile_z?: number | null
-          updated_at?: string
-          zone_code?: string | null
-        }
-        Update: {
-          bortle_estimate?: number | null
-          confidence?: string | null
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          latitude?: number
-          longitude?: number
-          lpi_value?: number | null
-          pixel_rgb?: Json | null
-          source?: string
-          sqm_value?: number | null
-          tile_x?: number | null
-          tile_y?: number | null
-          tile_z?: number | null
-          updated_at?: string
-          zone_code?: string | null
-        }
-        Relationships: []
-      }
       message_reactions: {
         Row: {
           created_at: string
@@ -1126,10 +1069,8 @@ export type Database = {
       user_utility_permissions: {
         Row: {
           created_at: string | null
-          expires_at: string | null
           id: string
           is_enabled: boolean
-          plan_type: string | null
           updated_at: string | null
           updated_by: string | null
           user_id: string
@@ -1137,10 +1078,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
-          expires_at?: string | null
           id?: string
           is_enabled?: boolean
-          plan_type?: string | null
           updated_at?: string | null
           updated_by?: string | null
           user_id: string
@@ -1148,10 +1087,8 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
-          expires_at?: string | null
           id?: string
           is_enabled?: boolean
-          plan_type?: string | null
           updated_at?: string | null
           updated_by?: string | null
           user_id?: string
@@ -1263,7 +1200,6 @@ export type Database = {
         Args: { p_user_id: string; p_utility_key: string }
         Returns: boolean
       }
-      cleanup_expired_light_pollution_cache: { Args: never; Returns: undefined }
       delete_conversation: {
         Args: { current_user_id: string; partner_id: string }
         Returns: undefined
@@ -1285,23 +1221,6 @@ export type Database = {
       }
       get_follower_count: { Args: { p_user_id: string }; Returns: number }
       get_following_count: { Args: { p_user_id: string }; Returns: number }
-      get_location_time_stats: {
-        Args: {
-          p_latitude: number
-          p_limit?: number
-          p_longitude: number
-          p_period?: string
-        }
-        Returns: {
-          avg_siqs: number
-          calculation_count: number
-          max_siqs: number
-          min_siqs: number
-          period_label: string
-          period_start: string
-          source: string
-        }[]
-      }
       get_manageable_users: {
         Args: never
         Returns: {
@@ -1366,9 +1285,7 @@ export type Database = {
       get_user_utility_permissions: {
         Args: { p_user_id: string }
         Returns: {
-          expires_at: string
           is_enabled: boolean
-          plan_type: string
           utility_key: string
         }[]
       }

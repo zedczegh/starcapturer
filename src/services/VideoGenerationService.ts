@@ -18,13 +18,7 @@ export interface VideoGenerationParams {
 }
 
 export interface MotionSettings {
-  motionType: 'zoom_in' | 'zoom_out' | 
-    'pan_left' | 'pan_right' | 'pan_up' | 'pan_down' | 
-    'zoom_in_pan_left' | 'zoom_in_pan_right' | 'zoom_in_pan_up' | 'zoom_in_pan_down' |
-    'zoom_out_pan_left' | 'zoom_out_pan_right' | 'zoom_out_pan_up' | 'zoom_out_pan_down' |
-    'pan_diagonal_up_left' | 'pan_diagonal_up_right' | 'pan_diagonal_down_left' | 'pan_diagonal_down_right' |
-    'zoom_in_pan_diagonal_up_left' | 'zoom_in_pan_diagonal_up_right' | 'zoom_in_pan_diagonal_down_left' | 'zoom_in_pan_diagonal_down_right' |
-    'zoom_out_pan_diagonal_up_left' | 'zoom_out_pan_diagonal_up_right' | 'zoom_out_pan_diagonal_down_left' | 'zoom_out_pan_diagonal_down_right';
+  motionType: 'zoom_in' | 'zoom_out' | 'pan_left' | 'pan_right';
   speed: number;
   duration: number;
   fieldOfView: number;
@@ -32,9 +26,7 @@ export interface MotionSettings {
   spin: number;
   spinDirection: 'clockwise' | 'counterclockwise';
   fadeOut?: boolean;
-  hyperspeed?: boolean;
-  spaceshipEffect?: boolean;
-  warpdriveEffect?: boolean;
+  hyperspeed?: boolean; // New: hyperspeed motion blur and whirlpool effect
 }
 
 export class VideoGenerationService {

@@ -7,8 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
-import { Upload, Video, Download, Sparkles, Eye, Settings2, Image as ImageIcon, Play, Pause, RotateCcw, RotateCw } from 'lucide-react';
-import { rotateAndCreateImageElement } from '@/utils/imageRotation';
+import { Upload, Video, Download, Sparkles, Eye, Settings2, Image as ImageIcon, Play, Pause, RotateCcw } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { UploadProgress } from '@/components/ui/upload-progress';
 import StarField3D from './StarField3D';
@@ -18,7 +17,6 @@ import { ChunkedProcessor } from '@/lib/performance/ChunkedProcessor';
 import { loadImageFromFile, validateImageFile } from '@/utils/imageProcessingUtils';
 import { captureFrames, encodeFramesToWebM, downloadBlob, calculateRecordingDimensions } from '@/utils/videoEncodingUtils';
 import VideoPlayerControls from '@/components/video/VideoPlayerControls';
-import GPUSettingsPanel, { GPUSettings } from '@/components/video/GPUSettingsPanel';
 
 interface ProcessedStarData {
   x: number;
@@ -181,29 +179,6 @@ const StarFieldGenerator: React.FC = () => {
   const handleStarlessUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     return handleImageUpload(event, setStarlessImage, setStarlessElement, starlessFileInputRef, 'starless');
   }, [handleImageUpload]);
-
-  // Rotate image 90 degrees clockwise handlers
-  const handleRotateStars = useCallback(async () => {
-    if (!starsOnlyElement) return;
-    try {
-      const { element, dataUrl } = await rotateAndCreateImageElement(starsOnlyElement);
-      setStarsOnlyImage(dataUrl);
-      setStarsOnlyElement(element);
-    } catch (error) {
-      console.error('Rotation error:', error);
-    }
-  }, [starsOnlyElement]);
-
-  const handleRotateStarless = useCallback(async () => {
-    if (!starlessElement) return;
-    try {
-      const { element, dataUrl } = await rotateAndCreateImageElement(starlessElement);
-      setStarlessImage(dataUrl);
-      setStarlessElement(element);
-    } catch (error) {
-      console.error('Rotation error:', error);
-    }
-  }, [starlessElement]);
 
   // Generate depth map from starless image - optimized with chunked processing
   const generateDepthMap = useCallback(async (img: HTMLImageElement): Promise<HTMLCanvasElement> => {
@@ -987,34 +962,18 @@ const StarFieldGenerator: React.FC = () => {
                     </div>
                   </Button>
                 ) : (
-                  <div className="space-y-2">
-                    <div className="relative group cursor-pointer" onClick={() => starsFileInputRef.current?.click()}>
-                      <img
-                        src={starsOnlyImage!}
-                        alt="Stars Preview"
-                        className="w-full h-40 object-cover rounded-lg border-2 border-orange-500/50 hover:border-orange-500 transition-all"
-                      />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                        <Upload className="w-8 h-8 text-orange-400" />
-                      </div>
+                  <div className="relative group cursor-pointer" onClick={() => starsFileInputRef.current?.click()}>
+                    <img
+                      src={starsOnlyImage!}
+                      alt="Stars Preview"
+                      className="w-full h-40 object-cover rounded-lg border-2 border-orange-500/50 hover:border-orange-500 transition-all"
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                      <Upload className="w-8 h-8 text-orange-400" />
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-cosmic-400">
-                        {starsOnlyElement.width} × {starsOnlyElement.height}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRotateStars();
-                        }}
-                        className="h-7 gap-1 text-xs bg-cosmic-800/50 hover:bg-orange-500/20 border-orange-500/30"
-                      >
-                        <RotateCw className="w-3 h-3" />
-                        {t('90°', '90°')}
-                      </Button>
-                    </div>
+                    <span className="text-xs text-cosmic-400 mt-1 block text-center">
+                      {starsOnlyElement.width} × {starsOnlyElement.height}
+                    </span>
                   </div>
                 )}
               </div>
@@ -1058,34 +1017,18 @@ const StarFieldGenerator: React.FC = () => {
                     </div>
                   </Button>
                 ) : (
-                  <div className="space-y-2">
-                    <div className="relative group cursor-pointer" onClick={() => starlessFileInputRef.current?.click()}>
-                      <img
-                        src={starlessImage!}
-                        alt="Starless Preview"
-                        className="w-full h-40 object-cover rounded-lg border-2 border-purple-500/50 hover:border-purple-500 transition-all"
-                      />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                        <Upload className="w-8 h-8 text-purple-400" />
-                      </div>
+                  <div className="relative group cursor-pointer" onClick={() => starlessFileInputRef.current?.click()}>
+                    <img
+                      src={starlessImage!}
+                      alt="Starless Preview"
+                      className="w-full h-40 object-cover rounded-lg border-2 border-purple-500/50 hover:border-purple-500 transition-all"
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                      <Upload className="w-8 h-8 text-purple-400" />
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-cosmic-400">
-                        {starlessElement.width} × {starlessElement.height}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRotateStarless();
-                        }}
-                        className="h-7 gap-1 text-xs bg-cosmic-800/50 hover:bg-purple-500/20 border-purple-500/30"
-                      >
-                        <RotateCw className="w-3 h-3" />
-                        {t('90°', '90°')}
-                      </Button>
-                    </div>
+                    <span className="text-xs text-cosmic-400 mt-1 block text-center">
+                      {starlessElement.width} × {starlessElement.height}
+                    </span>
                   </div>
                 )}
               </div>
