@@ -18,6 +18,7 @@ import { CanvasPool } from '@/lib/performance/CanvasPool';
 import { UploadProgress } from '@/components/ui/upload-progress';
 import { Separator } from '@/components/ui/separator';
 import VideoPlayerControls from '@/components/video/VideoPlayerControls';
+import GPUSettingsPanel, { GPUSettings } from '@/components/video/GPUSettingsPanel';
 
 interface StarData {
   x: number;
@@ -104,20 +105,22 @@ const ParallelVideoGenerator: React.FC = () => {
   const horizontalDisplace = displacementAmount; // Use displacement amount from UI
   const starShiftAmount = 6; // Fixed star shift amount
 
-  // 3D Star Field Motion Settings - complete settings (matching 3D StarField Generator defaults)
+  // 3D Star Field Motion Settings - complete settings (matching 3D StarField Generator defaults exactly)
   const [motionSettings, setMotionSettings] = useState<MotionSettings>({
     motionType: 'zoom_in',
-    speed: 1.5,
+    speed: 0.8, // Match starfield default
     duration: 10,
     fieldOfView: 75,
     amplification: 150,
     spin: 0,
     spinDirection: 'clockwise',
-    fadeOut: false, // Changed to false to match 3D StarField Generator
-    hyperspeed: false // New: hyperspeed effect disabled by default
+    fadeOut: false,
+    hyperspeed: false,
+    spaceshipEffect: false, // Match starfield: acceleration/deceleration effect
+    warpdriveEffect: false  // Match starfield: speed variations during flight
   });
 
-  const [depthIntensity, setDepthIntensity] = useState<number>(200);
+  const [depthIntensity, setDepthIntensity] = useState<number>(400); // Match starfield default (400%)
   const [preserveStarsIntensity, setPreserveStarsIntensity] = useState<number>(100); // Set to 100% for best star preservation
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationProgress, setAnimationProgress] = useState(0);
@@ -2391,6 +2394,72 @@ const ParallelVideoGenerator: React.FC = () => {
                     <SelectItem value="pan_right" className="text-white hover:bg-cosmic-700">
                       {t('Pan Right', '向右平移')}
                     </SelectItem>
+                    <SelectItem value="zoom_in_pan_left" className="text-white hover:bg-cosmic-700">
+                      {t('Zoom In + Pan Left', '放大 + 左移')}
+                    </SelectItem>
+                    <SelectItem value="zoom_in_pan_right" className="text-white hover:bg-cosmic-700">
+                      {t('Zoom In + Pan Right', '放大 + 右移')}
+                    </SelectItem>
+                    <SelectItem value="zoom_out_pan_left" className="text-white hover:bg-cosmic-700">
+                      {t('Zoom Out + Pan Left', '缩小 + 左移')}
+                    </SelectItem>
+                    <SelectItem value="zoom_out_pan_right" className="text-white hover:bg-cosmic-700">
+                      {t('Zoom Out + Pan Right', '缩小 + 右移')}
+                    </SelectItem>
+                    <SelectItem value="pan_up" className="text-white hover:bg-cosmic-700">
+                      {t('Pan Up', '向上平移')}
+                    </SelectItem>
+                    <SelectItem value="pan_down" className="text-white hover:bg-cosmic-700">
+                      {t('Pan Down', '向下平移')}
+                    </SelectItem>
+                    <SelectItem value="zoom_in_pan_up" className="text-white hover:bg-cosmic-700">
+                      {t('Zoom In + Pan Up', '放大 + 上移')}
+                    </SelectItem>
+                    <SelectItem value="zoom_in_pan_down" className="text-white hover:bg-cosmic-700">
+                      {t('Zoom In + Pan Down', '放大 + 下移')}
+                    </SelectItem>
+                    <SelectItem value="zoom_out_pan_up" className="text-white hover:bg-cosmic-700">
+                      {t('Zoom Out + Pan Up', '缩小 + 上移')}
+                    </SelectItem>
+                    <SelectItem value="zoom_out_pan_down" className="text-white hover:bg-cosmic-700">
+                      {t('Zoom Out + Pan Down', '缩小 + 下移')}
+                    </SelectItem>
+                    <SelectItem value="pan_diagonal_up_left" className="text-white hover:bg-cosmic-700">
+                      {t('Pan Diagonal Up-Left', '对角线左上')}
+                    </SelectItem>
+                    <SelectItem value="pan_diagonal_up_right" className="text-white hover:bg-cosmic-700">
+                      {t('Pan Diagonal Up-Right', '对角线右上')}
+                    </SelectItem>
+                    <SelectItem value="pan_diagonal_down_left" className="text-white hover:bg-cosmic-700">
+                      {t('Pan Diagonal Down-Left', '对角线左下')}
+                    </SelectItem>
+                    <SelectItem value="pan_diagonal_down_right" className="text-white hover:bg-cosmic-700">
+                      {t('Pan Diagonal Down-Right', '对角线右下')}
+                    </SelectItem>
+                    <SelectItem value="zoom_in_pan_diagonal_up_left" className="text-white hover:bg-cosmic-700">
+                      {t('Zoom In + Diagonal Up-Left', '放大 + 对角线左上')}
+                    </SelectItem>
+                    <SelectItem value="zoom_in_pan_diagonal_up_right" className="text-white hover:bg-cosmic-700">
+                      {t('Zoom In + Diagonal Up-Right', '放大 + 对角线右上')}
+                    </SelectItem>
+                    <SelectItem value="zoom_in_pan_diagonal_down_left" className="text-white hover:bg-cosmic-700">
+                      {t('Zoom In + Diagonal Down-Left', '放大 + 对角线左下')}
+                    </SelectItem>
+                    <SelectItem value="zoom_in_pan_diagonal_down_right" className="text-white hover:bg-cosmic-700">
+                      {t('Zoom In + Diagonal Down-Right', '放大 + 对角线右下')}
+                    </SelectItem>
+                    <SelectItem value="zoom_out_pan_diagonal_up_left" className="text-white hover:bg-cosmic-700">
+                      {t('Zoom Out + Diagonal Up-Left', '缩小 + 对角线左上')}
+                    </SelectItem>
+                    <SelectItem value="zoom_out_pan_diagonal_up_right" className="text-white hover:bg-cosmic-700">
+                      {t('Zoom Out + Diagonal Up-Right', '缩小 + 对角线右上')}
+                    </SelectItem>
+                    <SelectItem value="zoom_out_pan_diagonal_down_left" className="text-white hover:bg-cosmic-700">
+                      {t('Zoom Out + Diagonal Down-Left', '缩小 + 对角线左下')}
+                    </SelectItem>
+                    <SelectItem value="zoom_out_pan_diagonal_down_right" className="text-white hover:bg-cosmic-700">
+                      {t('Zoom Out + Diagonal Down-Right', '缩小 + 对角线右下')}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -2407,7 +2476,7 @@ const ParallelVideoGenerator: React.FC = () => {
                     amplification: value[0],
                     speed: (value[0] / 100) * (60 / prev.duration)
                   }))}
-                  min={100}
+                  min={20}
                   max={300}
                   step={10}
                   className="w-full"
@@ -2449,6 +2518,62 @@ const ParallelVideoGenerator: React.FC = () => {
                     className="ml-4"
                   />
                 </div>
+
+                {/* Spaceship Effect toggle - matches StarField Generator */}
+                <div className="flex items-center justify-between p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30 mt-3">
+                  <div className="flex-1">
+                    <Label className="text-cosmic-200 text-sm font-medium">
+                      {t('Spaceship Effect', '飞船效果')}
+                    </Label>
+                    <p className="text-xs text-cosmic-400 mt-1">
+                      {t('Accelerate at start and decelerate at end like a spaceship', '像飞船一样在开始时加速，在结束时减速')}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={motionSettings.spaceshipEffect || false}
+                    onCheckedChange={(checked) => setMotionSettings(prev => ({ ...prev, spaceshipEffect: checked }))}
+                    className="ml-4"
+                  />
+                </div>
+
+                {/* Warpdrive Effect toggle - matches StarField Generator */}
+                <div className="flex items-center justify-between p-3 bg-cosmic-800/30 rounded-lg border border-cosmic-700/30 mt-3">
+                  <div className="flex-1">
+                    <Label className="text-cosmic-200 text-sm font-medium">
+                      {t('Warpdrive Effect', '曲速效果')}
+                    </Label>
+                    <p className="text-xs text-cosmic-400 mt-1">
+                      {t('Add speed variations during flight for dynamic warp drive feel', '在飞行过程中添加速度变化以营造动态曲速感')}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={motionSettings.warpdriveEffect || false}
+                    onCheckedChange={(checked) => setMotionSettings(prev => ({ ...prev, warpdriveEffect: checked }))}
+                    className="ml-4"
+                  />
+                </div>
+              </div>
+
+              {/* Flight Speed - matches StarField Generator */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-cosmic-200">{t('Flight Speed', '飞行速度')}</Label>
+                  <span className="text-cosmic-300 text-sm font-semibold">{motionSettings.speed.toFixed(1)}x</span>
+                </div>
+                <Slider
+                  value={[motionSettings.speed]}
+                  onValueChange={(value) => setMotionSettings(prev => ({
+                    ...prev, 
+                    speed: value[0]
+                  }))}
+                  min={0.1}
+                  max={3.0}
+                  step={0.1}
+                  className="w-full"
+                />
+                <p className="text-xs text-cosmic-400">
+                  {t('Controls the overall animation speed (0.1x = slow drift, 3.0x = fast travel)', '控制整体动画速度（0.1x = 缓慢漂移，3.0x = 快速飞行）')}
+                </p>
               </div>
 
               <div className="space-y-3">
