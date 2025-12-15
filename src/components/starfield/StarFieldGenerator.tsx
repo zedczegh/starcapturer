@@ -17,6 +17,7 @@ import { ChunkedProcessor } from '@/lib/performance/ChunkedProcessor';
 import { loadImageFromFile, validateImageFile } from '@/utils/imageProcessingUtils';
 import { captureFrames, encodeFramesToWebM, downloadBlob, calculateRecordingDimensions } from '@/utils/videoEncodingUtils';
 import VideoPlayerControls from '@/components/video/VideoPlayerControls';
+import GPUSettingsPanel, { GPUSettings } from '@/components/video/GPUSettingsPanel';
 
 interface ProcessedStarData {
   x: number;
