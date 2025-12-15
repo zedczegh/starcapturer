@@ -10,7 +10,8 @@ import { Progress } from '@/components/ui/progress';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
-import { Upload, Eye, Download, Loader2, Layers, Settings2, Sparkles, ChevronDown, Package, RotateCcw, Info, Wand2, Check, Search } from 'lucide-react';
+import { Upload, Eye, Download, Loader2, Layers, Settings2, Sparkles, ChevronDown, Package, RotateCcw, Info, Wand2, Check, Search, RotateCw } from 'lucide-react';
+import { rotateAndCreateImageElement } from '@/utils/imageRotation';
 import { UploadProgress } from '@/components/ui/upload-progress';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { generateSimpleDepthMap, detectStars, type SimpleDepthParams } from '@/lib/simpleDepthMap';
@@ -95,10 +96,10 @@ const StereoscopeProcessor: React.FC = () => {
   });
 
   // Add stereo spacing parameter
-  const [stereoSpacing, setStereoSpacing] = useState<number>(200);
+  const [stereoSpacing, setStereoSpacing] = useState<number>(100);
   
   // Add border size parameter (0-600px)
-  const [borderSize, setBorderSize] = useState<number>(100);
+  const [borderSize, setBorderSize] = useState<number>(50);
   
   // Displacement controls for starless image
   const [displacementAmount, setDisplacementAmount] = useState<number>(25); // 0-50 pixels
@@ -784,6 +785,29 @@ const StereoscopeProcessor: React.FC = () => {
       if (starsInputRef.current) starsInputRef.current.value = '';
     }
   };
+
+  // Rotate image 90 degrees clockwise handlers
+  const handleRotateStars = useCallback(async () => {
+    if (!starsElement) return;
+    try {
+      const { element, dataUrl } = await rotateAndCreateImageElement(starsElement);
+      setStarsPreview(dataUrl);
+      setStarsElement(element);
+    } catch (error) {
+      console.error('Rotation error:', error);
+    }
+  }, [starsElement]);
+
+  const handleRotateStarless = useCallback(async () => {
+    if (!starlessElement) return;
+    try {
+      const { element, dataUrl } = await rotateAndCreateImageElement(starlessElement);
+      setStarlessPreview(dataUrl);
+      setStarlessElement(element);
+    } catch (error) {
+      console.error('Rotation error:', error);
+    }
+  }, [starlessElement]);
 
   // Generate astrophysically-informed depth map for stars
   const generateStarDepthMap = useCallback((
@@ -1795,18 +1819,34 @@ const StereoscopeProcessor: React.FC = () => {
                     </div>
                   </Button>
                 ) : (
-                  <div className="relative group cursor-pointer" onClick={() => starsInputRef.current?.click()}>
-                    <img
-                      src={starsPreview!}
-                      alt="Stars Preview"
-                      className="w-full h-40 object-cover rounded-lg border-2 border-orange-500/50 hover:border-orange-500 transition-all"
-                    />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                      <Upload className="w-8 h-8 text-orange-400" />
+                  <div className="space-y-2">
+                    <div className="relative group cursor-pointer" onClick={() => starsInputRef.current?.click()}>
+                      <img
+                        src={starsPreview!}
+                        alt="Stars Preview"
+                        className="w-full h-40 object-cover rounded-lg border-2 border-orange-500/50 hover:border-orange-500 transition-all"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                        <Upload className="w-8 h-8 text-orange-400" />
+                      </div>
                     </div>
-                    <span className="text-xs text-cosmic-400 mt-1 block text-center">
-                      {starsElement.width} × {starsElement.height}
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-cosmic-400">
+                        {starsElement.width} × {starsElement.height}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRotateStars();
+                        }}
+                        className="h-7 gap-1 text-xs bg-cosmic-800/50 hover:bg-orange-500/20 border-orange-500/30"
+                      >
+                        <RotateCw className="w-3 h-3" />
+                        {t('90°', '90°')}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1850,18 +1890,34 @@ const StereoscopeProcessor: React.FC = () => {
                     </div>
                   </Button>
                 ) : (
-                  <div className="relative group cursor-pointer" onClick={() => starlessInputRef.current?.click()}>
-                    <img
-                      src={starlessPreview!}
-                      alt="Starless Preview"
-                      className="w-full h-40 object-cover rounded-lg border-2 border-purple-500/50 hover:border-purple-500 transition-all"
-                    />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                      <Upload className="w-8 h-8 text-purple-400" />
+                  <div className="space-y-2">
+                    <div className="relative group cursor-pointer" onClick={() => starlessInputRef.current?.click()}>
+                      <img
+                        src={starlessPreview!}
+                        alt="Starless Preview"
+                        className="w-full h-40 object-cover rounded-lg border-2 border-purple-500/50 hover:border-purple-500 transition-all"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                        <Upload className="w-8 h-8 text-purple-400" />
+                      </div>
                     </div>
-                    <span className="text-xs text-cosmic-400 mt-1 block text-center">
-                      {starlessElement.width} × {starlessElement.height}
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-cosmic-400">
+                        {starlessElement.width} × {starlessElement.height}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRotateStarless();
+                        }}
+                        className="h-7 gap-1 text-xs bg-cosmic-800/50 hover:bg-purple-500/20 border-purple-500/30"
+                      >
+                        <RotateCw className="w-3 h-3" />
+                        {t('90°', '90°')}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>

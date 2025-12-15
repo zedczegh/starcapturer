@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
-import { Upload, Video, Sparkles, Eye, Settings2, Download, ChevronDown, RotateCcw, Info } from 'lucide-react';
+import { Upload, Video, Sparkles, Eye, Settings2, Download, ChevronDown, RotateCcw, Info, RotateCw } from 'lucide-react';
+import { rotateAndCreateImageElement } from '@/utils/imageRotation';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { VideoGenerationService, MotionSettings } from '@/services/VideoGenerationService';
 import { validateImageFile } from '@/utils/imageProcessingUtils';
@@ -89,9 +90,9 @@ const ParallelVideoGenerator: React.FC = () => {
     starsDepthMap?: HTMLCanvasElement;
   }>({});
 
-  // Processing Parameters - matching stereoscope processor exactly
-  const [stereoSpacing, setStereoSpacing] = useState<number>(600);
-  const [borderSize, setBorderSize] = useState<number>(300);
+  // Processing Parameters - matching stereoscope processor defaults
+  const [stereoSpacing, setStereoSpacing] = useState<number>(100);
+  const [borderSize, setBorderSize] = useState<number>(50);
   
   // Displacement controls for starless image
   const [displacementAmount, setDisplacementAmount] = useState<number>(25); // 0-50 pixels
@@ -418,6 +419,33 @@ const ParallelVideoGenerator: React.FC = () => {
   const handleStarsUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     return handleImageUpload(event, setStarsFile, setStarsElement, starsInputRef, 'stars');
   }, [handleImageUpload]);
+
+  // Rotate image 90 degrees clockwise handlers
+  const handleRotateStars = useCallback(async () => {
+    if (!starsElement) return;
+    try {
+      toast.info(t('Rotating image...', '正在旋转图像...'));
+      const { element, dataUrl } = await rotateAndCreateImageElement(starsElement);
+      setStarsElement(element);
+      toast.success(t('Image rotated', '图像已旋转'));
+    } catch (error) {
+      console.error('Rotation error:', error);
+      toast.error(t('Failed to rotate image', '旋转图像失败'));
+    }
+  }, [starsElement, t]);
+
+  const handleRotateStarless = useCallback(async () => {
+    if (!starlessElement) return;
+    try {
+      toast.info(t('Rotating image...', '正在旋转图像...'));
+      const { element, dataUrl } = await rotateAndCreateImageElement(starlessElement);
+      setStarlessElement(element);
+      toast.success(t('Image rotated', '图像已旋转'));
+    } catch (error) {
+      console.error('Rotation error:', error);
+      toast.error(t('Failed to rotate image', '旋转图像失败'));
+    }
+  }, [starlessElement, t]);
 
   // Helper to load image from file (handles TIFF)
   const loadImageFromFileElement = useCallback(async (element: HTMLImageElement): Promise<HTMLImageElement> => {
@@ -1577,18 +1605,34 @@ const ParallelVideoGenerator: React.FC = () => {
                     </div>
                   </Button>
                 ) : (
-                  <div className="relative group cursor-pointer" onClick={() => starsInputRef.current?.click()}>
-                    <img
-                      src={starsElement.src}
-                      alt="Stars Preview"
-                      className="w-full h-40 object-cover rounded-lg border-2 border-orange-500/50 hover:border-orange-500 transition-all"
-                    />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                      <Upload className="w-8 h-8 text-orange-400" />
+                  <div className="space-y-2">
+                    <div className="relative group cursor-pointer" onClick={() => starsInputRef.current?.click()}>
+                      <img
+                        src={starsElement.src}
+                        alt="Stars Preview"
+                        className="w-full h-40 object-cover rounded-lg border-2 border-orange-500/50 hover:border-orange-500 transition-all"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                        <Upload className="w-8 h-8 text-orange-400" />
+                      </div>
                     </div>
-                    <span className="text-xs text-cosmic-400 mt-1 block text-center">
-                      {starsElement.width} × {starsElement.height}
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-cosmic-400">
+                        {starsElement.width} × {starsElement.height}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRotateStars();
+                        }}
+                        className="h-7 gap-1 text-xs bg-cosmic-800/50 hover:bg-orange-500/20 border-orange-500/30"
+                      >
+                        <RotateCw className="w-3 h-3" />
+                        {t('90°', '90°')}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1632,18 +1676,34 @@ const ParallelVideoGenerator: React.FC = () => {
                     </div>
                   </Button>
                 ) : (
-                  <div className="relative group cursor-pointer" onClick={() => starlessInputRef.current?.click()}>
-                    <img
-                      src={starlessElement.src}
-                      alt="Starless Preview"
-                      className="w-full h-40 object-cover rounded-lg border-2 border-purple-500/50 hover:border-purple-500 transition-all"
-                    />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                      <Upload className="w-8 h-8 text-purple-400" />
+                  <div className="space-y-2">
+                    <div className="relative group cursor-pointer" onClick={() => starlessInputRef.current?.click()}>
+                      <img
+                        src={starlessElement.src}
+                        alt="Starless Preview"
+                        className="w-full h-40 object-cover rounded-lg border-2 border-purple-500/50 hover:border-purple-500 transition-all"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                        <Upload className="w-8 h-8 text-purple-400" />
+                      </div>
                     </div>
-                    <span className="text-xs text-cosmic-400 mt-1 block text-center">
-                      {starlessElement.width} × {starlessElement.height}
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-cosmic-400">
+                        {starlessElement.width} × {starlessElement.height}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRotateStarless();
+                        }}
+                        className="h-7 gap-1 text-xs bg-cosmic-800/50 hover:bg-purple-500/20 border-purple-500/30"
+                      >
+                        <RotateCw className="w-3 h-3" />
+                        {t('90°', '90°')}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
